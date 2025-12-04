@@ -1,4 +1,4 @@
-# Shadcn-UI Template Usage Instructions
+# snap-2-report Client
 
 ## technology stack
 
@@ -52,14 +52,14 @@ pnpm i
 
 **Add Dependencies**
 
-```shell
+````shell
 pnpm add some_new_dependency
 
 **Start Preview**
 
 ```shell
 pnpm run dev
-```
+````
 
 **To build**
 
