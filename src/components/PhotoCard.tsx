@@ -60,7 +60,7 @@ export function PhotoCard({ photo, index, onDelete, isReserve, onSelect, isSelec
           {/* Image */}
           <div className="flex-1 overflow-hidden bg-gray-100">
             <img
-              src={api.getPhotoUrl(photo.storage_path)}
+              src={photo.url}
               alt={photo.original_filename}
               className="w-full h-full object-cover transition-transform group-hover:scale-105"
               loading="lazy"

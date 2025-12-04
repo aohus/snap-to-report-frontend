@@ -14,6 +14,7 @@ export interface Photo {
   cluster_id?: string; // Optional, as it might be in Reserve (null) or a specific cluster
   original_filename: string;
   storage_path: string;
+  url: string;
   thumbnail_path?: string;
 }
 

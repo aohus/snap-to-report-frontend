@@ -16,7 +16,7 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
             {photos.map((photo) => (
               <div key={photo.id} className="aspect-square bg-gray-100 rounded-md overflow-hidden">
             <img
-              src={api.getPhotoUrl(photo.storage_path)}
+              src={photo.url}
               alt={photo.original_filename}
               className="w-full h-full object-cover transition-transform group-hover:scale-105"
               loading="lazy"
