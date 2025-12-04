@@ -265,7 +265,7 @@ export default function Dashboard() {
         )}
       </header>
 
-      <main className="flex-1 p-6 max-h-[1600px] max-w-[2000px] mx-auto w-full overflow-hidden flex flex-col">
+      <main className="flex-1 p-6 max-w-[2000px] mx-auto w-full overflow-y-auto flex flex-col">
         <div className="flex flex-col h-full gap-4">
           {clusters.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl shadow-sm border p-10">

@@ -121,63 +121,64 @@ export default function JobList() {
               <p className="text-gray-500">등록된 작업이 없습니다. 새로운 작업을 등록하고 작업 도우미를 경험하세요.</p>
             </div>
           ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-1">
+            <div className="grid gap-4 grid-cols-1">
               {jobs.map((job) => (
                 <div 
                   key={job.id}
                   onClick={() => navigate(`/jobs/${job.id}`)}
-                  className="group bg-white p-6 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer flex flex-col"
+                  className="group bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer flex items-center justify-between"
                 >
-                  <div className="flex items-start justify-between">
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
-                      className="h-7 w-7 opacity-0 group-hover:opacity-100 border-2 border-red-600 transition-opacity shadow-sm"
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent drag start and selection
-                        handleDeleteJob(job.id);
-                      }}
-                    >
-                      <X className="w-4 h-4 text-red-600" />
-                    </Button>
-                    <div flex items-start>
-                      <h3 className="p-2 text-xl font-bold text-gray-900 mb-1 group-hover:text-blue-600 transition-colors">
+                  {/* Left: Title, Status, Date */}
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
                         {job.title}
                       </h3>
-                      <span className={`px-2 py-1 gap-4 rounded-full text-sm font-medium ${
-                        job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'
+                      <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' : 
+                        job.status === 'FAILED' ? 'bg-red-100 text-red-700' :
+                        'bg-blue-50 text-blue-600'
                       }`}>
                         {job.status}
                       </span>
                     </div>
-                    <div>
-                      {job.export_status === 'FAILED' ? (
-                        <Button 
-                          variant="default" 
-                          size="lg" 
-                          className="text-lg bg-red-600 hover:bg-red-700 shadow-md"
-                          disabled={true}
-                        >
-                          PDF 생성 실패
-                        </Button>
-                      ) : (
-                      <Button 
-                        variant="outline" 
-                        size="lg" 
-                        className="text-lg border-indigo-600 hover:bg-indigo-200 shadow-md"
-                        onClick={handleDownload}
-                        disabled={job.export_status !== 'EXPORTED'}
-                      >
-                        {/* <FileDown className="w-5 h-5 mr-2" /> */}
-                        PDF 다운로드
-                      </Button>
-                      )}
+                    <div className="flex items-center text-gray-400 text-xs flex-1">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        {job.created_at ? format(new Date(job.created_at), 'yyyy-MM-dd HH:mm') : '-'}
+                        <ArrowRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all text-blue-600" />
                     </div>
                   </div>
-                  <div className="flex items-center text-gray-500 text-sm mt-auto pt-4">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    {job.created_at ? format(new Date(job.created_at), 'MMM d, yyyy') : 'Unknown date'}
-                    <ArrowRight className="w-4 h-4 ml-auto opacity-0 group-hover:opacity-100 transform translate-x-[-10px] group-hover:translate-x-0 transition-all text-blue-600" />
+
+                  {/* Right: Actions */}
+                  <div className="flex items-center gap-3">
+                    {job.export_status === 'EXPORTED' && (
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload(job.id);
+                        }}
+                      >
+                        <FileDown className="w-4 h-4 mr-2" />
+                        PDF 다운로드
+                      </Button>
+                    )}
+                    
+                    <Button 
+                      variant="ghost" 
+                      size="icon" 
+                      className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (confirm('정말 삭제하시겠습니까?')) {
+                          handleDeleteJob(job.id);
+                        }
+                      }}
+                    >
+                      <X className="w-5 h-5" />
+                    </Button>
                   </div>
                 </div>
               ))}
