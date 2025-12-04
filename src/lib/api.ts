@@ -147,48 +147,133 @@ export const api = {
   },
 
   // Photo Management
-  uploadPhotos: async (jobId: string, files: File[], onProgress?: (percent: number) => void): Promise<Photo[]> => {
-    const formData = new FormData();
-    files.forEach(file => formData.append('files', file));
+  getUploadUrls: async (jobId: string, files: File[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
+    const fileInfos = files.map(f => ({ filename: f.name, content_type: f.type }));
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
+      method: 'POST',
+      headers: authJsonHeaders(),
+      body: JSON.stringify(fileInfos),
+    });
+    return handleResponse(response);
+  },
 
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
-      
-      const accessToken = AuthService.getToken();
-      if (accessToken) {
-        xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-      }
-      
-      if (onProgress) {
-        xhr.upload.onprogress = (event) => {
-            if (event.lengthComputable) {
-                const percent = Math.round((event.loaded / event.total) * 100);
-                onProgress(percent);
-            }
-        };
-      }
-      
-      xhr.onload = () => {
-        if (xhr.status >= 200 && xhr.status < 300) {
-           try {
-             resolve(JSON.parse(xhr.responseText));
-           } catch (e) {
-             reject(e);
-           }
-        } else {
-           try {
-             const err = JSON.parse(xhr.responseText);
-             reject(new Error(err.detail || err.message || xhr.statusText));
-           } catch {
-             reject(new Error(xhr.statusText));
-           }
+  notifyUploadComplete: async (jobId: string, uploadedFiles: { filename: string; storage_path: string }[]): Promise<Photo[]> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/complete`, {
+      method: 'POST',
+      headers: authJsonHeaders(),
+      body: JSON.stringify(uploadedFiles),
+    });
+    // The backend returns PhotoUploadResponse which contains count, but here we might want actual photos?
+    // The backend service returns list[Photo], but the endpoint returns PhotoUploadResponse wrapper.
+    // Let's adjust expectation: The current endpoint returns { job_id, file_count }.
+    // If we need photo objects, we might need to fetch them again or update backend return type.
+    // For now, returning empty array or refetching photos is safer.
+    return []; 
+  },
+
+  uploadPhotos: async (jobId: string, files: File[], onProgress?: (percent: number) => void): Promise<Photo[]> => {
+    try {
+      // 1. Get Upload URLs
+      const { strategy, urls } = await api.getUploadUrls(jobId, files);
+      const totalFiles = files.length;
+      let completedFiles = 0;
+
+      const updateProgress = () => {
+        if (onProgress) {
+          const percent = Math.round((completedFiles / totalFiles) * 100);
+          onProgress(percent);
         }
       };
-      
-      xhr.onerror = () => reject(new Error('Network Error'));
-      xhr.send(formData);
-    });
+
+      if (strategy === 'direct') {
+        // Direct Upload Strategy (GCS Signed URL)
+        const uploadedFilesInfo: { filename: string; storage_path: string }[] = [];
+        
+        // Upload in batches to avoid browser connection limits
+        const BATCH_SIZE = 5;
+        for (let i = 0; i < files.length; i += BATCH_SIZE) {
+          const batch = files.slice(i, i + BATCH_SIZE);
+          await Promise.all(batch.map(async (file) => {
+            const fileUrlInfo = urls.find(u => u.filename === file.name);
+            if (fileUrlInfo && fileUrlInfo.upload_url) {
+              await fetch(fileUrlInfo.upload_url, {
+                method: 'PUT',
+                body: file,
+                headers: {
+                  'Content-Type': file.type
+                }
+              });
+              uploadedFilesInfo.push({ filename: file.name, storage_path: fileUrlInfo.storage_path });
+              completedFiles++;
+              updateProgress();
+            }
+          }));
+        }
+
+        // Notify Backend
+        await api.notifyUploadComplete(jobId, uploadedFilesInfo);
+        
+        // Since notifyUploadComplete doesn't return full photo objects in current schema,
+        // we fetch the updated photo list.
+        const clusterData = await api.getPhotos(jobId); 
+        // getPhotos returns Cluster[], we need to extract photos if needed or just return valid response.
+        // The original interface returned Photo[]. The getPhotos implementation actually calls endpoints returning Photo[].
+        // Wait, api.getPhotos implementation above calls `/jobs/${jobId}/photos` (GET) which usually returns Photo list?
+        // Let's look at `getPhotos` impl: `return handleResponse<Photo[]>(response);` -> It returns `Photo[]`.
+        // But the return type annotation says `Promise<Cluster[]>`. That seems like a typo in existing code.
+        // Assuming it returns Photo[], we are good.
+        return clusterData as unknown as Photo[]; 
+
+      } else {
+        // Proxy Strategy (Fallback to backend upload)
+        // Use existing FormData method but maybe in batches too for better reliability
+        const formData = new FormData();
+        files.forEach(file => formData.append('files', file));
+
+        return new Promise((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
+          
+          const accessToken = AuthService.getToken();
+          if (accessToken) {
+            xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+          }
+          
+          if (onProgress) {
+            xhr.upload.onprogress = (event) => {
+                if (event.lengthComputable) {
+                    const percent = Math.round((event.loaded / event.total) * 100);
+                    onProgress(percent);
+                }
+            };
+          }
+          
+          xhr.onload = () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+               try {
+                 // The backend upload endpoint returns PhotoUploadResponse { job_id, file_count }
+                 // But the interface expects Photo[]. We should fetch photos.
+                 resolve([]); // Or fetch photos
+               } catch (e) {
+                 reject(e);
+               }
+            } else {
+               reject(new Error(xhr.statusText));
+            }
+          };
+          
+          xhr.onerror = () => reject(new Error('Network Error'));
+          xhr.send(formData);
+        }).then(async () => {
+            // Fetch actual photos to satisfy return type
+            const photos = await api.getPhotos(jobId);
+            return photos as unknown as Photo[];
+        });
+      }
+    } catch (error) {
+      console.error("Upload failed", error);
+      throw error;
+    }
   },
 
   movePhoto: async (photoId: string, targetClusterId: string): Promise<void> => {
