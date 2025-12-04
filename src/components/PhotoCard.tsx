@@ -1,6 +1,7 @@
+import React from 'react'; // React.memo 사용을 위해 import
 import { Draggable } from '@hello-pangea/dnd';
 import { Photo } from '@/types';
-import { api } from '@/lib/api';
+// import { api } from '@/lib/api'; // 사용되지 않아 제거 가능
 import { X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -13,7 +14,15 @@ interface PhotoCardProps {
   isSelected?: boolean;
 }
 
-export function PhotoCard({ photo, index, onDelete, isReserve, onSelect, isSelected }: PhotoCardProps) {
+// React.memo로 감싸서 props가 변하지 않으면 리렌더링 방지
+export const PhotoCard = React.memo(function PhotoCard({ 
+  photo, 
+  index, 
+  onDelete, 
+  isReserve, 
+  onSelect, 
+  isSelected 
+}: PhotoCardProps) {
   return (
     <Draggable draggableId={photo.id.toString()} index={index}>
       {(provided, snapshot) => (
@@ -48,7 +57,7 @@ export function PhotoCard({ photo, index, onDelete, isReserve, onSelect, isSelec
               size="icon" 
               className="absolute top-1 right-1 z-10 h-6 w-6 md:h-7 md:w-7 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
               onClick={(e) => {
-                e.stopPropagation(); // Prevent drag start and selection
+                e.stopPropagation();
                 onDelete(photo.id);
               }}
             >
@@ -59,14 +68,27 @@ export function PhotoCard({ photo, index, onDelete, isReserve, onSelect, isSelec
           {/* Image */}
           <div className="flex-1 overflow-hidden bg-gray-100">
             <img
-              src={photo.url}
+              // 1. 썸네일이 있다면 우선 사용, 없다면 원본 사용 (백엔드 필드 확인 필요)
+              // 예: src={photo.thumbnail_url || photo.url} 
+              src={photo.url} 
               alt={photo.original_filename}
               className="w-full h-full object-cover transition-transform group-hover:scale-105"
               loading="lazy"
+              decoding="async" // 2. 비동기 디코딩
             />
           </div>
         </div>
       )}
     </Draggable>
   );
-}
+}, (prevProps, nextProps) => {
+  // 3. 커스텀 비교 함수 (선택사항): 
+  // 드래그 앤 드롭 시 불필요한 리렌더링을 강력하게 막고 싶다면 사용합니다.
+  return (
+    prevProps.photo.id === nextProps.photo.id &&
+    prevProps.photo.url === nextProps.photo.url &&
+    prevProps.index === nextProps.index &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isReserve === nextProps.isReserve
+  );
+});
