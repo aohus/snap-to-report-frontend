@@ -174,7 +174,7 @@ export const api = {
   uploadPhotos: async (jobId: string, files: File[], onProgress?: (percent: number) => void): Promise<Photo[]> => {
     try {
       // 1. Get Upload URLs
-      // const { strategy, urls } = await api.getUploadUrls(jobId, files);
+      const { strategy, urls } = await api.getUploadUrls(jobId, files);
       const totalFiles = files.length;
       let completedFiles = 0;
 
@@ -230,50 +230,56 @@ export const api = {
 
       // }
       // */
+        
         // Proxy Strategy (Fallback to backend upload)
-        // Use existing FormData method but maybe in batches too for better reliability
-        const formData = new FormData();
-        files.forEach(file => formData.append('files', file));
+        // Upload in batches to avoid 413 Request Entity Too Large (Nginx limit)
+        const BATCH_SIZE = 5;
 
-        return new Promise((resolve, reject) => {
-          const xhr = new XMLHttpRequest();
-          xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
-          
-          const accessToken = AuthService.getToken();
-          if (accessToken) {
-            xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-          }
-          
-          if (onProgress) {
-            xhr.upload.onprogress = (event) => {
-                if (event.lengthComputable) {
-                    const percent = Math.round((event.loaded / event.total) * 100);
-                    onProgress(percent);
-                }
-            };
-          }
-          
-          xhr.onload = () => {
-            if (xhr.status >= 200 && xhr.status < 300) {
-               try {
-                 // The backend upload endpoint returns PhotoUploadResponse { job_id, file_count }
-                 // But the interface expects Photo[]. We should fetch photos.
-                 resolve([]); // Or fetch photos
-               } catch (e) {
-                 reject(e);
-               }
-            } else {
-               reject(new Error(xhr.statusText));
+        for (let i = 0; i < files.length; i += BATCH_SIZE) {
+          const batch = files.slice(i, i + BATCH_SIZE);
+          const formData = new FormData();
+          batch.forEach(file => formData.append('files', file));
+
+          await new Promise((resolve, reject) => {
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
+            
+            const accessToken = AuthService.getToken();
+            if (accessToken) {
+              xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
             }
-          };
-          
-          xhr.onerror = () => reject(new Error('Network Error'));
-          xhr.send(formData);
-        }).then(async () => {
-            // Fetch actual photos to satisfy return type
-            const photos = await api.getPhotos(jobId);
-            return photos as unknown as Photo[];
-        });
+            
+            // For individual batch progress, we could track it, but global progress is simpler
+            // to update after each batch or roughly during batch.
+            // Let's update progress based on batch completion for simplicity in this sequential flow,
+            // or try to hook into xhr.upload.onprogress for smoother updates if needed.
+            // Given the sequential nature, we can just increment completedFiles after success.
+            
+            xhr.onload = () => {
+              if (xhr.status >= 200 && xhr.status < 300) {
+                 try {
+                   resolve(undefined);
+                 } catch (e) {
+                   reject(e);
+                 }
+              } else {
+                 reject(new Error(xhr.statusText));
+              }
+            };
+            
+            xhr.onerror = () => reject(new Error('Network Error'));
+            xhr.send(formData);
+          });
+
+          // Update progress
+          completedFiles += batch.length;
+          updateProgress();
+        }
+
+        // After all batches, fetch actual photos to satisfy return type
+        const photos = await api.getPhotos(jobId);
+        return photos as unknown as Photo[];
+
     } catch (error) {
       console.error("Upload failed", error);
       throw error;
