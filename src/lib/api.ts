@@ -174,7 +174,7 @@ export const api = {
   uploadPhotos: async (jobId: string, files: File[], onProgress?: (percent: number) => void): Promise<Photo[]> => {
     try {
       // 1. Get Upload URLs
-      const { strategy, urls } = await api.getUploadUrls(jobId, files);
+      // const { strategy, urls } = await api.getUploadUrls(jobId, files);
       const totalFiles = files.length;
       let completedFiles = 0;
 
@@ -232,8 +232,6 @@ export const api = {
       // */
         // Proxy Strategy (Fallback to backend upload)
         // Use existing FormData method but maybe in batches too for better reliability
-        // Proxy Strategy (Fallback to backend upload)
-        // Use existing FormData method but maybe in batches too for better reliability
         const formData = new FormData();
         files.forEach(file => formData.append('files', file));
 
@@ -276,7 +274,6 @@ export const api = {
             const photos = await api.getPhotos(jobId);
             return photos as unknown as Photo[];
         });
-      }
     } catch (error) {
       console.error("Upload failed", error);
       throw error;
