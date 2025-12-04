@@ -86,7 +86,7 @@ export const PhotoCard = React.memo(function PhotoCard({
   // 드래그 앤 드롭 시 불필요한 리렌더링을 강력하게 막고 싶다면 사용합니다.
   return (
     prevProps.photo.id === nextProps.photo.id &&
-    prevProps.photo.url === nextProps.photo.url &&
+    prevProps.photo.thumbnail_path === nextProps.photo.thumbnail_path &&
     prevProps.index === nextProps.index &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isReserve === nextProps.isReserve
