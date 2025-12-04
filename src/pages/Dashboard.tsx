@@ -215,23 +215,23 @@ export default function Dashboard() {
   return (
     <div className="h-screen bg-gray-100 flex flex-col font-sans overflow-hidden">
       {/* Header */}
-      <header className="bg-white border-b shadow-sm px-6 py-4 flex items-center justify-between flex-shrink-0 z-30">
-        <div className="flex items-center gap-4">
+      <header className="bg-white border-b shadow-sm px-4 py-3 md:px-6 md:py-4 flex items-center justify-between flex-shrink-0 z-30">
+        <div className="flex items-center gap-3 md:gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
             <ArrowLeft className="w-5 h-5 text-gray-600" />
           </Button>
-          <div className="p-2 bg-blue-600 rounded-lg shadow-md">
+          <div className="p-2 bg-blue-600 rounded-lg shadow-md hidden md:block">
             <LayoutGrid className="w-6 h-6 text-white" />
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900 tracking-tight">
+            <h1 className="text-lg md:text-2xl font-bold text-gray-900 tracking-tight truncate max-w-[150px] md:max-w-none">
               {job.title}
             </h1>
           </div>
         </div>
         {clusters.length > 0 && (
-          <div className="flex items-center gap-4">
-            <div className="hidden md:flex flex-col items-end mr-4">
+          <div className="flex items-center gap-2 md:gap-4">
+            <div className="hidden lg:flex flex-col items-end mr-4">
                 <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Progress</span>
                 <span className={`text-lg font-bold ${completedPlaces === totalPlaces && totalPlaces > 0 ? 'text-green-600' : 'text-gray-600'}`}>
                   완료 장소: {completedPlaces} / {totalPlaces} 
@@ -243,29 +243,31 @@ export default function Dashboard() {
             </Button> */}
             <Button 
               variant="default" 
-              size="lg" 
-              className="text-xl bg-indigo-600 hover:bg-indigo-700 shadow-md"
+              size="sm" 
+              className="md:text-lg bg-indigo-600 hover:bg-indigo-700 shadow-md md:h-11 md:px-8"
               onClick={handleStartClustering}
               disabled={isClustering}
             >
-              {isClustering ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <FileDown className="w-5 h-5 mr-2" />}
-              사진 분류 다시하기
+              {isClustering ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <FileDown className="w-4 h-4 md:w-5 md:h-5 md:mr-2" />}
+              <span className="hidden md:inline">사진 분류 다시하기</span>
+              <span className="md:hidden">재분류</span>
             </Button>
             <Button 
               variant="default" 
-              size="lg" 
-              className="text-lg bg-indigo-600 hover:bg-indigo-700 shadow-md"
+              size="sm" 
+              className="md:text-lg bg-indigo-600 hover:bg-indigo-700 shadow-md md:h-11 md:px-8"
               onClick={handleExport}
               disabled={exporting || clusters.length === 0}
             >
-              {exporting ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <FileDown className="w-5 h-5 mr-2" />}
-              PDF 내보내기
+              {exporting ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <FileDown className="w-4 h-4 md:w-5 md:h-5 md:mr-2" />}
+              <span className="hidden md:inline">PDF 내보내기</span>
+              <span className="md:hidden">PDF</span>
             </Button>
           </div>
         )}
       </header>
 
-      <main className="flex-1 p-6 max-w-[2000px] mx-auto w-full overflow-y-auto flex flex-col">
+      <main className="flex-1 p-2 md:p-6 max-w-[2000px] mx-auto w-full overflow-y-auto flex flex-col">
         <div className="flex flex-col h-full gap-4">
           {clusters.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl shadow-sm border p-10">

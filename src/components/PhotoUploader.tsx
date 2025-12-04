@@ -47,7 +47,7 @@ export function PhotoUploader({ onUpload, isUploading, progress }: PhotoUploader
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
       <div
-        className="border-2 border-dashed border-gray-300 rounded-lg p-10 text-center hover:bg-gray-50 transition-colors cursor-pointer"
+        className="border-2 border-dashed border-gray-300 rounded-lg p-6 md:p-10 text-center hover:bg-gray-50 transition-colors cursor-pointer"
         onDrop={handleDrop}
         onDragOver={handleDragOver}
         onClick={() => fileInputRef.current?.click()}
@@ -84,7 +84,7 @@ export function PhotoUploader({ onUpload, isUploading, progress }: PhotoUploader
               </Button>
             </div>
             
-            <div className="max-h-60 overflow-y-auto grid grid-cols-4 gap-2 mb-4">
+            <div className="max-h-60 overflow-y-auto grid grid-cols-3 md:grid-cols-4 gap-2 mb-4">
               {selectedFiles.map((file, index) => (
                 <div key={index} className="relative group aspect-square bg-gray-100 rounded-md overflow-hidden">
                   <img 
