@@ -185,46 +185,53 @@ export const api = {
         }
       };
 
-      if (strategy === 'direct') {
-        // Direct Upload Strategy (GCS Signed URL)
-        const uploadedFilesInfo: { filename: string; storage_path: string }[] = [];
+      // /*
+      // Direct upload strategy (GCS Signed URL) is temporarily disabled for future use.
+      // The 'urls' variable, which contains 'upload_url', is obtained but not currently used.
+      // Uncomment this block to re-enable direct uploads based on 'strategy === "direct"'.
+      // if (strategy === 'direct') {
+      //   // Direct Upload Strategy (GCS Signed URL)
+      //   const uploadedFilesInfo: { filename: string; storage_path: string }[] = [];
         
-        // Upload in batches to avoid browser connection limits
-        const BATCH_SIZE = 5;
-        for (let i = 0; i < files.length; i += BATCH_SIZE) {
-          const batch = files.slice(i, i + BATCH_SIZE);
-          await Promise.all(batch.map(async (file) => {
-            const fileUrlInfo = urls.find(u => u.filename === file.name);
-            if (fileUrlInfo && fileUrlInfo.upload_url) {
-              await fetch(fileUrlInfo.upload_url, {
-                method: 'PUT',
-                body: file,
-                headers: {
-                  'Content-Type': file.type
-                }
-              });
-              uploadedFilesInfo.push({ filename: file.name, storage_path: fileUrlInfo.storage_path });
-              completedFiles++;
-              updateProgress();
-            }
-          }));
-        }
+      //   // Upload in batches to avoid browser connection limits
+      //   const BATCH_SIZE = 5;
+      //   for (let i = 0; i < files.length; i += BATCH_SIZE) {
+      //     const batch = files.slice(i, i + BATCH_SIZE);
+      //     await Promise.all(batch.map(async (file) => {
+      //       const fileUrlInfo = urls.find(u => u.filename === file.name);
+      //       if (fileUrlInfo && fileUrlInfo.upload_url) {
+      //         await fetch(fileUrlInfo.upload_url, {
+      //           method: 'PUT',
+      //           body: file,
+      //           headers: {
+      //             'Content-Type': file.type
+      //           }
+      //         });
+      //         uploadedFilesInfo.push({ filename: file.name, storage_path: fileUrlInfo.storage_path });
+      //         completedFiles++;
+      //         updateProgress();
+      //       }
+      //     }));
+      //   }
 
-        // Notify Backend
-        await api.notifyUploadComplete(jobId, uploadedFilesInfo);
+      //   // Notify Backend
+      //   await api.notifyUploadComplete(jobId, uploadedFilesInfo);
         
-        // Since notifyUploadComplete doesn't return full photo objects in current schema,
-        // we fetch the updated photo list.
-        const clusterData = await api.getPhotos(jobId); 
-        // getPhotos returns Cluster[], we need to extract photos if needed or just return valid response.
-        // The original interface returned Photo[]. The getPhotos implementation actually calls endpoints returning Photo[].
-        // Wait, api.getPhotos implementation above calls `/jobs/${jobId}/photos` (GET) which usually returns Photo list?
-        // Let's look at `getPhotos` impl: `return handleResponse<Photo[]>(response);` -> It returns `Photo[]`.
-        // But the return type annotation says `Promise<Cluster[]>`. That seems like a typo in existing code.
-        // Assuming it returns Photo[], we are good.
-        return clusterData as unknown as Photo[]; 
+      //   // Since notifyUploadComplete doesn't return full photo objects in current schema,
+      //   // we fetch the updated photo list.
+      //   const clusterData = await api.getPhotos(jobId); 
+      //   // getPhotos returns Cluster[], we need to extract photos if needed or just return valid response.
+      //   // The original interface returned Photo[]. The getPhotos implementation actually calls endpoints returning Photo[].
+      //   // Wait, api.getPhotos implementation above calls `/jobs/${jobId}/photos` (GET) which usually returns Photo list?
+      //   // Let's look at `getPhotos` impl: `return handleResponse<Photo[]>(response);` -> It returns `Photo[]`.
+      //   // But the return type annotation says `Promise<Cluster[]>`. That seems like a typo in existing code.
+      //   // Assuming it returns Photo[], we are good.
+      //   return clusterData as unknown as Photo[]; 
 
-      } else {
+      // }
+      // */
+        // Proxy Strategy (Fallback to backend upload)
+        // Use existing FormData method but maybe in batches too for better reliability
         // Proxy Strategy (Fallback to backend upload)
         // Use existing FormData method but maybe in batches too for better reliability
         const formData = new FormData();
