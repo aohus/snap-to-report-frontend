@@ -17,6 +17,7 @@ export default function Dashboard() {
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const [isClustering, setIsClustering] = useState(false);
   const [exporting, setExporting] = useState(false);
 
@@ -29,18 +30,18 @@ export default function Dashboard() {
   const loadJobData = async (id: string) => {
     try {
       setLoading(true);
-      const jobData = await api.getJob(id);
+      // Optimized: Fetch all job details in a single API call
+      const jobData = await api.getJobDetails(id);
+      
       setJob(jobData);
-      if (jobData.status === "RUNNING") {
+      setPhotos(jobData.photos);
+      setClusters(jobData.clusters);
+
+      if (jobData.status === "PROCESSING" || jobData.status === "PENDING") { // Handle PENDING as well
         setIsClustering(true);
       };
-      
-      const clusterData = await api.getClusters(id);
-      setClusters(clusterData);
-
-      const photoData = await api.getPhotos(id);
-      setPhotos(photoData);
     } catch (error) {
+      console.error(error);
       toast.error('Failed to load job data');
       navigate('/');
     } finally {
@@ -60,14 +61,16 @@ export default function Dashboard() {
     if (!job) return;
     try {
       setLoading(true);
-      await api.uploadPhotos(job.id, files);
+      setUploadProgress(0);
+      await api.uploadPhotos(job.id, files, (percent) => setUploadProgress(percent));
       toast.success('Photos uploaded successfully');
-      const photos = await api.getPhotos(job.id);
-      setPhotos(photos);
+      // Reload full data to get new photos
+      await loadJobData(job.id);
     } catch (error) {
       toast.error('Failed to upload photos');
     } finally {
       setLoading(false);
+      setUploadProgress(0);
     }
   };
 
@@ -78,15 +81,16 @@ export default function Dashboard() {
       toast.info('Starting photo clustering...');
       await api.startClustering(job.id);
 
+      // Polling for status only
       const interval = setInterval(async () => {
         try {
-          const jobData = await api.getJob(job.id);
-          if (jobData.status === 'COMPLETED' || jobData.status === 'FAILED') {
+          const jobStatus = await api.getJob(job.id); // Lightweight status check
+          if (jobStatus.status === 'COMPLETED' || jobStatus.status === 'FAILED') {
             clearInterval(interval);
             setIsClustering(false);
-            if (jobData.status === 'COMPLETED') {
+            if (jobStatus.status === 'COMPLETED') {
               toast.success('Clustering complete!');
-              await loadJobData(job.id);
+              await loadJobData(job.id); // Fetch full data only on completion
             } else {
               toast.error('Clustering failed. Please try again.');
             }
@@ -266,7 +270,7 @@ export default function Dashboard() {
           {clusters.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl shadow-sm border p-10">
               {!isClustering && (
-                <PhotoUploader onUpload={handleUpload} isUploading={loading} />
+                <PhotoUploader onUpload={handleUpload} isUploading={loading} progress={uploadProgress} />
               )}
               {photos.length > 0 && (
                 <div className="w-full max-w-3xl mx-auto space-y-6 mt-6">

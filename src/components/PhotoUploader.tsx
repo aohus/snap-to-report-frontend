@@ -7,9 +7,10 @@ import { Card, CardContent } from '@/components/ui/card';
 interface PhotoUploaderProps {
   onUpload: (files: File[]) => Promise<void>;
   isUploading: boolean;
+  progress?: number;
 }
 
-export function PhotoUploader({ onUpload, isUploading }: PhotoUploaderProps) {
+export function PhotoUploader({ onUpload, isUploading, progress }: PhotoUploaderProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -117,9 +118,9 @@ export function PhotoUploader({ onUpload, isUploading }: PhotoUploaderProps) {
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
             <span>Uploading...</span>
-            <span>Please wait</span>
+            <span>{progress ? `${progress}%` : 'Please wait'}</span>
           </div>
-          <Progress value={undefined} className="w-full" />
+          <Progress value={progress} className="w-full" />
         </div>
       )}
     </div>

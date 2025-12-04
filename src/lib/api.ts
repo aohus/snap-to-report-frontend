@@ -1,4 +1,4 @@
-import { Job, Cluster, ExportStatus, Photo, FileRespoonse } from '@/types';
+import { Job, Cluster, ExportStatus, Photo, FileResponse } from '@/types';
 import { AuthService } from './auth';
 
 const API_BASE_URL = 'http://localhost:8000/api';
@@ -77,6 +77,13 @@ export const api = {
     return handleResponse<Job>(response);
   },
 
+  getJobDetails: async (jobId: string): Promise<Job & { photos: Photo[], clusters: Cluster[] }> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/details`, { 
+      headers: authJsonHeaders(), 
+    });
+    return handleResponse<Job & { photos: Photo[], clusters: Cluster[] }>(response);
+  },
+
   deleteJob: async (jobId: string): Promise<Job> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, { 
       method: 'DELETE',
@@ -140,17 +147,48 @@ export const api = {
   },
 
   // Photo Management
-  uploadPhotos: async (jobId: string, files: File[]): Promise<Photo[]> => {
+  uploadPhotos: async (jobId: string, files: File[], onProgress?: (percent: number) => void): Promise<Photo[]> => {
     const formData = new FormData();
     files.forEach(file => formData.append('files', file));
 
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos`, {
-      method: 'POST',
-      headers: authHeadersWithoutContentType(),
-      body: formData,
-      // Don't set Content-Type header for FormData, browser sets it with boundary
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
+      
+      const accessToken = AuthService.getToken();
+      if (accessToken) {
+        xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+      }
+      
+      if (onProgress) {
+        xhr.upload.onprogress = (event) => {
+            if (event.lengthComputable) {
+                const percent = Math.round((event.loaded / event.total) * 100);
+                onProgress(percent);
+            }
+        };
+      }
+      
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+           try {
+             resolve(JSON.parse(xhr.responseText));
+           } catch (e) {
+             reject(e);
+           }
+        } else {
+           try {
+             const err = JSON.parse(xhr.responseText);
+             reject(new Error(err.detail || err.message || xhr.statusText));
+           } catch {
+             reject(new Error(xhr.statusText));
+           }
+        }
+      };
+      
+      xhr.onerror = () => reject(new Error('Network Error'));
+      xhr.send(formData);
     });
-    return handleResponse<Photo[]>(response);
   },
 
   movePhoto: async (photoId: string, targetClusterId: string): Promise<void> => {
@@ -197,6 +235,6 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/export/download`, { 
       headers: authJsonHeaders(),
     });
-    return handleResponse<FileRespoonse>(response);
+    return handleResponse<FileResponse>(response);
   }
 };

@@ -42,7 +42,7 @@ export interface Token {
   token_type: string; // 'bearer'
 }
 
-export interface FileRespoonse {
+export interface FileResponse {
   path: string;
   filename: string;
   media_type: string;
