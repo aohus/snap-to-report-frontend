@@ -70,7 +70,7 @@ export const PhotoCard = React.memo(function PhotoCard({
             <img
               // 1. 썸네일이 있다면 우선 사용, 없다면 원본 사용 (백엔드 필드 확인 필요)
               // 예: src={photo.thumbnail_url || photo.url} 
-              src={photo.url} 
+              src={photo.thumbnail_path || photo.url} 
               alt={photo.original_filename}
               className="w-full h-full object-cover transition-transform group-hover:scale-105"
               loading="lazy"
