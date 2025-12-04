@@ -1,7 +1,7 @@
 import { Job, Cluster, ExportStatus, Photo, FileResponse } from '@/types';
 import { AuthService } from './auth';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+const API_BASE_URL = '/api';
 
 // JSON 요청용 + Authorization 헤더 조합
 function authJsonHeaders(): HeadersInit {
