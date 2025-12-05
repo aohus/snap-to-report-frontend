@@ -203,7 +203,9 @@ export const api = {
           const compressedBatch = await Promise.all(
             batch.map(async (file) => {
               try {
-                return await compressImage(file);
+                const compressed = await compressImage(file);
+                // Ensure original filename is preserved
+                return new File([compressed], file.name, { type: compressed.type });
               } catch (error) {
                 console.warn(`Compression failed for ${file.name}, uploading original.`, error);
                 return file;
@@ -237,18 +239,19 @@ export const api = {
                 filename: u.filename,
                 storage_path: u.storage_path
               })));
-
+              
               uploadedViaPresigned = true;
             }
           } catch (error) {
             console.warn("Presigned upload failed, falling back to server upload:", error);
             // Fallthrough to standard upload
           }
-
+          
           if (!uploadedViaPresigned) {
             const formData = new FormData();
             compressedBatch.forEach(file => formData.append('files', file));
-
+            
+            console.log(files)
             try {
               await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
