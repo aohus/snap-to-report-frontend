@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
 import { Upload, FileImage, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { compressImage } from '@/lib/image';
 
 interface PhotoUploaderProps {
   onUpload: (files: File[]) => Promise<void>;
@@ -12,6 +13,7 @@ interface PhotoUploaderProps {
 
 export function PhotoUploader({ onUpload, isUploading, progress }: PhotoUploaderProps) {
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [isCompressing, setIsCompressing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -40,8 +42,19 @@ export function PhotoUploader({ onUpload, isUploading, progress }: PhotoUploader
 
   const handleUploadClick = async () => {
     if (selectedFiles.length === 0) return;
-    await onUpload(selectedFiles);
-    setSelectedFiles([]);
+    
+    setIsCompressing(true);
+    try {
+      const compressedFiles = await Promise.all(
+        selectedFiles.map(file => compressImage(file))
+      );
+      await onUpload(compressedFiles);
+      setSelectedFiles([]);
+    } catch (error) {
+      console.error("Error compressing or uploading files:", error);
+    } finally {
+      setIsCompressing(false);
+    }
   };
 
   return (
@@ -106,21 +119,25 @@ export function PhotoUploader({ onUpload, isUploading, progress }: PhotoUploader
             <Button 
               className="w-full" 
               onClick={handleUploadClick} 
-              disabled={isUploading}
+              disabled={isUploading || isCompressing}
             >
-              {isUploading ? '사진을 등록 중입니다...' : '사진 등록하기'}
+              {isCompressing 
+                ? '사진 압축 중...' 
+                : isUploading 
+                  ? '사진을 등록 중입니다...' 
+                  : '사진 등록하기'}
             </Button>
           </CardContent>
         </Card>
       )}
       
-      {isUploading && (
+      {(isUploading || isCompressing) && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>Uploading...</span>
-            <span>{progress ? `${progress}%` : 'Please wait'}</span>
+            <span>{isCompressing ? 'Compressing images...' : 'Uploading...'}</span>
+            <span>{isCompressing ? '' : progress ? `${progress}%` : 'Please wait'}</span>
           </div>
-          <Progress value={progress} className="w-full" />
+          <Progress value={isCompressing ? undefined : progress} className="w-full" />
         </div>
       )}
     </div>
