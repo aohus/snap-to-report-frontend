@@ -14,6 +14,10 @@ export default function Signup() {
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (registerForm.username.length < 6) {
+      toast.error('아이디는 최소 6자 이상이어야 합니다');
+      return;
+    }
 
     if (registerForm.password !== registerForm.confirmPassword) {
       toast.error('비밀번호가 일치하지 않습니다');
