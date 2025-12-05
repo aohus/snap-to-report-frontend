@@ -1,6 +1,6 @@
 import { Job, Cluster, ExportStatus, Photo, FileResponse } from '@/types';
 import { AuthService } from './auth';
-import { compressImage } from './image';
+import { compressImage, isJPEGFile } from './image'; // Import isJPEGFile
 
 const API_BASE_URL = '/api';
 
@@ -148,13 +148,15 @@ export const api = {
   },
 
   // Photo Management
-  getUploadUrls: async (jobId: string, files: File[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
-    const fileInfos = files.map(f => ({ filename: f.name, content_type: f.type }));
+  getUploadUrls: async (jobId: string, files: { filename: string; content_type: string }[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
+    const fileInfos = files.map(f => ({ filename: f.filename, content_type: f.content_type }));
+    console.log("calling presigned with:", fileInfos);
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
       method: 'POST',
       headers: authJsonHeaders(),
       body: JSON.stringify(fileInfos),
     });
+    console.log("calling presigned with:", response);
     return handleResponse(response);
   },
 
@@ -199,11 +201,16 @@ export const api = {
           const batch = batches.shift();
           if (!batch) break;
 
-          // Compress images before upload to improve speed
+          // Conditionally compress images before upload to improve speed, only for JPEGs
           const compressedBatch = await Promise.all(
             batch.map(async (file) => {
               try {
-                return await compressImage(file);
+                if (isJPEGFile(file)) { // Only compress if it's a JPEG
+                  return await compressImage(file);
+                } else {
+                  console.log(`Skipping compression for non-JPEG file: ${file.name}`);
+                  return file; // Return original file if not JPEG
+                }
               } catch (error) {
                 console.warn(`Compression failed for ${file.name}, uploading original.`, error);
                 return file;
@@ -217,11 +224,12 @@ export const api = {
           try {
             // Use original filenames but compressed file types for requesting upload URLs
             const fileInfos = compressedBatch.map((f, i) => ({
-              name: batch[i].name,
-              type: f.type,
-            })) as unknown as File[];
+              filename: batch[i].name,
+              content_type: f.type,
+            }));
 
             const { strategy, urls } = await api.getUploadUrls(jobId, fileInfos);
+            console.log("PRESIGNED RESPONSE:", { strategy, urls });
 
             if (strategy === 'presigned' && urls.length === compressedBatch.length) {
               // Upload directly to storage (S3/GCS)
