@@ -32,13 +32,13 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>Enter your credentials to access the Photo Cluster Service</CardDescription>
+          <CardTitle>로그인</CardTitle>
+          <CardDescription>아이디와 비밀번호를 입력해주세요.</CardDescription>
         </CardHeader>
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="login-username">ID</Label>
+              <Label htmlFor="login-username">아이디</Label>
               <Input
                 id="login-username"
                 type="text"
@@ -49,7 +49,7 @@ export default function Login() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="login-password">PASSWORD</Label>
+              <Label htmlFor="login-password">비밀번호</Label>
               <Input
                 id="login-password"
                 type="password"
@@ -63,7 +63,7 @@ export default function Login() {
           <CardFooter className="flex flex-col space-y-2">
             <Button type="submit" className="w-full">로그인</Button>
             <div className="text-sm text-center text-gray-500">
-              Don't have an account? <Link to="/signup" className="text-blue-600 hover:underline">Sign up</Link>
+              회원가입이 필요하신가요? <Link to="/signup" className="text-blue-600 hover:underline">회원가입</Link>
             </div>
           </CardFooter>
         </form>

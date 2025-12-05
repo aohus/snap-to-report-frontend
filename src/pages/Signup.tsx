@@ -8,9 +8,9 @@ import { AuthService } from '@/lib/auth';
 import { toast } from 'sonner';
 
 export default function Signup() {
-  // const navigate = useNavigate();
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '', confirmPassword: '' });
+  const [registerForm, setRegisterForm] = useState({ username: '', password: '', confirmPassword: '' });
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,9 +28,10 @@ export default function Signup() {
     setIsLoading(true);
 
     try {
-      await AuthService.register(registerForm.username, registerForm.email, registerForm.password);
+      await AuthService.register(registerForm.username,registerForm.password, registerForm.company_name);
       toast.success('회원가입 성공! 로그인해주세요.');
-      setRegisterForm({ username: '', email: '', password: '', confirmPassword: '' });
+      navigate('/');
+      setRegisterForm({ username: '', password: '', confirmPassword: '', company_name: '' });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '회원가입 실패');
     } finally {
@@ -42,17 +43,17 @@ export default function Signup() {
     <div className="min-h-screen flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Sign Up</CardTitle>
-          <CardDescription>Create a new account</CardDescription>
+          <CardTitle>회원가입</CardTitle>
+          <CardDescription>새로운 계정을 만드세요.</CardDescription>
         </CardHeader>
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="register-username">사용자명</Label>
+              <Label htmlFor="register-username">아이디</Label>
               <Input
                 id="register-username"
                 type="text"
-                placeholder="사용자명 (3자 이상)"
+                placeholder="아이디 (6자 이상)"
                 value={registerForm.username}
                 onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
                 required
@@ -60,13 +61,13 @@ export default function Signup() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="register-email">이메일</Label>
+              <Label htmlFor="company-name">회사명(선택)</Label>
               <Input
-                id="register-email"
-                type="email"
-                placeholder="이메일을 입력하세요"
-                value={registerForm.email}
-                onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                id="company-name"
+                type="text"
+                placeholder="회사명을 입력하세요"
+                value={registerForm.company_name}
+                onChange={(e) => setRegisterForm({ ...registerForm, company_name: e.target.value })}
                 required
               />
             </div>
@@ -97,7 +98,7 @@ export default function Signup() {
           <CardFooter className="flex flex-col space-y-2">
             <Button type="submit" className="w-full">회원가입</Button>
             <div className="text-sm text-center text-gray-500">
-              이미 계정이 있으신가요? <Link to="/login" className="text-blue-600 hover:underline">Login</Link>
+              이미 계정이 있으신가요? <Link to="/login" className="text-blue-600 hover:underline">로그인</Link>
             </div>
           </CardFooter>
         </form>

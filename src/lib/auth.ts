@@ -8,7 +8,6 @@ interface LoginResponse {
 interface UserResponse {
   user_id: string;
   username: string;
-  email: string;
   created_at: string;
 }
 
@@ -31,13 +30,13 @@ export class AuthService {
     return !!this.getToken();
   }
 
-  static async register(username: string, email: string, password: string): Promise<UserResponse> {
+  static async register(username: string, password: string, company_name?: string): Promise<UserResponse> {
     const response = await fetch(`${API_BASE_URL}/auth/register`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ username, email, password }),
+      body: JSON.stringify({ username, password, company_name }),
     });
 
     if (!response.ok) {

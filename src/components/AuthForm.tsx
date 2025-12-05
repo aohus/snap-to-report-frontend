@@ -14,7 +14,7 @@ interface AuthFormProps {
 export default function AuthForm({ onSuccess }: AuthFormProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
-  const [registerForm, setRegisterForm] = useState({ username: '', email: '', password: '', confirmPassword: '' });
+  const [registerForm, setRegisterForm] = useState({ username: '', password: '', confirmPassword: '' });
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,7 +49,7 @@ export default function AuthForm({ onSuccess }: AuthFormProps) {
     try {
       await AuthService.register(registerForm.username, registerForm.email, registerForm.password);
       toast.success('회원가입 성공! 로그인해주세요.');
-      setRegisterForm({ username: '', email: '', password: '', confirmPassword: '' });
+      setRegisterForm({ username: '', password: '', confirmPassword: '' });
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '회원가입 실패');
     } finally {
