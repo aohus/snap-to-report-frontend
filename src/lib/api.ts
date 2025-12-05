@@ -147,15 +147,15 @@ export const api = {
   },
 
   // Photo Management
-  getUploadUrls: async (jobId: string, files: File[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
-    const fileInfos = files.map(f => ({ filename: f.name, content_type: f.type }));
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
-      method: 'POST',
-      headers: authJsonHeaders(),
-      body: JSON.stringify(fileInfos),
-    });
-    return handleResponse(response);
-  },
+  // getUploadUrls: async (jobId: string, files: File[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
+  //   const fileInfos = files.map(f => ({ filename: f.name, content_type: f.type }));
+  //   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
+  //     method: 'POST',
+  //     headers: authJsonHeaders(),
+  //     body: JSON.stringify(fileInfos),
+  //   });
+  //   return handleResponse(response);
+  // },
 
   notifyUploadComplete: async (jobId: string, uploadedFiles: { filename: string; storage_path: string }[]): Promise<Photo[]> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/complete`, {
@@ -163,18 +163,14 @@ export const api = {
       headers: authJsonHeaders(),
       body: JSON.stringify(uploadedFiles),
     });
-    // The backend returns PhotoUploadResponse which contains count, but here we might want actual photos?
-    // The backend service returns list[Photo], but the endpoint returns PhotoUploadResponse wrapper.
-    // Let's adjust expectation: The current endpoint returns { job_id, file_count }.
-    // If we need photo objects, we might need to fetch them again or update backend return type.
-    // For now, returning empty array or refetching photos is safer.
     return []; 
   },
 
   uploadPhotos: async (jobId: string, files: File[], onProgress?: (percent: number) => void): Promise<Photo[]> => {
     try {
-      // 1. Get Upload URLs
-      const { strategy, urls } = await api.getUploadUrls(jobId, files);
+      // 1. Get Upload URLs (Required for initialization)
+      // await api.getUploadUrls(jobId, files);
+      
       const totalFiles = files.length;
       let completedFiles = 0;
 
@@ -185,100 +181,68 @@ export const api = {
         }
       };
 
-      // /*
-      // Direct upload strategy (GCS Signed URL) is temporarily disabled for future use.
-      // The 'urls' variable, which contains 'upload_url', is obtained but not currently used.
-      // Uncomment this block to re-enable direct uploads based on 'strategy === "direct"'.
-      // if (strategy === 'direct') {
-      //   // Direct Upload Strategy (GCS Signed URL)
-      //   const uploadedFilesInfo: { filename: string; storage_path: string }[] = [];
-        
-      //   // Upload in batches to avoid browser connection limits
-      //   const BATCH_SIZE = 5;
-      //   for (let i = 0; i < files.length; i += BATCH_SIZE) {
-      //     const batch = files.slice(i, i + BATCH_SIZE);
-      //     await Promise.all(batch.map(async (file) => {
-      //       const fileUrlInfo = urls.find(u => u.filename === file.name);
-      //       if (fileUrlInfo && fileUrlInfo.upload_url) {
-      //         await fetch(fileUrlInfo.upload_url, {
-      //           method: 'PUT',
-      //           body: file,
-      //           headers: {
-      //             'Content-Type': file.type
-      //           }
-      //         });
-      //         uploadedFilesInfo.push({ filename: file.name, storage_path: fileUrlInfo.storage_path });
-      //         completedFiles++;
-      //         updateProgress();
-      //       }
-      //     }));
-      //   }
+      // Optimization: Parallel Batch Uploads
+      // We use a queue-based worker pattern to limit concurrency while maximizing throughput.
+      const BATCH_SIZE = 5;
+      const MAX_CONCURRENCY = 3; // Limit parallel requests to avoid browser stalling
 
-      //   // Notify Backend
-      //   await api.notifyUploadComplete(jobId, uploadedFilesInfo);
-        
-      //   // Since notifyUploadComplete doesn't return full photo objects in current schema,
-      //   // we fetch the updated photo list.
-      //   const clusterData = await api.getPhotos(jobId); 
-      //   // getPhotos returns Cluster[], we need to extract photos if needed or just return valid response.
-      //   // The original interface returned Photo[]. The getPhotos implementation actually calls endpoints returning Photo[].
-      //   // Wait, api.getPhotos implementation above calls `/jobs/${jobId}/photos` (GET) which usually returns Photo list?
-      //   // Let's look at `getPhotos` impl: `return handleResponse<Photo[]>(response);` -> It returns `Photo[]`.
-      //   // But the return type annotation says `Promise<Cluster[]>`. That seems like a typo in existing code.
-      //   // Assuming it returns Photo[], we are good.
-      //   return clusterData as unknown as Photo[]; 
+      // Create all batches first
+      const batches: File[][] = [];
+      for (let i = 0; i < files.length; i += BATCH_SIZE) {
+        batches.push(files.slice(i, i + BATCH_SIZE));
+      }
 
-      // }
-      // */
-        
-        // Proxy Strategy (Fallback to backend upload)
-        // Upload in batches to avoid 413 Request Entity Too Large (Nginx limit)
-        const BATCH_SIZE = 5;
+      // Worker function to process batches from the queue
+      const uploadWorker = async () => {
+        while (batches.length > 0) {
+          const batch = batches.shift();
+          if (!batch) break;
 
-        for (let i = 0; i < files.length; i += BATCH_SIZE) {
-          const batch = files.slice(i, i + BATCH_SIZE);
           const formData = new FormData();
           batch.forEach(file => formData.append('files', file));
 
-          await new Promise((resolve, reject) => {
-            const xhr = new XMLHttpRequest();
-            xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
-            
-            const accessToken = AuthService.getToken();
-            if (accessToken) {
-              xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-            }
-            
-            // For individual batch progress, we could track it, but global progress is simpler
-            // to update after each batch or roughly during batch.
-            // Let's update progress based on batch completion for simplicity in this sequential flow,
-            // or try to hook into xhr.upload.onprogress for smoother updates if needed.
-            // Given the sequential nature, we can just increment completedFiles after success.
-            
-            xhr.onload = () => {
-              if (xhr.status >= 200 && xhr.status < 300) {
-                 try {
-                   resolve(undefined);
-                 } catch (e) {
-                   reject(e);
-                 }
-              } else {
-                 reject(new Error(xhr.statusText));
+          try {
+            await new Promise((resolve, reject) => {
+              const xhr = new XMLHttpRequest();
+              xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
+              
+              const accessToken = AuthService.getToken();
+              if (accessToken) {
+                xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
               }
-            };
-            
-            xhr.onerror = () => reject(new Error('Network Error'));
-            xhr.send(formData);
-          });
+              
+              xhr.onload = () => {
+                if (xhr.status >= 200 && xhr.status < 300) {
+                   resolve(undefined);
+                } else {
+                   reject(new Error(xhr.statusText));
+                }
+              };
+              
+              xhr.onerror = () => reject(new Error('Network Error'));
+              xhr.send(formData);
+            });
 
-          // Update progress
-          completedFiles += batch.length;
-          updateProgress();
+            completedFiles += batch.length;
+            updateProgress();
+          } catch (error) {
+            // If one batch fails, we re-throw to stop the process or handle retry logic.
+            // For now, failing fast.
+            throw error;
+          }
         }
+      };
 
-        // After all batches, fetch actual photos to satisfy return type
-        const photos = await api.getPhotos(jobId);
-        return photos as unknown as Photo[];
+      // Start workers
+      const workers = Array(Math.min(batches.length, MAX_CONCURRENCY))
+        .fill(null)
+        .map(() => uploadWorker());
+
+      await Promise.all(workers);
+
+      // After all batches, fetch actual photos to satisfy return type
+      const photos = await api.getPhotos(jobId);
+      return photos as unknown as Photo[];
 
     } catch (error) {
       console.error("Upload failed", error);
