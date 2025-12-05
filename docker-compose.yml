@@ -1,6 +1,8 @@
 services:
   web:
-    build: .
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
     container_name: photo-organizer-web
     volumes:
       - .:/app
@@ -9,4 +11,4 @@ services:
       - "3000:80"
     restart: always
     environment:
-      - NODE_ENV=production
+      - NODE_ENV=development
