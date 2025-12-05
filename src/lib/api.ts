@@ -203,11 +203,7 @@ export const api = {
           const compressedBatch = await Promise.all(
             batch.map(async (file) => {
               try {
-                const compressed = await compressImage(file);
-                // Ensure original filename is preserved
-                // We use arrayBuffer to ensure data is correctly read from the Blob/File returned by the worker
-                const buffer = await compressed.arrayBuffer();
-                return new File([buffer], file.name, { type: compressed.type });
+                return await compressImage(file);
               } catch (error) {
                 console.warn(`Compression failed for ${file.name}, uploading original.`, error);
                 return file;
@@ -219,7 +215,13 @@ export const api = {
 
           // Try Presigned URL Strategy First
           try {
-            const { strategy, urls } = await api.getUploadUrls(jobId, compressedBatch);
+            // Use original filenames but compressed file types for requesting upload URLs
+            const fileInfos = compressedBatch.map((f, i) => ({
+              name: batch[i].name,
+              type: f.type,
+            })) as unknown as File[];
+
+            const { strategy, urls } = await api.getUploadUrls(jobId, fileInfos);
 
             if (strategy === 'presigned' && urls.length === compressedBatch.length) {
               // Upload directly to storage (S3/GCS)
@@ -251,7 +253,8 @@ export const api = {
           
           if (!uploadedViaPresigned) {
             const formData = new FormData();
-            compressedBatch.forEach(file => formData.append('files', file));
+            // Explicitly use original filename (batch[i].name) because compressed file might have 'blob' or different name
+            compressedBatch.forEach((file, i) => formData.append('files', file, batch[i].name));
             
             try {
               await new Promise((resolve, reject) => {
