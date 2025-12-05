@@ -205,7 +205,9 @@ export const api = {
               try {
                 const compressed = await compressImage(file);
                 // Ensure original filename is preserved
-                return new File([compressed], file.name, { type: compressed.type });
+                // We use arrayBuffer to ensure data is correctly read from the Blob/File returned by the worker
+                const buffer = await compressed.arrayBuffer();
+                return new File([buffer], file.name, { type: compressed.type });
               } catch (error) {
                 console.warn(`Compression failed for ${file.name}, uploading original.`, error);
                 return file;
@@ -251,7 +253,6 @@ export const api = {
             const formData = new FormData();
             compressedBatch.forEach(file => formData.append('files', file));
             
-            console.log(files)
             try {
               await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
