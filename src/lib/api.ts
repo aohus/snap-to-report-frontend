@@ -1,5 +1,6 @@
 import { Job, Cluster, ExportStatus, Photo, FileResponse } from '@/types';
 import { AuthService } from './auth';
+import { compressImage } from './image';
 
 const API_BASE_URL = '/api';
 
@@ -147,15 +148,15 @@ export const api = {
   },
 
   // Photo Management
-  // getUploadUrls: async (jobId: string, files: File[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
-  //   const fileInfos = files.map(f => ({ filename: f.name, content_type: f.type }));
-  //   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
-  //     method: 'POST',
-  //     headers: authJsonHeaders(),
-  //     body: JSON.stringify(fileInfos),
-  //   });
-  //   return handleResponse(response);
-  // },
+  getUploadUrls: async (jobId: string, files: File[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
+    const fileInfos = files.map(f => ({ filename: f.name, content_type: f.type }));
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
+      method: 'POST',
+      headers: authJsonHeaders(),
+      body: JSON.stringify(fileInfos),
+    });
+    return handleResponse(response);
+  },
 
   notifyUploadComplete: async (jobId: string, uploadedFiles: { filename: string; storage_path: string }[]): Promise<Photo[]> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/complete`, {
@@ -198,38 +199,85 @@ export const api = {
           const batch = batches.shift();
           if (!batch) break;
 
-          const formData = new FormData();
-          batch.forEach(file => formData.append('files', file));
-
-          try {
-            await new Promise((resolve, reject) => {
-              const xhr = new XMLHttpRequest();
-              xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
-              
-              const accessToken = AuthService.getToken();
-              if (accessToken) {
-                xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+          // Compress images before upload to improve speed
+          const compressedBatch = await Promise.all(
+            batch.map(async (file) => {
+              try {
+                return await compressImage(file);
+              } catch (error) {
+                console.warn(`Compression failed for ${file.name}, uploading original.`, error);
+                return file;
               }
-              
-              xhr.onload = () => {
-                if (xhr.status >= 200 && xhr.status < 300) {
-                   resolve(undefined);
-                } else {
-                   reject(new Error(xhr.statusText));
-                }
-              };
-              
-              xhr.onerror = () => reject(new Error('Network Error'));
-              xhr.send(formData);
-            });
+            })
+          );
 
-            completedFiles += batch.length;
-            updateProgress();
+          let uploadedViaPresigned = false;
+
+          // Try Presigned URL Strategy First
+          try {
+            const { strategy, urls } = await api.getUploadUrls(jobId, compressedBatch);
+
+            if (strategy === 'presigned' && urls.length === compressedBatch.length) {
+              // Upload directly to storage (S3/GCS)
+              await Promise.all(compressedBatch.map((file, idx) => {
+                const urlInfo = urls[idx];
+                if (!urlInfo.upload_url) throw new Error('Missing upload URL');
+                
+                return fetch(urlInfo.upload_url, {
+                  method: 'PUT',
+                  body: file,
+                  headers: {
+                    'Content-Type': file.type, // Important for some providers
+                  }
+                });
+              }));
+
+              // Notify backend of completion
+              await api.notifyUploadComplete(jobId, urls.map(u => ({
+                filename: u.filename,
+                storage_path: u.storage_path
+              })));
+
+              uploadedViaPresigned = true;
+            }
           } catch (error) {
-            // If one batch fails, we re-throw to stop the process or handle retry logic.
-            // For now, failing fast.
-            throw error;
+            console.warn("Presigned upload failed, falling back to server upload:", error);
+            // Fallthrough to standard upload
           }
+
+          if (!uploadedViaPresigned) {
+            const formData = new FormData();
+            compressedBatch.forEach(file => formData.append('files', file));
+
+            try {
+              await new Promise((resolve, reject) => {
+                const xhr = new XMLHttpRequest();
+                xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
+                
+                const accessToken = AuthService.getToken();
+                if (accessToken) {
+                  xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+                }
+                
+                xhr.onload = () => {
+                  if (xhr.status >= 200 && xhr.status < 300) {
+                     resolve(undefined);
+                  } else {
+                     reject(new Error(xhr.statusText));
+                  }
+                };
+                
+                xhr.onerror = () => reject(new Error('Network Error'));
+                xhr.send(formData);
+              });
+            } catch (error) {
+              // If one batch fails, we re-throw to stop the process or handle retry logic.
+              throw error;
+            }
+          }
+
+          completedFiles += batch.length;
+          updateProgress();
         }
       };
 
