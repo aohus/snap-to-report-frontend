@@ -56,7 +56,7 @@ export async function compressImage(
     const bitmap = await createImageBitmap(file);
 
     // 5) Orientation 보정된 canvas 생성
-    const { canvas: orientedCanvas } = prepareOrientedCanvas(bitmap, orientation);
+    const { canvas: orientedCanvas } = prepareOrientedCanvas(bitmap);
 
     // 6) 목표 크기 계산 및 리사이즈 Canvas 생성
     const ratio = Math.min(
@@ -91,10 +91,7 @@ export async function compressImage(
       });
     }
 
-    // 9) Orientation 보정했으므로 EXIF.orientation=1로 강제 업데이트 가능
-    originalExif["0th"][piexif.ImageIFD.Orientation] = 1;
-
-    // 10) 원본 EXIF → 압축된 JPEG에 재삽입
+    // 9) 원본 EXIF → 압축된 JPEG에 재삽입
     let exifInserted = jpegDataUrl;
 
     if (originalExif) {
@@ -159,46 +156,15 @@ async function readOrientation(arrayBuffer: ArrayBuffer): Promise<number> {
 }
 
 function prepareOrientedCanvas(
-  bitmap: ImageBitmap,
-  orientation: number
+  bitmap: ImageBitmap
 ): { canvas: HTMLCanvasElement } {
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d")!;
 
-  const w = bitmap.width;
-  const h = bitmap.height;
+  canvas.width = bitmap.width;
+  canvas.height = bitmap.height;
 
-  canvas.width = w;
-  canvas.height = h;
-
-  switch (orientation) {
-    case 2:
-      ctx.translate(w, 0); ctx.scale(-1, 1);
-      break;
-    case 3:
-      ctx.translate(w, h); ctx.rotate(Math.PI);
-      break;
-    case 4:
-      ctx.translate(0, h); ctx.scale(1, -1);
-      break;
-    case 5:
-      canvas.width = h; canvas.height = w;
-      ctx.rotate(0.5 * Math.PI); ctx.scale(1, -1);
-      break;
-    case 6:
-      canvas.width = h; canvas.height = w;
-      ctx.rotate(0.5 * Math.PI); ctx.translate(0, -h);
-      break;
-    case 7:
-      canvas.width = h; canvas.height = w;
-      ctx.rotate(0.5 * Math.PI); ctx.translate(w, -h); ctx.scale(-1, 1);
-      break;
-    case 8:
-      canvas.width = h; canvas.height = w;
-      ctx.rotate(-0.5 * Math.PI); ctx.translate(-w, 0);
-      break;
-  }
-
+  // Simply draw the image without any orientation correction
   ctx.drawImage(bitmap, 0, 0);
   return { canvas };
 }
