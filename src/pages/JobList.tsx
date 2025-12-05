@@ -61,11 +61,17 @@ export default function JobList() {
 
   const handleDownload = async (jobId: string) => {
     try {
-      await api.getDownloadUrl(jobId);
+      const response = await api.getDownloadUrl(jobId);
+      if (response.path) {
+        const link = document.createElement('a');
+        link.href = response.path;
+        link.setAttribute('download', response.filename || 'download');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
     } catch (error) {
-      toast.error('Failed to get pdf');
-    } finally {
-      loadJobs();
+      toast.error('Failed to download pdf');
     }
   }
 
