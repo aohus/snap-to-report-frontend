@@ -17,8 +17,8 @@ import EXIF from "exif-js";
  */
 export async function compressImage(
   file: File,
-  maxWidth: number = 2440,
-  maxHeight: number = 2440,
+  maxWidth: number = 1920,
+  maxHeight: number = 1920,
   quality: number = 0.8
 ): Promise<File> {
   try {
