@@ -369,10 +369,11 @@ export const api = {
   },
 
   // Export
-  startExport: async (jobId: string): Promise<ExportStatus> => {
+  startExport: async (jobId: string, metadata?: { title?: string, construction_type?: string, company_name?: string }): Promise<ExportStatus> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/export`, {
       method: 'POST',
       headers: authJsonHeaders(),
+      body: JSON.stringify(metadata || {}),
     });
     return handleResponse<ExportStatus>(response);
   },
