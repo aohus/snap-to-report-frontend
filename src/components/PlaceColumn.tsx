@@ -69,7 +69,7 @@ export function PlaceColumn({
 
   return (
     <div className="flex flex-col h-full min-w-[460px] w-[460px] bg-gray-100/50 rounded-lg border border-gray-200 shadow-sm">
-      <div className="p-3 border-b bg-white rounded-t-lg flex flex-col gap-2 sticky top-0 z-10">
+      <div className="p-2 border-b bg-white rounded-t-lg flex flex-col gap-2 sticky top-0 z-10">
         <div className="flex items-center justify-between gap-2">
           {isEditing ? (
             <div className="flex items-center gap-1 w-full">
@@ -157,7 +157,7 @@ export function PlaceColumn({
                 <DropdownMenuItem 
                   onClick={() => onCreate(cluster.order_index, selectedPhotoIds)}
                 >
-                  <MoveDown className="mr-2 h-4 w-4" />
+                  <ArrowRight className="mr-2 h-4 w-4" />
                   <span>선택 사진 옆에 추가</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onCreate(cluster.order_index, [])}>

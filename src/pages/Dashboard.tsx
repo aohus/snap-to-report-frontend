@@ -341,7 +341,6 @@ export default function Dashboard() {
     setExporting(true);
     
     try {
-      await api.updateJob(job.id, exportMetadata);
       await api.startExport(job.id);
       
       const interval = setInterval(async () => {
