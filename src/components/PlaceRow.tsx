@@ -247,7 +247,7 @@ export function PlaceRow({
             {[...cluster.photos]
               .sort((a, b) => a.order_index - b.order_index) // 숫자 오름차순 정렬
               .map((photo, index) => (
-                <div key={photo.id} className={isCompact ? "w-[100px] h-[75px] md:w-[120px] md:h-[90px] flex-shrink-0" : ""}>
+                <div key={photo.id}>
                   <PhotoCard 
                     photo={photo}
                     index={index}

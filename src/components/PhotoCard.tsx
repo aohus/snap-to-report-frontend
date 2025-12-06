@@ -37,7 +37,7 @@ export const PhotoCard = React.memo(function PhotoCard({
             relative group flex flex-col bg-white rounded-xl shadow-sm overflow-hidden cursor-grab active:cursor-grabbing
             transition-all duration-200 ease-in-out
             ${isCompact 
-              ? 'w-[100px] h-[75px] md:w-[120px] md:h-[90px] rounded-md' 
+              ? 'w-[200px] h-[150px] md:w-[240px] md:h-[180px] rounded-md' 
               : 'w-[280px] h-[160px] sm:w-[340px] sm:h-[200px] md:w-[420px] md:h-[240px]'
             }
             ${snapshot.isDragging ? 'shadow-2xl ring-4 ring-blue-500 z-50 scale-105 rotate-2' : 'border border-gray-200 hover:border-blue-400 hover:shadow-md'}
