@@ -159,7 +159,7 @@ export function PlaceRow({
               </div>
 
               {selectedPhotoIds.length > 0 ? (
-                <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+                <DropdownMenu open={isOpen} onOpenChange={setIsOpen} >
                   <DropdownMenuTrigger asChild>
                     <div 
                       onMouseEnter={() => setIsOpen(true)} 
@@ -170,6 +170,7 @@ export function PlaceRow({
                         size="sm" 
                         variant="outline" 
                         className={`border-2 border-green-600 bg-green-600 text-white hover:bg-green-700 ml-auto md:ml-0 ${isCompact ? 'h-7 px-2 text-xs' : 'h-8 md:h-10 px-2 md:px-4 text-xs md:text-base'}`} 
+                        onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotoIds)}
                       >
                         <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-4 h-4 md:w-6 md:h-6 md:mr-2"} /> 
                         <span className={isCompact ? "" : "hidden md:inline"}>

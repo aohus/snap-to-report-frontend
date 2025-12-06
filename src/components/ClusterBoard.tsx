@@ -3,7 +3,7 @@ import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { Cluster } from '@/types';
 import { PlaceRow } from './PlaceRow';
 import { PhotoCard } from './PhotoCard';
-import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, LayoutList, Rows } from 'lucide-react';
+import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, LayoutList, Rows, Eye, EyeOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -24,6 +24,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
   const isMobile = useIsMobile();
   const [isCompact, setIsCompact] = useState(false);
   const [collapsedClusterIds, setCollapsedClusterIds] = useState<Set<string>>(new Set());
+  const [hideCompleted, setHideCompleted] = useState(false);
 
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -71,6 +72,11 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
       return next;
     });
   };
+
+  const displayedClusters = placeClusters.filter(c => {
+    if (hideCompleted && c.photos.length >= 3) return false;
+    return true;
+  });
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
@@ -127,6 +133,16 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
             <Button
               variant="outline"
               size="sm"
+              onClick={() => setHideCompleted(!hideCompleted)}
+              className="text-xs md:text-sm h-8"
+              title={hideCompleted ? "완료된 항목 보이기" : "완료된 항목 감추기"}
+            >
+              {hideCompleted ? <Eye className="w-4 h-4 md:mr-1" /> : <EyeOff className="w-4 h-4 md:mr-1" />}
+              <span className="hidden md:inline">{hideCompleted ? "완료 보이기" : "완료 감추기"}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={toggleCollapseCompleted}
               className="text-xs md:text-sm h-8"
               title={areAllCompletedCollapsed ? "완료된 항목 펼치기" : "완료된 항목 접기"}
@@ -146,8 +162,8 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
             </Button>
           </div>
 
-          <div className="space-y-4 md:space-y-8">
-            {placeClusters.map((cluster) => (
+          <div className={isCompact ? "grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 items-start" : "space-y-4 md:space-y-8"}>
+            {displayedClusters.map((cluster) => (
               <PlaceRow
                 key={cluster.id}
                 cluster={cluster}
