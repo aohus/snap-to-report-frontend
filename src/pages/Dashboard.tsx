@@ -7,7 +7,7 @@ import { Job, Cluster, Photo } from '@/types';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { PhotoGrid } from '@/components/PhotoGrid';
 import { ClusterBoard } from '@/components/ClusterBoard';
-import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft } from 'lucide-react';
+import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
@@ -22,6 +22,36 @@ export default function Dashboard() {
   const [isClustering, setIsClustering] = useState(false);
   const [exporting, setExporting] = useState(false);
   const isSelectionLoaded = useRef(false);
+  const [saving, setSaving] = useState(false);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialLoad = useRef(true);
+
+  // Auto-save effect
+  useEffect(() => {
+    if (isInitialLoad.current) {
+      if (clusters.length > 0) isInitialLoad.current = false;
+      return;
+    }
+
+    if (!job) return;
+
+    setSaving(true);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await api.syncClusters(job.id, clusters);
+        setSaving(false);
+      } catch (error) {
+        console.error("Auto-save failed", error);
+        setSaving(false);
+      }
+    }, 2000);
+
+    return () => {
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+    };
+  }, [clusters, job]);
 
   // Load selection from local storage
   useEffect(() => {
@@ -132,7 +162,6 @@ export default function Dashboard() {
   };
 
   const handleMovePhoto = async (photoId: string, sourceClusterId: string, targetClusterId: string) => {
-    // Optimistic update
     const newClusters = clusters.map(c => {
       if (c.id === sourceClusterId) {
         return { ...c, photos: c.photos.filter(p => p.id !== photoId) };
@@ -147,21 +176,9 @@ export default function Dashboard() {
       return c;
     });
     setClusters(newClusters);
-
-    try {
-      await api.movePhoto(photoId, targetClusterId);
-      const cls = await api.getClusters(job!.id);
-      setClusters(cls);
-    } catch (error) {
-      toast.error('Failed to move photo');
-      // Revert on failure
-      const cls = await api.getClusters(job!.id);
-      setClusters(cls);
-    }
   };
 
   const handleDeletePhoto = async (photoId: string, clusterId: string) => {
-    // Optimistic update
     const newClusters = clusters.map(c => {
         if (c.id === clusterId) {
             return { ...c, photos: c.photos.filter(p => p.id !== photoId) };
@@ -175,35 +192,39 @@ export default function Dashboard() {
         toast.success('Photo deleted');
     } catch (error) {
         toast.error('Failed to delete photo');
-        const cls = await api.getClusters(job!.id);
-        setClusters(cls);
     }
   };
 
   const handleRenameCluster = async (clusterId: string, newName: string) => {
     setClusters(prev => prev.map(c => c.id === clusterId ? { ...c, name: newName } : c));
-    try {
-      await api.updateCluster(clusterId, { new_name: newName });
-    } catch (error) {
-      toast.error('Failed to rename place');
-    }
   };
 
   const handleDeleteCluster = async (clusterId: string) => {
     if (!confirm('Are you sure you want to delete this place? Photos will be moved to reserve.')) return;
 
-    // Optimistic update
-    const newClusters = clusters.filter(c => c.id !== clusterId);
+    const clusterToDelete = clusters.find(c => c.id === clusterId);
+    const reserveCluster = clusters.find(c => c.name === 'reserve');
+    
+    let newClusters = clusters;
+    
+    // Optimistically move photos to reserve if it exists
+    if (clusterToDelete && reserveCluster && clusterToDelete.photos.length > 0) {
+       newClusters = newClusters.map(c => {
+           if (c.id === reserveCluster.id) {
+               return { ...c, photos: [...c.photos, ...clusterToDelete.photos] };
+           }
+           return c;
+       });
+    }
+    
+    newClusters = newClusters.filter(c => c.id !== clusterId);
     setClusters(newClusters);
 
     try {
-      const updatedClusters = await api.deleteCluster(clusterId);
-      setClusters(updatedClusters);
+      await api.deleteCluster(clusterId);
       toast.success('Place deleted');
     } catch (error) {
       toast.error('Failed to delete place');
-      const cls = await api.getClusters(job!.id);
-      setClusters(cls);
     }
   };
 
@@ -217,17 +238,6 @@ export default function Dashboard() {
     const currentCluster = clusters[currentIndex];
     const targetCluster = clusters[targetIndex];
 
-    // Skip if trying to move past 'reserve' or similar logic if needed
-    // Assuming 'reserve' is not in the main list or handled separately. 
-    // In Dashboard.tsx, 'clusters' seems to contain all clusters including reserve?
-    // Actually completedPlaces calculation filters 'reserve'. 
-    // Let's check if 'reserve' is in 'clusters' state.
-    // Yes, 'loadJobData' sets 'clusters' from 'jobData.clusters'.
-    // We should probably exclude 'reserve' from swapping if it's treated specially.
-    // Usually 'reserve' has a specific order_index or is just filtered out in UI.
-    
-    // Optimistic update
-    // We swap the order_index of the two clusters
     const newClusters = [...clusters];
     
     // Swap order_index values
@@ -235,41 +245,28 @@ export default function Dashboard() {
     currentCluster.order_index = targetCluster.order_index;
     targetCluster.order_index = tempOrder;
 
-    // Sort by order_index to reflect change in UI immediately if UI sorts by it
+    // Sort by order_index
     newClusters.sort((a, b) => a.order_index - b.order_index);
     setClusters(newClusters);
-
-    try {
-      await Promise.all([
-        api.updateCluster(currentCluster.id, { order_index: currentCluster.order_index }),
-        api.updateCluster(targetCluster.id, { order_index: targetCluster.order_index })
-      ]);
-    } catch (error) {
-      toast.error('Failed to move place');
-      const cls = await api.getClusters(job!.id);
-      setClusters(cls);
-    }
   };
 
   const handleCreateCluster = async (orderIndex: number, photoIds: string[] = [], clusterId?: string) => {
     if (!job) return;
     try {
+      // API call needed to get valid ID
+      const newCluster = await api.createCluster(job.id, `${job.title}`, orderIndex, photoIds);
+      
+      // Insert into local state
+      const newClusters = [...clusters, newCluster].sort((a, b) => a.order_index - b.order_index);
+      setClusters(newClusters);
+
       if (photoIds.length > 0) {
-        await api.createCluster(job.id, `${job.title}`, orderIndex, photoIds);
-        
-        // Remove used photos from selection
         const remainingSelection = selectedPhotoIds.filter(id => !photoIds.includes(id));
         setSelectedPhotoIds(remainingSelection);
-        // Update local storage immediately (though useEffect handles it, this is safer for immediate logic)
-        // Actually useEffect [selectedPhotoIds] will handle the storage update.
-        
         toast.success(`New place created with ${photoIds.length} photos.`);
       } else {
-        await api.createCluster(job.id, `${job.title}`, orderIndex);
         toast.success('New empty place created.');
       }
-      const clusterData = await api.getClusters(job.id);
-      setClusters(clusterData);
     } catch (error) {
       toast.error('Failed to create new place');
     }
@@ -324,7 +321,17 @@ export default function Dashboard() {
         {clusters.length > 0 && (
           <div className="flex items-center gap-2 md:gap-4">
             <div className="hidden lg:flex flex-col items-end mr-4">
-                <span className="text-xs text-gray-500 font-medium uppercase tracking-wider">Progress</span>
+                <div className="flex items-center gap-2 mb-1">
+                  {saving ? (
+                    <span className="text-xs text-blue-600 font-medium flex items-center gap-1 animate-pulse">
+                      <CloudUpload className="w-3 h-3" /> 저장 중...
+                    </span>
+                  ) : (
+                    <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" /> 저장됨
+                    </span>
+                  )}
+                </div>
                 <span className={`text-lg font-bold ${completedPlaces === totalPlaces && totalPlaces > 0 ? 'text-green-600' : 'text-gray-600'}`}>
                   완료 장소: {completedPlaces} / {totalPlaces} 
                 </span>
