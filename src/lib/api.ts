@@ -62,10 +62,10 @@ export const api = {
     return handleResponse<Job[]>(response);
   },
 
-  createJob: async (title: string, construction_type?: string, client_name?: string): Promise<Job> => {
-    const body: { title: string; construction_type?: string; client_name?: string; } = { title };
+  createJob: async (title: string, construction_type?: string, company_name?: string): Promise<Job> => {
+    const body: { title: string; construction_type?: string; company_name?: string; } = { title };
     if (construction_type) body.construction_type = construction_type;
-    if (client_name) body.client_name = client_name;
+    if (company_name) body.company_name = company_name;
 
     const response = await fetch(`${API_BASE_URL}/jobs`, {
       method: 'POST',

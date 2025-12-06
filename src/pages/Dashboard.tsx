@@ -326,9 +326,6 @@ export default function Dashboard() {
 
   const handleExport = () => {
     if (!job) return;
-    
-    const defaultDate = format(new Date(), 'yyyy-MM-dd');
-
     setExportMetadata({
       title: job.title,
       construction_type: job.construction_type || job.title,

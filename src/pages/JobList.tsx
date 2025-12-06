@@ -16,41 +16,41 @@ export default function JobList() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   
-  // Form State
-  const [newJobTitle, setNewJobTitle] = useState('');
-  const [newJobConstructionType, setNewJobConstructionType] = useState('');
-  const [newJobClientName, setNewJobClientName] = useState('');
-
-  useEffect(() => {
-    loadJobs();
-  }, []);
-
-  const loadJobs = async () => {
-    try {
-      const data = await api.getJobs();
-      setJobs(data);
-    } catch (error) {
-      toast.error('Failed to load jobs');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleCreateJob = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newJobTitle.trim()) return;
-
-    setCreating(true);
-    try {
-      const job = await api.createJob(newJobTitle, newJobConstructionType, newJobClientName);
-      toast.success('Job created successfully');
-      navigate(`/jobs/${job.id}`);
-    } catch (error) {
-      toast.error('Failed to create job');
-    } finally {
-      setCreating(false);
-    }
-  };
+    // Form State
+    const [newJobTitle, setNewJobTitle] = useState('');
+    const [newJobConstructionType, setNewJobConstructionType] = useState('');
+    const [newCompanyName, setNewCompanyName] = useState('');
+  
+    useEffect(() => {
+      loadJobs();
+    }, []);
+  
+    const loadJobs = async () => {
+      try {
+        const data = await api.getJobs();
+        setJobs(data);
+      } catch (error) {
+        toast.error('Failed to load jobs');
+      } finally {
+        setLoading(false);
+      }
+    };
+  
+    const handleCreateJob = async (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newJobTitle.trim()) return;
+  
+      setCreating(true);
+      try {
+        const job = await api.createJob(newJobTitle, newJobConstructionType, newCompanyName);
+        toast.success('Job created successfully');
+        navigate(`/jobs/${job.id}`);
+      } catch (error) {
+        toast.error('Failed to create job');
+      } finally {
+        setCreating(false);
+      }
+    };
 
   const handleDeleteJob = async (jobId: string) => {
     try {
@@ -134,13 +134,12 @@ export default function JobList() {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">시행처 (선택)</label>
               <Input 
-                placeholder="예: 수원시청" 
-                value={newJobClientName}
-                onChange={(e) => setNewJobClientName(e.target.value)}
+                placeholder="예: 튼튼나무병원" 
+                value={newCompanyName}
+                onChange={(e) => setNewCompanyName(e.target.value)}
                 className="h-10"
               />
             </div>
-
             <div className="md:col-span-2 mt-2 flex justify-end">
               <Button type="submit" size="lg" className="w-full md:w-auto text-lg h-12 px-8 bg-blue-600 hover:bg-blue-700" disabled={creating || !newJobTitle.trim()}>
                 {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5 mr-2" />}

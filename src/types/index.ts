@@ -2,7 +2,7 @@ export interface Job {
   id: string;
   title: string;
   construction_type?: string;
-  client_name?: string;
+  company_name?: string;
   status: 'CREATED' | 'UPLOADING' | 'PROCESSING' | 'PENDING' | 'COMPLETED' | 'FAILED'| 'DELETED';
   export_status?: 'PROCESSING' | 'EXPORTED' | 'FAILED' | 'PENDING' ;
   created_at: string;
