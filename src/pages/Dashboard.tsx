@@ -1,6 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { format } from 'date-fns';
 
 import { api } from '@/lib/api';
 import { Job, Cluster, Photo } from '@/types';
@@ -23,35 +34,31 @@ export default function Dashboard() {
   const [exporting, setExporting] = useState(false);
   const isSelectionLoaded = useRef(false);
   const [saving, setSaving] = useState(false);
+  const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [exportMetadata, setExportMetadata] = useState({
+    title: '',
+    construction_type: '',
+    client_name: '',
+  });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
 
-  // Auto-save effect
-  useEffect(() => {
-    if (isInitialLoad.current) {
-      if (clusters.length > 0) isInitialLoad.current = false;
-      return;
-    }
-
+  // Auto-save helper
+  const triggerAutoSave = (updatedClusters: Cluster[]) => {
     if (!job) return;
-
     setSaving(true);
     if (saveTimer.current) clearTimeout(saveTimer.current);
 
     saveTimer.current = setTimeout(async () => {
       try {
-        await api.syncClusters(job.id, clusters);
+        await api.syncClusters(job.id, updatedClusters);
         setSaving(false);
       } catch (error) {
         console.error("Auto-save failed", error);
         setSaving(false);
       }
     }, 2000);
-
-    return () => {
-      if (saveTimer.current) clearTimeout(saveTimer.current);
-    };
-  }, [clusters, job]);
+  };
 
   // Load selection from local storage
   useEffect(() => {
@@ -176,6 +183,7 @@ export default function Dashboard() {
       return c;
     });
     setClusters(newClusters);
+    triggerAutoSave(newClusters);
   };
 
   const handleDeletePhoto = async (photoId: string, clusterId: string) => {
@@ -197,6 +205,12 @@ export default function Dashboard() {
 
   const handleRenameCluster = async (clusterId: string, newName: string) => {
     setClusters(prev => prev.map(c => c.id === clusterId ? { ...c, name: newName } : c));
+    try {
+      await api.updateCluster(clusterId, { new_name: newName });
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to rename place');
+    }
   };
 
   const handleDeleteCluster = async (clusterId: string) => {
@@ -248,6 +262,7 @@ export default function Dashboard() {
     // Sort by order_index
     newClusters.sort((a, b) => a.order_index - b.order_index);
     setClusters(newClusters);
+    triggerAutoSave(newClusters);
   };
 
   const handleCreateCluster = async (orderIndex: number, photoIds: string[] = [], clusterId?: string) => {
@@ -272,11 +287,65 @@ export default function Dashboard() {
     }
   };
 
-  const handleExport = async () => {
-    if (!job) return;
-    setExporting(true);
+  const handleAddPhotosToExistingCluster = async (clusterId: string, photoIds: string[]) => {
+    if (!job || photoIds.length === 0) return;
     try {
+      await api.addPhotosToExistingCluster(clusterId, photoIds);
+      
+      // Update local state by moving photos
+      const newClusters = clusters.map(c => {
+        // Remove moved photos from any cluster
+        let newPhotos = c.photos.filter(p => !photoIds.includes(p.id));
+        
+        // If this is the target cluster, add the photos
+        if (c.id === clusterId) {
+          // Find the photo objects from the current clusters structure
+          const movedPhotos = clusters
+            .flatMap(cl => cl.photos)
+            .filter(p => photoIds.includes(p.id));
+            
+          // Deduplicate just in case
+          const uniqueMovedPhotos = Array.from(new Map(movedPhotos.map(p => [p.id, p])).values());
+          
+          newPhotos = [...newPhotos, ...uniqueMovedPhotos];
+        }
+        return { ...c, photos: newPhotos };
+      });
+      setClusters(newClusters);
+
+      // Remove used photos from selection
+      const remainingSelection = selectedPhotoIds.filter(id => !photoIds.includes(id));
+      setSelectedPhotoIds(remainingSelection);
+
+      toast.success(`Added ${photoIds.length} photos to place.`);
+    } catch (error) {
+      console.error(error);
+      toast.error('Failed to add photos to place');
+    }
+  };
+
+  const handleExport = () => {
+    if (!job) return;
+    
+    const defaultDate = format(new Date(), 'yyyy-MM-dd');
+
+    setExportMetadata({
+      title: job.title,
+      construction_type: job.construction_type || job.title,
+      client_name: job.client_name || '',
+    });
+    setExportDialogOpen(true);
+  };
+
+  const handleConfirmExport = async () => {
+    if (!job) return;
+    setExportDialogOpen(false);
+    setExporting(true);
+    
+    try {
+      await api.updateJob(job.id, exportMetadata);
       await api.startExport(job.id);
+      
       const interval = setInterval(async () => {
         const status = await api.getExportStatus(job.id);
         if (status.status === 'EXPORTED') {
@@ -426,6 +495,9 @@ export default function Dashboard() {
                     clusters={clusters} 
                     onMovePhoto={handleMovePhoto}
                     onCreateCluster={handleCreateCluster}
+                    onDeleteCluster={handleDeleteCluster}
+                    onMoveCluster={handleMoveCluster}
+                    onAddPhotosToExistingCluster={handleAddPhotosToExistingCluster}
                     onRenameCluster={handleRenameCluster}
                     onDeletePhoto={handleDeletePhoto}
                     selectedPhotoIds={selectedPhotoIds}
@@ -436,6 +508,55 @@ export default function Dashboard() {
           )}
         </div>
       </main>
+
+      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>PDF 내보내기 설정</DialogTitle>
+            <DialogDescription>
+              내보내기 전 작업 정보를 확인하고 수정할 수 있습니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                작업명
+              </Label>
+              <Input
+                id="title"
+                value={exportMetadata.title}
+                onChange={(e) => setExportMetadata({ ...exportMetadata, title: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="construction_type" className="text-right">
+                공종명
+              </Label>
+              <Input
+                id="construction_type"
+                value={exportMetadata.construction_type}
+                onChange={(e) => setExportMetadata({ ...exportMetadata, construction_type: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="client_name" className="text-right">
+                시행처
+              </Label>
+              <Input
+                id="client_name"
+                value={exportMetadata.client_name}
+                onChange={(e) => setExportMetadata({ ...exportMetadata, client_name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" onClick={handleConfirmExport}>내보내기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

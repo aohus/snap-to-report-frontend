@@ -62,11 +62,15 @@ export const api = {
     return handleResponse<Job[]>(response);
   },
 
-  createJob: async (title: string): Promise<Job> => {
+  createJob: async (title: string, construction_type?: string, client_name?: string): Promise<Job> => {
+    const body: { title: string; construction_type?: string; client_name?: string; } = { title };
+    if (construction_type) body.construction_type = construction_type;
+    if (client_name) body.client_name = client_name;
+
     const response = await fetch(`${API_BASE_URL}/jobs`, {
       method: 'POST',
       headers: authJsonHeaders(), 
-      body: JSON.stringify({ title }),
+      body: JSON.stringify(body),
     });
     return handleResponse<Job>(response);
   },
@@ -74,6 +78,15 @@ export const api = {
   getJob: async (jobId: string): Promise<Job> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, { 
       headers: authJsonHeaders(), 
+    });
+    return handleResponse<Job>(response);
+  },
+
+  updateJob: async (jobId: string, data: Partial<Job>): Promise<Job> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(),
+      body: JSON.stringify(data),
     });
     return handleResponse<Job>(response);
   },
@@ -118,10 +131,17 @@ export const api = {
   },
 
   syncClusters: async (jobId: string, clusters: Cluster[]): Promise<void> => {
+    const payload = {
+      clusters: clusters.map(c => ({
+        id: c.id,
+        order_index: c.order_index,
+        photo_ids: c.photos.map(p => p.id)
+      }))
+    };
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/clusters/sync`, {
       method: 'PUT',
       headers: authJsonHeaders(),
-      body: JSON.stringify(clusters),
+      body: JSON.stringify(payload),
     });
     return handleResponse<void>(response);
   },
@@ -327,6 +347,15 @@ export const api = {
       method: 'POST',
       headers: authJsonHeaders(),
       body: JSON.stringify({ target_cluster_id: targetClusterId }),
+    });
+    return handleResponse<void>(response);
+  },
+
+  addPhotosToExistingCluster: async (clusterId: string, photoIds: string[]): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/clusters/${clusterId}/add_photos`, {
+      method: 'POST',
+      headers: authJsonHeaders(),
+      body: JSON.stringify({ photo_ids: photoIds }),
     });
     return handleResponse<void>(response);
   },

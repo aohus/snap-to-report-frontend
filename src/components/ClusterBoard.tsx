@@ -8,7 +8,8 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface ClusterBoardProps {
   clusters: Cluster[];
   onMovePhoto: (photoId: string, sourceClusterId: string, targetClusterId: string) => void;
-  onCreateCluster: (order_index: number, photoIds: string[]) => void; // Updated signature
+  onCreateCluster: (order_index: number, photoIds: string[]) => void;
+  onAddPhotosToExistingCluster: (clusterId: string, photoIds: string[]) => void; // New prop
   onRenameCluster: (clusterId: string, newName: string) => void;
   onDeletePhoto: (photoId: string, clusterId: string) => void;
   onDeleteCluster: (clusterId: string) => void;
@@ -17,7 +18,7 @@ interface ClusterBoardProps {
   onSelectPhoto: (photoId: string) => void;
 }
 
-export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotoIds, onSelectPhoto }: ClusterBoardProps) {
+export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotoIds, onSelectPhoto }: ClusterBoardProps) {
   const isMobile = useIsMobile();
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -88,7 +89,8 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onRename
             <PlaceRow
               key={cluster.id}
               cluster={cluster}
-              onCreate={onCreateCluster}
+              onCreate={(order_index, photoIds) => onCreateCluster(order_index, photoIds)} // Pass new prop
+              onAddPhotosToExistingCluster={(clusterId, photoIds) => onAddPhotosToExistingCluster(clusterId, photoIds)} // Pass new prop
               onRename={onRenameCluster}
               onDeletePhoto={(pid) => onDeletePhoto(pid, cluster.id)}
               onDeleteCluster={onDeleteCluster}

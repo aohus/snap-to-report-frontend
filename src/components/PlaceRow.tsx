@@ -10,11 +10,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Pencil, Check, AlertCircle, Plus, CheckCircle2, ArrowUp, ArrowDown, Trash2, Image as ImageIcon, BoxSelect } from 'lucide-react';
+import { Pencil, Check, AlertCircle, Plus, CheckCircle2, ArrowUp, ArrowDown, Trash2, Image as ImageIcon, MoveDown, BringToFront } from 'lucide-react';
 
 interface PlaceRowProps {
   cluster: Cluster;
   onCreate: (order_index: number, photoIds: string[]) => void;
+  onAddPhotosToExistingCluster: (clusterId: string, photoIds: string[]) => void; // New prop
   onRename: (clusterId: string, newName: string) => void;
   onDeletePhoto?: (photoId: string) => void;
   onDeleteCluster: (clusterId: string) => void;
@@ -24,7 +25,7 @@ interface PlaceRowProps {
 }
 
 
-export function PlaceRow({ cluster, onCreate, onRename, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotoIds, onSelectPhoto }: PlaceRowProps) {
+export function PlaceRow({ cluster, onCreate, onAddPhotosToExistingCluster, onRename, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotoIds, onSelectPhoto }: PlaceRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState(cluster.name || `Place ${cluster.order_index + 1}`);
@@ -42,18 +43,13 @@ export function PlaceRow({ cluster, onCreate, onRename, onDeletePhoto, onDeleteC
   };
 
   const handleCreateEmpty = async () => {
-    const orderIndex = cluster.order_index + 1;
+    const orderIndex = cluster.order_index;
     onCreate(orderIndex, []); // Always create an empty cluster from this button
   };
 
   const photoCount = cluster.photos.length;
   const isComplete = photoCount === 3;
   const isOverLimit = photoCount > 3;
-
-  // Calculate selected photos in this cluster
-  const thisBoxSelectedIds = cluster.photos
-    .filter(p => selectedPhotoIds.includes(p.id.toString()))
-    .map(p => p.id.toString());
 
   return (
     <div className={`
@@ -96,7 +92,7 @@ export function PlaceRow({ cluster, onCreate, onRename, onDeletePhoto, onDeleteC
                 ${isComplete ? 'bg-green-100 text-green-600' : 
                   isOverLimit ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}
               `}>
-                {isComplete ? <CheckCircle2 className="w-3 h-3 md:w-5 md:h-5" /> : <AlertCircle className="w-3 h-3 md:w-5 md:h-5" />}
+                {isComplete ? <CheckCircle2 className="w-3 h-3 md:w-5 md:h-5" /> : <AlertCircle className="w-3 h-3 md:h-5 md:h-5" />}
                 <span>{photoCount} / 3 <span className="hidden md:inline">Photos</span></span>
               </div> */}
 
@@ -157,18 +153,19 @@ export function PlaceRow({ cluster, onCreate, onRename, onDeletePhoto, onDeleteC
                     onMouseEnter={() => setIsOpen(true)} 
                     onMouseLeave={() => setIsOpen(false)}
                   >
-                    <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, selectedPhotoIds)}>
-                      <ImageIcon className="mr-2 h-4 w-4" />
-                      <span>전체 선택 추가 ({selectedPhotoIds.length})</span>
+                    <DropdownMenuItem 
+                      onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotoIds)}
+                    >
+                      <BringToFront className="mr-2 h-4 w-4" />
+                      <span>선택 사진 여기 추가 ({selectedPhotoIds.length})</span>
                     </DropdownMenuItem>
                     <DropdownMenuItem 
-                      onClick={() => onCreate(cluster.order_index + 1, thisBoxSelectedIds)}
-                      disabled={thisBoxSelectedIds.length === 0}
+                      onClick={() => onCreate(cluster.order_index, selectedPhotoIds)}
                     >
-                      <BoxSelect className="mr-2 h-4 w-4" />
-                      <span>이 박스 선택 추가 ({thisBoxSelectedIds.length})</span>
+                      <MoveDown className="mr-2 h-4 w-4" />
+                      <span>선택 사진 아래 추가 ({selectedPhotoIds.length})</span>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, [])}>
+                    <DropdownMenuItem onClick={() => onCreate(cluster.order_index, [])}>
                       <Plus className="mr-2 h-4 w-4" />
                       <span>빈 장소 추가</span>
                     </DropdownMenuItem>
