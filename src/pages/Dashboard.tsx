@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+
 import { api } from '@/lib/api';
 import { Job, Cluster, Photo } from '@/types';
 import { PhotoUploader } from '@/components/PhotoUploader';
@@ -20,6 +21,29 @@ export default function Dashboard() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isClustering, setIsClustering] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const isSelectionLoaded = useRef(false);
+
+  // Load selection from local storage
+  useEffect(() => {
+    if (jobId) {
+      const saved = localStorage.getItem(`selectedPhotoIds_${jobId}`);
+      if (saved) {
+        try {
+          setSelectedPhotoIds(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse selectedPhotoIds", e);
+        }
+      }
+      isSelectionLoaded.current = true;
+    }
+  }, [jobId]);
+
+  // Save selection to local storage
+  useEffect(() => {
+    if (jobId && isSelectionLoaded.current) {
+      localStorage.setItem(`selectedPhotoIds_${jobId}`, JSON.stringify(selectedPhotoIds));
+    }
+  }, [selectedPhotoIds, jobId]);
 
   useEffect(() => {
     if (jobId) {
@@ -165,13 +189,81 @@ export default function Dashboard() {
     }
   };
 
-  const handleCreateCluster = async (orderIndex: number, clusterId?: string) => {
+  const handleDeleteCluster = async (clusterId: string) => {
+    if (!confirm('Are you sure you want to delete this place? Photos will be moved to reserve.')) return;
+
+    // Optimistic update
+    const newClusters = clusters.filter(c => c.id !== clusterId);
+    setClusters(newClusters);
+
+    try {
+      const updatedClusters = await api.deleteCluster(clusterId);
+      setClusters(updatedClusters);
+      toast.success('Place deleted');
+    } catch (error) {
+      toast.error('Failed to delete place');
+      const cls = await api.getClusters(job!.id);
+      setClusters(cls);
+    }
+  };
+
+  const handleMoveCluster = async (clusterId: string, direction: 'up' | 'down') => {
+    const currentIndex = clusters.findIndex(c => c.id === clusterId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= clusters.length) return;
+
+    const currentCluster = clusters[currentIndex];
+    const targetCluster = clusters[targetIndex];
+
+    // Skip if trying to move past 'reserve' or similar logic if needed
+    // Assuming 'reserve' is not in the main list or handled separately. 
+    // In Dashboard.tsx, 'clusters' seems to contain all clusters including reserve?
+    // Actually completedPlaces calculation filters 'reserve'. 
+    // Let's check if 'reserve' is in 'clusters' state.
+    // Yes, 'loadJobData' sets 'clusters' from 'jobData.clusters'.
+    // We should probably exclude 'reserve' from swapping if it's treated specially.
+    // Usually 'reserve' has a specific order_index or is just filtered out in UI.
+    
+    // Optimistic update
+    // We swap the order_index of the two clusters
+    const newClusters = [...clusters];
+    
+    // Swap order_index values
+    const tempOrder = currentCluster.order_index;
+    currentCluster.order_index = targetCluster.order_index;
+    targetCluster.order_index = tempOrder;
+
+    // Sort by order_index to reflect change in UI immediately if UI sorts by it
+    newClusters.sort((a, b) => a.order_index - b.order_index);
+    setClusters(newClusters);
+
+    try {
+      await Promise.all([
+        api.updateCluster(currentCluster.id, { order_index: currentCluster.order_index }),
+        api.updateCluster(targetCluster.id, { order_index: targetCluster.order_index })
+      ]);
+    } catch (error) {
+      toast.error('Failed to move place');
+      const cls = await api.getClusters(job!.id);
+      setClusters(cls);
+    }
+  };
+
+  const handleCreateCluster = async (orderIndex: number, photoIds: string[] = [], clusterId?: string) => {
     if (!job) return;
     try {
-      if (selectedPhotoIds.length > 0) {
-        await api.createCluster(job.id, `${job.title}`, orderIndex, selectedPhotoIds);
-        setSelectedPhotoIds([]);
-        toast.success(`New place created with ${selectedPhotoIds.length} photos.`);
+      if (photoIds.length > 0) {
+        await api.createCluster(job.id, `${job.title}`, orderIndex, photoIds);
+        
+        // Remove used photos from selection
+        const remainingSelection = selectedPhotoIds.filter(id => !photoIds.includes(id));
+        setSelectedPhotoIds(remainingSelection);
+        // Update local storage immediately (though useEffect handles it, this is safer for immediate logic)
+        // Actually useEffect [selectedPhotoIds] will handle the storage update.
+        
+        toast.success(`New place created with ${photoIds.length} photos.`);
       } else {
         await api.createCluster(job.id, `${job.title}`, orderIndex);
         toast.success('New empty place created.');

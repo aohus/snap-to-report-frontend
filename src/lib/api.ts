@@ -117,6 +117,15 @@ export const api = {
     return handleResponse<Cluster[]>(response);
   },
 
+  syncClusters: async (jobId: string, clusters: Cluster[]): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/clusters/sync`, {
+      method: 'PUT',
+      headers: authJsonHeaders(),
+      body: JSON.stringify(clusters),
+    });
+    return handleResponse<void>(response);
+  },
+
   createCluster: async (jobId: string, name: string, orderIndex: number, photo_ids?: string[]): Promise<Cluster> => {
     const payload: { name: string; order_index: number; photo_ids?: string[] } = { name, order_index: orderIndex };
     if (photo_ids && photo_ids.length > 0) {

@@ -17,8 +17,8 @@ import EXIF from "exif-js";
  */
 export async function compressImage(
   file: File,
-  maxWidth: number = 1920,
-  maxHeight: number = 1920,
+  maxWidth: number = 2440,
+  maxHeight: number = 2440,
   quality: number = 0.8
 ): Promise<File> {
   try {
@@ -38,18 +38,6 @@ export async function compressImage(
       }
     } else {
       console.warn("Not a JPEG file. EXIF cannot be preserved for this file.");
-    }
-
-    // 3) Orientation 추출
-    let orientation = 1;
-    if (originalExif && originalExif["0th"] && originalExif["0th"][piexif.ImageIFD.Orientation]) {
-      orientation = originalExif["0th"][piexif.ImageIFD.Orientation];
-    } else {
-      try {
-        orientation = await readOrientation(arrayBuffer);
-      } catch (e) {
-        console.warn("Failed to read orientation with EXIF-js", e);
-      }
     }
 
     // 4) 이미지 로드
@@ -105,16 +93,13 @@ export async function compressImage(
 
     // 11) Base64 → Blob
     const compressedBlob = dataURLtoBlob(exifInserted);
-
     // 12) Blob → File
     const compressedFile = new File(
       [compressedBlob],
       file.name.replace(/\.\w+$/, ".jpg"),
       { type: "image/jpeg", lastModified: Date.now() }
     );
-
     return compressedFile;
-
   } catch (error) {
     console.error("EXIF-preserving compression failed — returning original file", error);
     return file;
@@ -122,7 +107,6 @@ export async function compressImage(
 }
 
 /************************* UTILITIES *************************/
-
 export function isJPEGFile(file: File): boolean {
   return file.type === "image/jpeg" || file.name.toLowerCase().endsWith(".jpg") || file.name.toLowerCase().endsWith(".jpeg");
 }
@@ -145,14 +129,6 @@ function dataURLtoBlob(dataurl: string): Blob {
   const u8arr = new Uint8Array(n);
   while (n--) u8arr[n] = bstr.charCodeAt(n);
   return new Blob([u8arr], { type: mime });
-}
-
-async function readOrientation(arrayBuffer: ArrayBuffer): Promise<number> {
-  return new Promise<number>((resolve) => {
-    EXIF.getData(new Blob([arrayBuffer]), function () {
-      resolve(EXIF.getTag(this, "Orientation") || 1);
-    });
-  });
 }
 
 function prepareOrientedCanvas(

@@ -4,20 +4,29 @@ import { Cluster } from '@/types';
 import { PhotoCard } from './PhotoCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Pencil, Check, AlertCircle, Plus, CheckCircle2 } from 'lucide-react';
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Pencil, Check, AlertCircle, Plus, CheckCircle2, ArrowUp, ArrowDown, Trash2, Image as ImageIcon, BoxSelect } from 'lucide-react';
 
 interface PlaceRowProps {
   cluster: Cluster;
-  onCreate: (order_index: number) => void;
+  onCreate: (order_index: number, photoIds: string[]) => void;
   onRename: (clusterId: string, newName: string) => void;
   onDeletePhoto?: (photoId: string) => void;
+  onDeleteCluster: (clusterId: string) => void;
+  onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
   selectedPhotoIds: string[];
   onSelectPhoto: (photoId: string) => void;
 }
 
 
-export function PlaceRow({ cluster, onCreate, onRename, onDeletePhoto, selectedPhotoIds, onSelectPhoto }: PlaceRowProps) {
+export function PlaceRow({ cluster, onCreate, onRename, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotoIds, onSelectPhoto }: PlaceRowProps) {
   const [isEditing, setIsEditing] = useState(false);
+  const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState(cluster.name || `Place ${cluster.order_index + 1}`);
 
   // Sync name if prop changes
@@ -32,14 +41,19 @@ export function PlaceRow({ cluster, onCreate, onRename, onDeletePhoto, selectedP
     setIsEditing(false);
   };
 
-  const handleCreate = async () => {
+  const handleCreateEmpty = async () => {
     const orderIndex = cluster.order_index + 1;
-    onCreate(orderIndex);
+    onCreate(orderIndex, []); // Always create an empty cluster from this button
   };
 
   const photoCount = cluster.photos.length;
   const isComplete = photoCount === 3;
   const isOverLimit = photoCount > 3;
+
+  // Calculate selected photos in this cluster
+  const thisBoxSelectedIds = cluster.photos
+    .filter(p => selectedPhotoIds.includes(p.id.toString()))
+    .map(p => p.id.toString());
 
   return (
     <div className={`
@@ -77,28 +91,105 @@ export function PlaceRow({ cluster, onCreate, onRename, onDeletePhoto, selectedP
             </div>
             
             <div className="flex items-center justify-between md:justify-start gap-2 w-full md:w-auto mt-1 md:mt-0">
-              <div className={`
+              {/* <div className={`
                 flex items-center gap-1 px-2 py-1 md:px-3 md:py-2 rounded-full font-medium text-xs md:text-sm
                 ${isComplete ? 'bg-green-100 text-green-600' : 
                   isOverLimit ? 'bg-orange-100 text-orange-600' : 'bg-gray-100 text-gray-500'}
               `}>
                 {isComplete ? <CheckCircle2 className="w-3 h-3 md:w-5 md:h-5" /> : <AlertCircle className="w-3 h-3 md:w-5 md:h-5" />}
                 <span>{photoCount} / 3 <span className="hidden md:inline">Photos</span></span>
+              </div> */}
+
+              {/* Action Buttons: Move & Delete */}
+              <div className="flex items-center gap-0.5 md:gap-1 mx-1 md:mx-2 bg-gray-100/50 rounded-lg p-0.5">
+                <Button 
+                  variant="ghost" size="icon" 
+                  className="h-7 w-7 md:h-8 md:w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                  onClick={() => onMoveCluster(cluster.id, 'up')}
+                  title="위로 이동"
+                >
+                  <ArrowUp className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                </Button>
+                <Button 
+                  variant="ghost" size="icon" 
+                  className="h-7 w-7 md:h-8 md:w-8 text-gray-500 hover:text-blue-600 hover:bg-blue-50"
+                  onClick={() => onMoveCluster(cluster.id, 'down')}
+                  title="아래로 이동"
+                >
+                  <ArrowDown className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                </Button>
+                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                <Button 
+                  variant="ghost" size="icon" 
+                  className="h-7 w-7 md:h-8 md:w-8 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => onDeleteCluster(cluster.id)}
+                  title="장소 삭제"
+                >
+                  <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
+                </Button>
               </div>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                className="h-8 md:h-10 px-2 md:px-4 text-xs md:text-base border-2 border-green-600 text-green-600 hover:bg-green-100 ml-auto md:ml-0" 
-                onClick={handleCreate}
-              >
-                <Plus className="w-4 h-4 md:w-6 md:h-6 md:mr-2" /> 
-                <span className="md:hidden">
-                  {selectedPhotoIds.length > 0 ? `추가 (${selectedPhotoIds.length})` : '추가'}
-                </span>
-                <span className="hidden md:inline">
-                  {selectedPhotoIds.length > 0 ? `선택한 사진 (${selectedPhotoIds.length}) 추가` : '장소 추가'}
-                </span>
-              </Button>
+
+              {selectedPhotoIds.length > 0 ? (
+                <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+                  <DropdownMenuTrigger asChild>
+                    <div 
+                      onMouseEnter={() => setIsOpen(true)} 
+                      onMouseLeave={() => setIsOpen(false)}
+                      className="inline-block"
+                    >
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="h-8 md:h-10 px-2 md:px-4 text-xs md:text-base border-2 border-green-600 bg-green-600 text-white hover:bg-green-700 ml-auto md:ml-0" 
+                      >
+                        <Plus className="w-4 h-4 md:w-6 md:h-6 md:mr-2" /> 
+                        <span className="hidden md:inline">
+                          장소 추가 ({selectedPhotoIds.length})
+                        </span>
+                        <span className="md:hidden">
+                          추가 ({selectedPhotoIds.length})
+                        </span>
+                      </Button>
+                    </div>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent 
+                    align="end" 
+                    onMouseEnter={() => setIsOpen(true)} 
+                    onMouseLeave={() => setIsOpen(false)}
+                  >
+                    <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, selectedPhotoIds)}>
+                      <ImageIcon className="mr-2 h-4 w-4" />
+                      <span>전체 선택 추가 ({selectedPhotoIds.length})</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => onCreate(cluster.order_index + 1, thisBoxSelectedIds)}
+                      disabled={thisBoxSelectedIds.length === 0}
+                    >
+                      <BoxSelect className="mr-2 h-4 w-4" />
+                      <span>이 박스 선택 추가 ({thisBoxSelectedIds.length})</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, [])}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      <span>빈 장소 추가</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : (
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  className="h-8 md:h-10 px-2 md:px-4 text-xs md:text-base border-2 border-green-600 text-green-600 hover:bg-green-100 ml-auto md:ml-0" 
+                  onClick={handleCreateEmpty}
+                >
+                  <Plus className="w-4 h-4 md:w-6 md:h-6 md:mr-2" /> 
+                  <span className="hidden md:inline">
+                    장소 추가
+                  </span>
+                  <span className="md:hidden">
+                    추가
+                  </span>
+                </Button>
+              )}
             </div>
           </div>
         </div>
