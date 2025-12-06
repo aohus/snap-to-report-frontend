@@ -1,8 +1,10 @@
+import { useState } from 'react';
 import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { Cluster } from '@/types';
 import { PlaceRow } from './PlaceRow';
 import { PhotoCard } from './PhotoCard';
-import { Archive } from 'lucide-react';
+import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, LayoutList, Rows } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ClusterBoardProps {
@@ -20,6 +22,9 @@ interface ClusterBoardProps {
 
 export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotoIds, onSelectPhoto }: ClusterBoardProps) {
   const isMobile = useIsMobile();
+  const [isCompact, setIsCompact] = useState(false);
+  const [collapsedClusterIds, setCollapsedClusterIds] = useState<Set<string>>(new Set());
+
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
 
@@ -35,6 +40,37 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
 
   const reserveCluster = clusters.find(c => c.name === 'reserve');
   const placeClusters = clusters.filter(c => c.id !== reserveCluster?.id).sort((a, b) => a.order_index - b.order_index);
+
+  const toggleClusterCollapse = (clusterId: string) => {
+    setCollapsedClusterIds(prev => {
+      const next = new Set(prev);
+      if (next.has(clusterId)) {
+        next.delete(clusterId);
+      } else {
+        next.add(clusterId);
+      }
+      return next;
+    });
+  };
+
+  const areAllCompletedCollapsed = placeClusters
+    .filter(c => c.photos.length >= 3)
+    .every(c => collapsedClusterIds.has(c.id));
+
+  const toggleCollapseCompleted = () => {
+    const completedClusters = placeClusters.filter(c => c.photos.length >= 3);
+    setCollapsedClusterIds(prev => {
+      const next = new Set(prev);
+      if (areAllCompletedCollapsed) {
+        // Expand all completed
+        completedClusters.forEach(c => next.delete(c.id));
+      } else {
+        // Collapse all completed
+        completedClusters.forEach(c => next.add(c.id));
+      }
+      return next;
+    });
+  };
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
@@ -56,7 +92,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                 {...provided.droppableProps}
                 className={`
                   flex-1 overflow-x-auto md:overflow-x-hidden md:overflow-y-auto p-2 md:p-4 
-                  flex md:flex-col gap-2 md:gap-4 transition-colors scrollbar-hide
+                  flex md:flex-col md:flex-wrap gap-2 md:gap-4 transition-colors scrollbar-hide content-start
                   ${snapshot.isDraggingOver ? 'bg-blue-100/50' : ''}
                 `}
               >
@@ -66,7 +102,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                   </div>
                 )}
                 {reserveCluster?.photos.map((photo, index) => (
-                  <div key={photo.id} className="min-w-[100px] md:min-w-0">
+                  <div key={photo.id} className={`flex-shrink-0 ${isCompact ? 'w-[100px] md:w-[120px]' : ''}`}>
                     <PhotoCard 
                       photo={photo} 
                       index={index} 
@@ -74,6 +110,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                       isReserve={true}
                       onSelect={() => onSelectPhoto(photo.id.toString())}
                       isSelected={selectedPhotoIds.includes(photo.id.toString())}
+                      isCompact={isCompact}
                     />
                   </div>
                 ))}
@@ -84,21 +121,50 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
         </div>
 
         {/* Left Area (Mobile: Bottom): Places List */}
-        <div className="flex-1 overflow-y-auto pr-1 md:pr-2 pb-2 space-y-4 md:space-y-8 order-2 md:order-1">
-          {placeClusters.map((cluster) => (
-            <PlaceRow
-              key={cluster.id}
-              cluster={cluster}
-              onCreate={(order_index, photoIds) => onCreateCluster(order_index, photoIds)} // Pass new prop
-              onAddPhotosToExistingCluster={(clusterId, photoIds) => onAddPhotosToExistingCluster(clusterId, photoIds)} // Pass new prop
-              onRename={onRenameCluster}
-              onDeletePhoto={(pid) => onDeletePhoto(pid, cluster.id)}
-              onDeleteCluster={onDeleteCluster}
-              onMoveCluster={onMoveCluster}
-              selectedPhotoIds={selectedPhotoIds}
-              onSelectPhoto={onSelectPhoto}
-            />
-          ))}
+        <div className="flex-1 overflow-y-auto pr-1 md:pr-2 pb-2 flex flex-col order-2 md:order-1">
+          {/* Controls */}
+          <div className="flex items-center justify-end gap-2 mb-4">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleCollapseCompleted}
+              className="text-xs md:text-sm h-8"
+              title={areAllCompletedCollapsed ? "완료된 항목 펼치기" : "완료된 항목 접기"}
+            >
+              {areAllCompletedCollapsed ? <ChevronsDown className="w-4 h-4 md:mr-1" /> : <ChevronsUp className="w-4 h-4 md:mr-1" />}
+              <span className="hidden md:inline">{areAllCompletedCollapsed ? "완료 펼치기" : "완료 접기"}</span>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setIsCompact(!isCompact)}
+              className="text-xs md:text-sm h-8"
+              title={isCompact ? "크게 보기" : "작게 보기"}
+            >
+              {isCompact ? <Rows className="w-4 h-4 md:mr-1" /> : <LayoutList className="w-4 h-4 md:mr-1" />}
+              <span className="hidden md:inline">{isCompact ? "기본 보기" : "작게 보기"}</span>
+            </Button>
+          </div>
+
+          <div className="space-y-4 md:space-y-8">
+            {placeClusters.map((cluster) => (
+              <PlaceRow
+                key={cluster.id}
+                cluster={cluster}
+                onCreate={(order_index, photoIds) => onCreateCluster(order_index, photoIds)} // Pass new prop
+                onAddPhotosToExistingCluster={(clusterId, photoIds) => onAddPhotosToExistingCluster(clusterId, photoIds)} // Pass new prop
+                onRename={onRenameCluster}
+                onDeletePhoto={(pid) => onDeletePhoto(pid, cluster.id)}
+                onDeleteCluster={onDeleteCluster}
+                onMoveCluster={onMoveCluster}
+                selectedPhotoIds={selectedPhotoIds}
+                onSelectPhoto={onSelectPhoto}
+                isCompact={isCompact}
+                isCollapsed={collapsedClusterIds.has(cluster.id)}
+                onToggleCollapse={() => toggleClusterCollapse(cluster.id)}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </DragDropContext>

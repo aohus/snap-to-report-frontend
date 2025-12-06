@@ -38,7 +38,7 @@ export default function Dashboard() {
   const [exportMetadata, setExportMetadata] = useState({
     title: '',
     construction_type: '',
-    company_name: '',
+    client_name: '',
   });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
@@ -289,45 +289,33 @@ export default function Dashboard() {
 
   const handleAddPhotosToExistingCluster = async (clusterId: string, photoIds: string[]) => {
     if (!job || photoIds.length === 0) return;
-    
-    const targetClusterId = String(clusterId);
-    const movingIds = new Set(photoIds.map(String));
-
     try {
-      await api.addPhotosToExistingCluster(targetClusterId, photoIds);
+      await api.addPhotosToExistingCluster(clusterId, photoIds);
       
-      // Get all photos that are being moved (to ensure we have the objects)
-      const photosToMove = clusters
-        .flatMap(c => c.photos)
-        .filter(p => movingIds.has(String(p.id)));
-
-      // Update local state
+      // Update local state by moving photos
       const newClusters = clusters.map(c => {
-        // 1. Remove moved photos from ALL clusters
-        let newPhotos = c.photos.filter(p => !movingIds.has(String(p.id)));
+        // Remove moved photos from any cluster
+        let newPhotos = c.photos.filter(p => !photoIds.includes(p.id));
         
-        // 2. Add photos to the TARGET cluster
-        if (String(c.id) === targetClusterId) {
-          // Use a Map to ensure uniqueness by ID, avoiding any potential duplication
-          const uniqueMap = new Map();
+        // If this is the target cluster, add the photos
+        if (c.id === clusterId) {
+          // Find the photo objects from the current clusters structure
+          const movedPhotos = clusters
+            .flatMap(cl => cl.photos)
+            .filter(p => photoIds.includes(p.id));
+            
+          // Deduplicate just in case
+          const uniqueMovedPhotos = Array.from(new Map(movedPhotos.map(p => [p.id, p])).values());
           
-          // Add existing photos (that weren't moved out)
-          newPhotos.forEach(p => uniqueMap.set(String(p.id), p));
-          
-          // Add the moved photos
-          photosToMove.forEach(p => uniqueMap.set(String(p.id), p));
-          
-          newPhotos = Array.from(uniqueMap.values());
+          newPhotos = [...newPhotos, ...uniqueMovedPhotos];
         }
-        
         return { ...c, photos: newPhotos };
       });
-
       setClusters(newClusters);
       triggerAutoSave(newClusters);
 
       // Remove used photos from selection
-      const remainingSelection = selectedPhotoIds.filter(id => !movingIds.has(String(id)));
+      const remainingSelection = selectedPhotoIds.filter(id => !photoIds.includes(id));
       setSelectedPhotoIds(remainingSelection);
 
       toast.success(`Added ${photoIds.length} photos to place.`);
@@ -342,7 +330,7 @@ export default function Dashboard() {
     setExportMetadata({
       title: job.title,
       construction_type: job.construction_type || job.title,
-      company_name: job.company_name || '',
+      client_name: job.client_name || '',
     });
     setExportDialogOpen(true);
   };
@@ -353,7 +341,8 @@ export default function Dashboard() {
     setExporting(true);
     
     try {
-      await api.startExport(job.id, exportMetadata);
+      await api.updateJob(job.id, exportMetadata);
+      await api.startExport(job.id);
       
       const interval = setInterval(async () => {
         const status = await api.getExportStatus(job.id);
@@ -414,10 +403,6 @@ export default function Dashboard() {
                   완료 장소: {completedPlaces} / {totalPlaces} 
                 </span>
             </div>
-            {/* <Button size="base" variant="outline" className="h-10 px-4 text-base border-2 border-green-600 text-green-600 hover:bg-green-100" onClick={handleCreateCluster}>
-              <Plus className="w-6 h-6 mr-2" /> 
-              {selectedPhotoIds.length > 0 ? `${selectedPhotoIds.length}개의 사진으로 장소 추가` : '장소 추가'}
-            </Button> */}
             <Button 
               variant="default" 
               size="sm" 
@@ -550,13 +535,13 @@ export default function Dashboard() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="company_name" className="text-right">
+              <Label htmlFor="client_name" className="text-right">
                 시행처
               </Label>
               <Input
-                id="company_name"
-                value={exportMetadata.company_name}
-                onChange={(e) => setExportMetadata({ ...exportMetadata, company_name: e.target.value })}
+                id="client_name"
+                value={exportMetadata.client_name}
+                onChange={(e) => setExportMetadata({ ...exportMetadata, client_name: e.target.value })}
                 className="col-span-3"
               />
             </div>

@@ -12,6 +12,7 @@ interface PhotoCardProps {
   isReserve?: boolean;
   onSelect?: () => void;
   isSelected?: boolean;
+  isCompact?: boolean;
 }
 
 // React.memo로 감싸서 props가 변하지 않으면 리렌더링 방지
@@ -21,7 +22,8 @@ export const PhotoCard = React.memo(function PhotoCard({
   onDelete, 
   isReserve, 
   onSelect, 
-  isSelected 
+  isSelected,
+  isCompact = false
 }: PhotoCardProps) {
   return (
     <Draggable draggableId={photo.id.toString()} index={index}>
@@ -34,7 +36,10 @@ export const PhotoCard = React.memo(function PhotoCard({
           className={`
             relative group flex flex-col bg-white rounded-xl shadow-sm overflow-hidden cursor-grab active:cursor-grabbing
             transition-all duration-200 ease-in-out
-            w-[280px] h-[160px] sm:w-[340px] sm:h-[200px] md:w-[420px] md:h-[240px]
+            ${isCompact 
+              ? 'w-[100px] h-[75px] md:w-[120px] md:h-[90px] rounded-md' 
+              : 'w-[280px] h-[160px] sm:w-[340px] sm:h-[200px] md:w-[420px] md:h-[240px]'
+            }
             ${snapshot.isDragging ? 'shadow-2xl ring-4 ring-blue-500 z-50 scale-105 rotate-2' : 'border border-gray-200 hover:border-blue-400 hover:shadow-md'}
             ${!isReserve && index < 3 && !isSelected ? 'ring-2 ring-green-500 border-green-500' : ''}
             ${isSelected ? 'ring-4 ring-blue-500 border-blue-500' : ''}
@@ -45,7 +50,7 @@ export const PhotoCard = React.memo(function PhotoCard({
         >
           {/* Selection Badge */}
           {!isReserve && index < 3 && (
-            <div className="absolute top-2 left-2 z-10 bg-green-600 text-white px-2 py-0.5 rounded-md text-xs md:text-base font-bold shadow-md">
+            <div className={`absolute top-2 left-2 z-10 bg-green-600 text-white rounded-md font-bold shadow-md ${isCompact ? 'px-1 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs md:text-base'}`}>
               #{index + 1}
             </div>
           )}
@@ -55,13 +60,13 @@ export const PhotoCard = React.memo(function PhotoCard({
             <Button 
               variant="destructive" 
               size="icon" 
-              className="absolute top-1 right-1 z-10 h-6 w-6 md:h-7 md:w-7 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm"
+              className={`absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm ${isCompact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7'}`}
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(photo.id);
               }}
             >
-              <X className="w-3 h-3 md:w-4 md:h-4" />
+              <X className={isCompact ? "w-2.5 h-2.5" : "w-3 h-3 md:w-4 md:h-4"} />
             </Button>
           )}
 
@@ -88,6 +93,7 @@ export const PhotoCard = React.memo(function PhotoCard({
     prevProps.photo.thumbnail_path === nextProps.photo.thumbnail_path &&
     prevProps.index === nextProps.index &&
     prevProps.isSelected === nextProps.isSelected &&
-    prevProps.isReserve === nextProps.isReserve
+    prevProps.isReserve === nextProps.isReserve &&
+    prevProps.isCompact === nextProps.isCompact
   );
 });
