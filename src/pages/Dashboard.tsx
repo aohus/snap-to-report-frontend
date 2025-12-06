@@ -214,7 +214,7 @@ export default function Dashboard() {
   };
 
   const handleDeleteCluster = async (clusterId: string) => {
-    if (!confirm('Are you sure you want to delete this place? Photos will be moved to reserve.')) return;
+    // if (!confirm('Are you sure you want to delete this place? Photos will be moved to reserve.')) return;
 
     const clusterToDelete = clusters.find(c => c.id === clusterId);
     const reserveCluster = clusters.find(c => c.name === 'reserve');
@@ -289,32 +289,45 @@ export default function Dashboard() {
 
   const handleAddPhotosToExistingCluster = async (clusterId: string, photoIds: string[]) => {
     if (!job || photoIds.length === 0) return;
+    
+    const targetClusterId = String(clusterId);
+    const movingIds = new Set(photoIds.map(String));
+
     try {
-      await api.addPhotosToExistingCluster(clusterId, photoIds);
+      await api.addPhotosToExistingCluster(targetClusterId, photoIds);
       
-      // Update local state by moving photos
+      // Get all photos that are being moved (to ensure we have the objects)
+      const photosToMove = clusters
+        .flatMap(c => c.photos)
+        .filter(p => movingIds.has(String(p.id)));
+
+      // Update local state
       const newClusters = clusters.map(c => {
-        // Remove moved photos from any cluster
-        let newPhotos = c.photos.filter(p => !photoIds.includes(p.id));
+        // 1. Remove moved photos from ALL clusters
+        let newPhotos = c.photos.filter(p => !movingIds.has(String(p.id)));
         
-        // If this is the target cluster, add the photos
-        if (c.id === clusterId) {
-          // Find the photo objects from the current clusters structure
-          const movedPhotos = clusters
-            .flatMap(cl => cl.photos)
-            .filter(p => photoIds.includes(p.id));
-            
-          // Deduplicate just in case
-          const uniqueMovedPhotos = Array.from(new Map(movedPhotos.map(p => [p.id, p])).values());
+        // 2. Add photos to the TARGET cluster
+        if (String(c.id) === targetClusterId) {
+          // Use a Map to ensure uniqueness by ID, avoiding any potential duplication
+          const uniqueMap = new Map();
           
-          newPhotos = [...newPhotos, ...uniqueMovedPhotos];
+          // Add existing photos (that weren't moved out)
+          newPhotos.forEach(p => uniqueMap.set(String(p.id), p));
+          
+          // Add the moved photos
+          photosToMove.forEach(p => uniqueMap.set(String(p.id), p));
+          
+          newPhotos = Array.from(uniqueMap.values());
         }
+        
         return { ...c, photos: newPhotos };
       });
+
       setClusters(newClusters);
+      triggerAutoSave(newClusters);
 
       // Remove used photos from selection
-      const remainingSelection = selectedPhotoIds.filter(id => !photoIds.includes(id));
+      const remainingSelection = selectedPhotoIds.filter(id => !movingIds.has(String(id)));
       setSelectedPhotoIds(remainingSelection);
 
       toast.success(`Added ${photoIds.length} photos to place.`);
