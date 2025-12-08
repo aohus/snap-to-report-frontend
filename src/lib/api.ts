@@ -107,7 +107,7 @@ export const api = {
     return handleResponse<Job>(response);
   },
 
-  getPhotos: async (jobId: string): Promise<Cluster[]> => {
+  getPhotos: async (jobId: string): Promise<Photo[]> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos`, { 
       headers: authJsonHeaders(), 
    });
@@ -342,8 +342,8 @@ export const api = {
       }
 
       // 💡 수정됨: Cluster[]를 Photo[]로 변환하여 반환
-      const clusters = await api.getPhotos(jobId);
-      return clusters.flatMap(cluster => cluster.photos);
+      const photos = await api.getPhotos(jobId);
+      return photos
 
       } catch (error) {
         console.error("Fatal error in upload process", error);
