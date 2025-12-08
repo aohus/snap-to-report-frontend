@@ -11,6 +11,10 @@ export default defineConfig(({ mode }) => ({
     }),
     react(),
   ],
+  build: {
+    reportCompressedSize: false,
+    chunkSizeWarningLimit: 1000,
+  },
   server: {
     watch: { usePolling: true, interval: 800 /* 300~1500 */ },
   },

@@ -93,7 +93,7 @@ export default function Dashboard() {
     fetchJobData();
   }, [jobId]);
   
-  // Sequential Sync Logic
+  /* Sequential Sync Logic - DEPRECATED (Preserved as requested)
   const isSyncing = useRef(false);
   const pendingSync = useRef<Cluster[] | null>(null);
   const pendingDeletes = useRef<Set<string>>(new Set()); // For photo deletes
@@ -182,6 +182,7 @@ export default function Dashboard() {
       processSync();
     }, 2000);
   }, [job]);
+  */
 
   // ... existing code ...
 
@@ -284,7 +285,7 @@ export default function Dashboard() {
     );
   };
 
-  const handleMovePhoto = (photoId: string, sourceClusterId: string, targetClusterId: string, newIndex: number) => {
+  const handleMovePhoto = async (photoId: string, sourceClusterId: string, targetClusterId: string, newIndex: number) => {
     const newClusters = clusters.map(c => ({...c, photos: [...c.photos]}));
     
     const sourceCluster = newClusters.find(c => c.id === sourceClusterId);
@@ -299,7 +300,22 @@ export default function Dashboard() {
     targetCluster.photos.splice(newIndex, 0, photo);
 
     setClusters(newClusters);
-    triggerAutoSave(newClusters);
+    
+    // triggerAutoSave(newClusters);
+    if (!job) return;
+    setSaving(true);
+    try {
+        const clustersToSync = [sourceCluster];
+        if (sourceClusterId !== targetClusterId) {
+            clustersToSync.push(targetCluster);
+        }
+        await api.syncClusters(job.id, clustersToSync);
+    } catch (e) {
+        console.error("Failed to sync move", e);
+        toast.error("Failed to save move");
+    } finally {
+        setSaving(false);
+    }
   };
 
   const handleDeletePhoto = async (photoId: string, clusterId: string) => {
@@ -312,41 +328,68 @@ export default function Dashboard() {
     setClusters(newClusters);
     
     // Queue for deletion
-    pendingDeletes.current.add(photoId);
-    triggerAutoSave(newClusters);
+    // pendingDeletes.current.add(photoId);
+    // triggerAutoSave(newClusters);
+    setSaving(true);
+    try {
+        await api.deletePhoto(photoId);
+    } catch (e) {
+        console.error("Failed to delete photo", e);
+        toast.error("Failed to delete photo");
+    } finally {
+        setSaving(false);
+    }
   };
 
   const handleRenameCluster = async (clusterId: string, newName: string) => {
     setClusters(prev => prev.map(c => c.id === clusterId ? { ...c, name: newName } : c));
     
     // Add rename to pendingRenames queue and trigger sync
-    pendingRenames.current.set(clusterId, newName);
-    triggerAutoSave(); // No new cluster state, just trigger processing existing pending actions
+    // pendingRenames.current.set(clusterId, newName);
+    // triggerAutoSave(); // No new cluster state, just trigger processing existing pending actions
+
+    setSaving(true);
+    try {
+        await api.updateCluster(clusterId, { new_name: newName });
+    } catch (e) {
+        console.error("Failed to rename cluster", e);
+        toast.error("Failed to rename cluster");
+    } finally {
+        setSaving(false);
+    }
   };
 
   const handleDeleteCluster = async (clusterId: string) => {
     const clusterToDelete = clusters.find(c => c.id === clusterId);
-    const reserveCluster = clusters.find(c => c.name === 'reserve');
     
-    let newClusters = clusters;
+    // We are deleting the cluster and its photos. 
+    // Do NOT move photos to reserve.
     
-    if (clusterToDelete && reserveCluster && clusterToDelete.photos.length > 0) {
+    let newClusters = clusters.filter(c => c.id !== clusterId);
+    
+    if (clusterToDelete) {
        newClusters = newClusters.map(c => {
-           if (c.id === reserveCluster.id) {
-               // Move photos to reserve, sorted
-               const merged = [...c.photos, ...clusterToDelete.photos];
-               return { ...c, photos: sortPhotosByOrderIndex(merged) };
-           }
-           return c;
+         if (c.order_index > clusterToDelete.order_index) {
+            return { ...c, order_index: c.order_index - 1 };
+         }
+         return c;
        });
     }
-    
-    newClusters = newClusters.filter(c => c.id !== clusterId);
+
     setClusters(newClusters);
     
     // Queue for cluster deletion
-    pendingClusterDeletes.current.add(clusterId);
-    triggerAutoSave(newClusters);
+    // pendingClusterDeletes.current.add(clusterId);
+    // triggerAutoSave(newClusters);
+    setSaving(true);
+    try {
+        await api.deleteCluster(clusterId);
+    } catch (e) {
+        console.error("Failed to delete cluster", e);
+        toast.error("Failed to delete cluster");
+    } finally {
+        setSaving(false);
+    }
   };
 
   const handleMoveCluster = async (clusterId: string, direction: 'up' | 'down') => {
@@ -356,10 +399,10 @@ export default function Dashboard() {
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (targetIndex < 0 || targetIndex >= clusters.length) return;
 
-    const currentCluster = clusters[currentIndex];
-    const targetCluster = clusters[targetIndex];
-
-    const newClusters = [...clusters];
+    // Deep copy to avoid mutation
+    const newClusters = clusters.map(c => ({...c}));
+    const currentCluster = newClusters[currentIndex];
+    const targetCluster = newClusters[targetIndex];
     
     const tempOrder = currentCluster.order_index;
     currentCluster.order_index = targetCluster.order_index;
@@ -367,7 +410,18 @@ export default function Dashboard() {
 
     newClusters.sort((a, b) => a.order_index - b.order_index);
     setClusters(newClusters);
-    triggerAutoSave(newClusters);
+    
+    // triggerAutoSave(newClusters);
+    if (!job) return;
+    setSaving(true);
+    try {
+        await api.syncClusters(job.id, [currentCluster, targetCluster]);
+    } catch (e) {
+        console.error("Failed to move cluster", e);
+        toast.error("Failed to move cluster");
+    } finally {
+        setSaving(false);
+    }
   };
 
   const handleCreateCluster = async (orderIndex: number, photoIds: string[] = [], clusterId?: string) => {
@@ -379,7 +433,7 @@ export default function Dashboard() {
 
       const newClusters = [...clusters, { ...newCluster, photos: sortedNewClusterPhotos }].sort((a, b) => a.order_index - b.order_index);
       setClusters(newClusters);
-      triggerAutoSave(newClusters); // Trigger sync for the new cluster
+      // triggerAutoSave(newClusters); // Trigger sync for the new cluster
 
       if (photoIds.length > 0) {
         const remainingSelection = selectedPhotoIds.filter(id => !photoIds.includes(id));
@@ -412,8 +466,29 @@ export default function Dashboard() {
     });
     
     setClusters(newClusters);
-    triggerAutoSave(newClusters);
-    toast.success(`Added ${photoIds.length} photos to place`);
+    // triggerAutoSave(newClusters);
+    
+    setSaving(true);
+    try {
+        // Find source clusters from 'clusters' (before state update) to identify what needs syncing
+        const sourceClusterIds = new Set<string>();
+        clusters.forEach(c => {
+            if (c.photos.some(p => photoIds.includes(p.id))) {
+                sourceClusterIds.add(c.id);
+            }
+        });
+        sourceClusterIds.add(clusterId); // Add target
+        
+        const clustersToSync = newClusters.filter(c => sourceClusterIds.has(c.id));
+        await api.syncClusters(job.id, clustersToSync);
+        
+        toast.success(`Added ${photoIds.length} photos to place`);
+    } catch (e) {
+        console.error("Failed to add photos", e);
+        toast.error("Failed to add photos");
+    } finally {
+        setSaving(false);
+    }
   };
 
   const handleExport = () => {
