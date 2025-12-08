@@ -25,7 +25,8 @@ export async function uploadViaResumable(
           method: 'PUT',
           body: chunk,
           headers: {
-            'Content-Range': `bytes ${start}-${end - 1}/${totalBytes}`
+            'Content-Range': `bytes ${start}-${end - 1}/${totalBytes}`,
+            'Content-Type': file.type
           }
         });
 
