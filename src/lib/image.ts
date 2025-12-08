@@ -1,146 +1,86 @@
 /***********************************************************************
  * compressImage.ts
  *
- * - EXIF 전체 보존 (GPS, 카메라 정보, Lens, Exposure 등 모두)
- * - Orientation 자동 보정
- * - pica 기반 고품질 리사이즈/압축
- * - JPEG 품질 제어
- * - 기존 compressImage 함수와 동일한 시그니처
+ * Uses a pool of Web Workers for concurrent off-main-thread compression.
  ***********************************************************************/
 
-import pica from "pica";
-import piexif from "piexifjs";
-import EXIF from "exif-js";
+import ImageWorker from './image.worker?worker';
 
-/**
- * Main entry — drop-in replacement compatible with previous compressImage().
- */
+// Determine concurrency based on hardware (clamp between 2 and 6)
+const CONCURRENCY = Math.min(Math.max((navigator.hardwareConcurrency || 4) - 1, 2), 6);
+
+const workers: Worker[] = [];
+for (let i = 0; i < CONCURRENCY; i++) {
+  workers.push(new ImageWorker());
+}
+
+let messageId = 0;
+const pendingResolves = new Map<
+  number,
+  {
+    resolve: (f: File) => void;
+    reject: (e: unknown) => void;
+    fileName: string;
+  }
+>();
+
+// Round-robin index to distribute tasks
+let nextWorkerIndex = 0;
+
+// Set up listeners for all workers
+workers.forEach((worker) => {
+  worker.onmessage = (e) => {
+    const { id, blob, error } = e.data;
+    const pending = pendingResolves.get(id);
+    if (!pending) return;
+
+    pendingResolves.delete(id);
+
+    if (error) {
+      pending.reject(new Error(error));
+    } else {
+      const file = new File([blob], pending.fileName, {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+      });
+      pending.resolve(file);
+    }
+  };
+});
+
 export async function compressImage(
   file: File,
   maxWidth: number = 1920,
   maxHeight: number = 1920,
   quality: number = 0.8
 ): Promise<File> {
-  try {
-    // 1) 파일 → ArrayBuffer
-    const arrayBuffer = await file.arrayBuffer();
-    const originalBinary = arrayBufferToBinaryString(arrayBuffer);
+  return new Promise<File>((resolve, reject) => {
+    const id = messageId++;
+    const fileName = file.name.replace(/\.\w+$/, ".jpg");
 
-    // 2) 원본 EXIF 전체 로드
-    let originalExif = null;
+    pendingResolves.set(id, { resolve, reject, fileName });
 
-    if (isJPEGFile(file)) {
-      try {
-        originalExif = piexif.load(originalBinary);
-      } catch (e) {
-        console.warn("Cannot load EXIF from this JPEG. EXIF will be ignored.", e);
-        originalExif = null;
-      }
-    } else {
-      console.warn("Not a JPEG file. EXIF cannot be preserved for this file.");
-    }
+    // Select worker round-robin
+    const worker = workers[nextWorkerIndex];
+    nextWorkerIndex = (nextWorkerIndex + 1) % workers.length;
 
-    // 4) 이미지 로드
-    const bitmap = await createImageBitmap(file);
-
-    // 5) Orientation 보정된 canvas 생성
-    const { canvas: orientedCanvas } = prepareOrientedCanvas(bitmap);
-
-    // 6) 목표 크기 계산 및 리사이즈 Canvas 생성
-    const ratio = Math.min(
-      maxWidth / orientedCanvas.width,
-      maxHeight / orientedCanvas.height,
-      1
-    );
-
-    const targetWidth = Math.round(orientedCanvas.width * ratio);
-    const targetHeight = Math.round(orientedCanvas.height * ratio);
-
-    const resizedCanvas = document.createElement("canvas");
-    resizedCanvas.width = targetWidth;
-    resizedCanvas.height = targetHeight;
-
-    // 7) pica 고품질 resize
-    await pica().resize(orientedCanvas, resizedCanvas, {
-      quality: 3,
-      alpha: false,
+    worker.postMessage({
+      id,
+      file,
+      maxWidth,
+      maxHeight,
+      quality,
     });
-
-    // 8) JPEG Base64 획득
-    const jpegDataUrl = resizedCanvas.toDataURL("image/jpeg", quality);
-
-    if (!jpegDataUrl.startsWith("data:image/jpeg")) {
-      console.warn("Canvas did NOT generate JPEG. Can't insert EXIF. Returning compressed JPEG.");
-      
-      const compressedBlob = dataURLtoBlob(jpegDataUrl);
-      return new File([compressedBlob], file.name.replace(/\.\w+$/, ".jpg"), {
-        type: "image/jpeg",
-        lastModified: Date.now(),
-      });
-    }
-
-    // 9) 원본 EXIF → 압축된 JPEG에 재삽입
-    let exifInserted = jpegDataUrl;
-
-    if (originalExif) {
-      try {
-        exifInserted = piexif.insert(piexif.dump(originalExif), jpegDataUrl);
-      } catch (e) {
-        console.warn("EXIF insertion failed. Returning JPEG without EXIF.", e);
-        exifInserted = jpegDataUrl;
-      }
-    }
-
-    // 11) Base64 → Blob
-    const compressedBlob = dataURLtoBlob(exifInserted);
-    // 12) Blob → File
-    const compressedFile = new File(
-      [compressedBlob],
-      file.name.replace(/\.\w+$/, ".jpg"),
-      { type: "image/jpeg", lastModified: Date.now() }
-    );
-    return compressedFile;
-  } catch (error) {
-    console.error("EXIF-preserving compression failed — returning original file", error);
+  }).catch((err) => {
+    console.warn("Worker compression failed, returning original file:", err);
     return file;
-  }
+  });
 }
 
-/************************* UTILITIES *************************/
 export function isJPEGFile(file: File): boolean {
-  return file.type === "image/jpeg" || file.name.toLowerCase().endsWith(".jpg") || file.name.toLowerCase().endsWith(".jpeg");
-}
-
-function arrayBufferToBinaryString(buffer: ArrayBuffer): string {
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  for (let i = 0; i < len; i++) {
-    binary += String.fromCharCode(bytes[i]);
-  }
-  return binary;
-}
-
-function dataURLtoBlob(dataurl: string): Blob {
-  const arr = dataurl.split(",");
-  const mime = arr[0].match(/:(.*?);/)![1];
-  const bstr = atob(arr[1]);
-  let n = bstr.length;
-  const u8arr = new Uint8Array(n);
-  while (n--) u8arr[n] = bstr.charCodeAt(n);
-  return new Blob([u8arr], { type: mime });
-}
-
-function prepareOrientedCanvas(
-  bitmap: ImageBitmap
-): { canvas: HTMLCanvasElement } {
-  const canvas = document.createElement("canvas");
-  const ctx = canvas.getContext("2d")!;
-
-  canvas.width = bitmap.width;
-  canvas.height = bitmap.height;
-
-  // Simply draw the image without any orientation correction
-  ctx.drawImage(bitmap, 0, 0);
-  return { canvas };
+  return (
+    file.type === "image/jpeg" ||
+    file.name.toLowerCase().endsWith(".jpg") ||
+    file.name.toLowerCase().endsWith(".jpeg")
+  );
 }
