@@ -14,14 +14,14 @@ import { Pencil, Check, AlertCircle, Plus, CheckCircle2, ArrowUp, ArrowDown, Tra
 
 interface PlaceRowProps {
   cluster: Cluster;
-  onCreate: (order_index: number, photoIds: string[]) => void;
-  onAddPhotosToExistingCluster: (clusterId: string, photoIds: string[]) => void;
+  onCreate: (order_index: number, photos: { id: string, clusterId: string }[]) => void;
+  onAddPhotosToExistingCluster: (clusterId: string, photos: { id: string, clusterId: string }[]) => void;
   onRename: (clusterId: string, newName: string) => void;
   onDeletePhoto?: (photoId: string) => void;
   onDeleteCluster: (clusterId: string) => void;
   onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
-  selectedPhotoIds: string[];
-  onSelectPhoto: (photoId: string) => void;
+  selectedPhotos: { id: string, clusterId: string }[];
+  onSelectPhoto: (photoId: string, clusterId: string) => void;
   isCompact?: boolean;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -36,7 +36,7 @@ export function PlaceRow({
   onDeletePhoto, 
   onDeleteCluster, 
   onMoveCluster, 
-  selectedPhotoIds, 
+  selectedPhotos, 
   onSelectPhoto,
   isCompact = false,
   isCollapsed = false,
@@ -46,6 +46,8 @@ export function PlaceRow({
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState(cluster.name || `Place ${cluster.order_index + 1}`);
   const prevPhotoCount = useRef(cluster.photos.length);
+
+  const selectedPhotoIds = selectedPhotos.map(p => p.id);
 
   // Sync name if prop changes
   useEffect(() => {
@@ -170,7 +172,7 @@ export function PlaceRow({
                                         size="sm"
                                         variant="outline"
                                         className={`border-2 border-green-600 bg-green-600 text-white hover:bg-green-700 ml-auto md:ml-0 ${isCompact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'}`}
-                                        onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotoIds)}
+                                        onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
                                       >
                                         <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-4 h-4 mr-1"} />
                                         <span className={isCompact ? "" : "hidden md:inline"}>
@@ -188,13 +190,13 @@ export function PlaceRow({
                                     onMouseLeave={() => setIsOpen(false)}
                                   >
                                     <DropdownMenuItem
-                                      onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotoIds)}
+                                      onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
                                     >
                                       <BringToFront className="mr-2 h-4 w-4" />
                                       <span>선택 사진 여기 추가 ({selectedPhotoIds.length})</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      onClick={() => onCreate(cluster.order_index + 1, selectedPhotoIds)}
+                                      onClick={() => onCreate(cluster.order_index + 1, selectedPhotos)}
                                     >
                                       <MoveDown className="mr-2 h-4 w-4" />
                                       <span>선택 사진 아래 추가 ({selectedPhotoIds.length})</span>
@@ -251,7 +253,7 @@ export function PlaceRow({
                     photo={photo}
                     index={index}
                     onDelete={onDeletePhoto ? () => onDeletePhoto(photo.id.toString()) : undefined}
-                    onSelect={() => onSelectPhoto(photo.id.toString())}
+                    onSelect={() => onSelectPhoto(photo.id.toString(), cluster.id)}
                     isSelected={selectedPhotoIds.includes(photo.id.toString())}
                     isCompact={isCompact}
                   />

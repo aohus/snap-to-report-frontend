@@ -14,14 +14,14 @@ import { Pencil, Check, Plus, ArrowLeft, ArrowRight, Trash2, MoveDown, BringToFr
 
 interface PlaceColumnProps {
   cluster: Cluster;
-  onCreate: (order_index: number, photoIds: string[]) => void;
-  onAddPhotosToExistingCluster: (clusterId: string, photoIds: string[]) => void;
+  onCreate: (order_index: number, photos: { id: string, clusterId: string }[]) => void;
+  onAddPhotosToExistingCluster: (clusterId: string, photos: { id: string, clusterId: string }[]) => void;
   onRename: (clusterId: string, newName: string) => void;
   onDeletePhoto?: (photoId: string) => void;
   onDeleteCluster: (clusterId: string) => void;
   onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
-  selectedPhotoIds: string[];
-  onSelectPhoto: (photoId: string) => void;
+  selectedPhotos: { id: string, clusterId: string }[];
+  onSelectPhoto: (photoId: string, clusterId: string) => void;
   isCompact?: boolean; // Kept for compatibility, though column might ignore it or use it for card size
 }
 
@@ -33,7 +33,7 @@ export function PlaceColumn({
   onDeletePhoto, 
   onDeleteCluster, 
   onMoveCluster, 
-  selectedPhotoIds, 
+  selectedPhotos, 
   onSelectPhoto,
   isCompact = false
 }: PlaceColumnProps) {
@@ -41,6 +41,8 @@ export function PlaceColumn({
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState(cluster.name || `Place ${cluster.order_index + 1}`);
   const prevPhotoCount = useRef(cluster.photos.length);
+  
+  const selectedPhotoIds = selectedPhotos.map(p => p.id);
 
   useEffect(() => {
     setName(cluster.name || `Place ${cluster.order_index + 1}`);
@@ -136,7 +138,7 @@ export function PlaceColumn({
                     size="sm" 
                     variant="outline" 
                     className="h-7 px-2 border-green-600 bg-green-600 text-white hover:bg-green-700 text-xs"
-                    onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotoIds)}
+                    onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
                   >
                     <Plus className="w-3 h-3 mr-1" /> 
                     추가 ({selectedPhotoIds.length})
@@ -149,13 +151,13 @@ export function PlaceColumn({
                 onMouseLeave={() => setIsOpen(false)}
               >
                 <DropdownMenuItem 
-                  onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotoIds)}
+                  onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
                 >
                   <BringToFront className="mr-2 h-4 w-4" />
                   <span>선택 사진 여기 추가</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  onClick={() => onCreate(cluster.order_index + 1, selectedPhotoIds)}
+                  onClick={() => onCreate(cluster.order_index + 1, selectedPhotos)}
                 >
                   <ArrowRight className="mr-2 h-4 w-4" />
                   <span>선택 사진 옆에 추가</span>
@@ -197,7 +199,7 @@ export function PlaceColumn({
                   photo={photo} 
                   index={index} 
                   onDelete={onDeletePhoto ? () => onDeletePhoto(photo.id.toString()) : undefined}
-                  onSelect={() => onSelectPhoto(photo.id.toString())}
+                  onSelect={() => onSelectPhoto(photo.id.toString(), cluster.id)}
                   isSelected={selectedPhotoIds.includes(photo.id.toString())}
                   isCompact={isCompact} 
                 />

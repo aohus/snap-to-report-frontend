@@ -11,22 +11,24 @@ import { useIsMobile } from '@/hooks/use-mobile';
 interface ClusterBoardProps {
   clusters: Cluster[];
   onMovePhoto: (photoId: string, sourceClusterId: string, targetClusterId: string, targetIndex?: number) => void;
-  onCreateCluster: (order_index: number, photoIds: string[]) => void;
-  onAddPhotosToExistingCluster: (clusterId: string, photoIds: string[]) => void;
+  onCreateCluster: (order_index: number, photos: { id: string, clusterId: string }[]) => void;
+  onAddPhotosToExistingCluster: (clusterId: string, photos: { id: string, clusterId: string }[]) => void;
   onRenameCluster: (clusterId: string, newName: string) => void;
   onDeletePhoto: (photoId: string, clusterId: string) => void;
   onDeleteCluster: (clusterId: string) => void;
   onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
-  selectedPhotoIds: string[];
-  onSelectPhoto: (photoId: string) => void;
+  selectedPhotos: { id: string, clusterId: string }[];
+  onSelectPhoto: (photoId: string, clusterId: string) => void;
 }
 
-export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotoIds, onSelectPhoto }: ClusterBoardProps) {
+export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotos, onSelectPhoto }: ClusterBoardProps) {
   const isMobile = useIsMobile();
   const [isCompact, setIsCompact] = useState(false);
   const [isVerticalMode, setIsVerticalMode] = useState(false); // false = Horizontal Mode (Reserve Top), true = Vertical Mode (Reserve Left)
   const [collapsedClusterIds, setCollapsedClusterIds] = useState<Set<string>>(new Set());
   const [hideCompleted, setHideCompleted] = useState(false);
+  
+  const selectedPhotoIds = selectedPhotos.map(p => p.id);
 
   const handleDragEnd = (result: DropResult) => {
     const { source, destination, draggableId } = result;
@@ -142,7 +144,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                       index={index} 
                       onDelete={(pid) => onDeletePhoto(pid.toString(), reserveCluster.id)}
                       isReserve={true}
-                      onSelect={() => onSelectPhoto(photo.id.toString())}
+                      onSelect={() => onSelectPhoto(photo.id.toString(), reserveCluster.id)}
                       isSelected={selectedPhotoIds.includes(photo.id.toString())}
                       isCompact={isCompact}
                     />
@@ -223,13 +225,13 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                   <PlaceColumn 
                     key={cluster.id}
                     cluster={cluster}
-                    onCreate={(order_index, photoIds) => onCreateCluster(order_index, photoIds)}
-                    onAddPhotosToExistingCluster={(clusterId, photoIds) => onAddPhotosToExistingCluster(clusterId, photoIds)}
+                    onCreate={(order_index, photos) => onCreateCluster(order_index, photos)}
+                    onAddPhotosToExistingCluster={(clusterId, photos) => onAddPhotosToExistingCluster(clusterId, photos)}
                     onRename={onRenameCluster}
                     onDeletePhoto={(pid) => onDeletePhoto(pid, cluster.id)}
                     onDeleteCluster={onDeleteCluster}
                     onMoveCluster={onMoveCluster}
-                    selectedPhotoIds={selectedPhotoIds}
+                    selectedPhotos={selectedPhotos}
                     onSelectPhoto={onSelectPhoto}
                     isCompact={isCompact}
                   />
@@ -237,13 +239,13 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                   <PlaceRow
                     key={cluster.id}
                     cluster={cluster}
-                    onCreate={(order_index, photoIds) => onCreateCluster(order_index, photoIds)}
-                    onAddPhotosToExistingCluster={(clusterId, photoIds) => onAddPhotosToExistingCluster(clusterId, photoIds)}
+                    onCreate={(order_index, photos) => onCreateCluster(order_index, photos)}
+                    onAddPhotosToExistingCluster={(clusterId, photos) => onAddPhotosToExistingCluster(clusterId, photos)}
                     onRename={onRenameCluster}
                     onDeletePhoto={(pid) => onDeletePhoto(pid, cluster.id)}
                     onDeleteCluster={onDeleteCluster}
                     onMoveCluster={onMoveCluster}
-                    selectedPhotoIds={selectedPhotoIds}
+                    selectedPhotos={selectedPhotos}
                     onSelectPhoto={onSelectPhoto}
                     isCompact={isCompact}
                     isCollapsed={collapsedClusterIds.has(cluster.id)}

@@ -55,7 +55,7 @@ export default function Dashboard() {
   const [job, setJob] = useState<Job | null>(null);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
-  const [selectedPhotoIds, setSelectedPhotoIds] = useState<string[]>([]);
+  const [selectedPhotos, setSelectedPhotos] = useState<{ id: string; clusterId: string }[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isClustering, setIsClustering] = useState(false);
@@ -277,12 +277,14 @@ export default function Dashboard() {
     }
   };
 
-  const handleSelectPhoto = (photoId: string) => {
-    setSelectedPhotoIds(prev => 
-      prev.includes(photoId) 
-        ? prev.filter(id => id !== photoId)
-        : [...prev, photoId]
-    );
+  const handleSelectPhoto = (photoId: string, clusterId: string) => {
+    setSelectedPhotos(prev => {
+      const exists = prev.some(p => p.id === photoId);
+      if (exists) {
+        return prev.filter(p => p.id !== photoId);
+      }
+      return [...prev, { id: photoId, clusterId }];
+    });
   };
 
   const handleMovePhoto = async (photoId: string, sourceClusterId: string, targetClusterId: string, newIndex: number) => {
@@ -463,66 +465,101 @@ export default function Dashboard() {
     }
   };
 
-  const handleCreateCluster = async (orderIndex: number, photoIds: string[] = [], clusterId?: string) => {
+  const handleCreateCluster = async (orderIndex: number, photosToMoveParam: { id: string; clusterId: string }[] = []) => {
     if (!job) return;
+
+    const prevClusters = clusters; // Store current state for rollback
+    const prevSelectedPhotos = selectedPhotos; // Store current selection for rollback
+
+    const photoIds = photosToMoveParam.map(p => p.id);
+    const fullPhotosToMove: Photo[] = photosToMoveParam.map(p => {
+        // Find the full Photo object from the current clusters state
+        return clusters.flatMap(cl => cl.photos).find(photo => photo.id === p.id) || p as any; // Fallback to partial object if not found (shouldn't happen)
+    });
+
     try {
-      const newCluster = await api.createCluster(job.id, `${job.title}`, orderIndex, photoIds);
-      const sortedNewClusterPhotos = sortPhotosByOrderIndex(newCluster.photos || []);
-      
-      // Shift existing clusters
-      const shiftedClusters = clusters.map(c => {
+      // Optimistically update UI
+      // 1. Integrate shifting and photo removal into a single map
+      const optimisticClusters = clusters.map(c => {
+        let updatedCluster = { ...c };
+        
+        // Shift existing clusters (order_index 업데이트)
         if (c.order_index >= orderIndex) {
-          return { ...c, order_index: c.order_index + 1 };
+            updatedCluster.order_index += 1;
         }
-        return c;
+        
+        // Remove moved photos from source clusters (photos 업데이트)
+        const photosToRemoveFromHere = photosToMoveParam.filter(p => p.clusterId === c.id).map(p => p.id);
+        if (photosToRemoveFromHere.length > 0) {
+            updatedCluster.photos = c.photos.filter(p => !photosToRemoveFromHere.includes(p.id.toString()));
+        }
+        return updatedCluster;
       });
 
-      const newClusters = [...shiftedClusters, { ...newCluster, photos: sortedNewClusterPhotos }].sort((a, b) => a.order_index - b.order_index);
-      setClusters(newClusters);
-      // triggerAutoSave(newClusters); // Trigger sync for the new cluster
+      // 2. Create the new cluster via API
+      const newClusterResponse = await api.createCluster(job.id, `${job.title}`, orderIndex, photoIds);
+      // Ensure the API response has photos, even if empty, so sortPhotosByOrderIndex works
+      const newClusterWithPhotos = { ...newClusterResponse, photos: sortPhotosByOrderIndex(fullPhotosToMove) };
 
-      if (photoIds.length > 0) {
-        const remainingSelection = selectedPhotoIds.filter(id => !photoIds.includes(id));
-        setSelectedPhotoIds(remainingSelection);
-        toast.success(`New place created with ${photoIds.length} photos.`);
-      } else {
-        toast.success('New empty place created.');
-      }
+      // 3. Add new cluster and re-sort
+      const finalClusters = [...optimisticClusters, newClusterWithPhotos].sort((a, b) => a.order_index - b.order_index);
+      
+      setClusters(finalClusters);
+      setSelectedPhotos([]); // Clear selection after successful move/creation
+      // triggerAutoSave(finalClusters); // Trigger sync for the new cluster
+
+      toast.success(`New place created with ${photoIds.length} photos.`);
     } catch (error) {
+      console.error("Failed to create new place", error);
       toast.error('Failed to create new place');
+      setClusters(prevClusters); // Rollback clusters state
+      setSelectedPhotos(prevSelectedPhotos); // Rollback selection state
     }
   };
 
-  const handleAddPhotosToExistingCluster = async (clusterId: string, photoIds: string[]) => {
-    if (!job || photoIds.length === 0) return;
-    
-    // Update local state ONLY. Sync will handle the backend association.
-    const newClusters = clusters.map(c => {
-      let newPhotos = c.photos.filter(p => !photoIds.includes(p.id.toString()));
-      
-      if (c.id === clusterId) {
-        const movedPhotos = clusters
-          .flatMap(cl => cl.photos)
-          .filter(p => photoIds.includes(p.id.toString()));
-          
-        const uniqueMovedPhotos = Array.from(new Map(movedPhotos.map(p => [p.id, p])).values());
-        newPhotos = sortPhotosByOrderIndex([...newPhotos, ...uniqueMovedPhotos]);
-      }
-      return { ...c, photos: newPhotos };
+  const handleAddPhotosToExistingCluster = async (targetClusterId: string, photosToMoveParam: { id: string; clusterId: string }[]) => {
+    if (!job || photosToMoveParam.length === 0) return;
+
+    const prevClusters = clusters; // Store current state for rollback
+    const prevSelectedPhotos = selectedPhotos; // Store current selection for rollback
+
+    const photoIds = photosToMoveParam.map(p => p.id);
+    const fullPhotosToMove: Photo[] = photosToMoveParam.map(p => {
+        return clusters.flatMap(cl => cl.photos).find(photo => photo.id === p.id) || p as any;
     });
-    
-    setClusters(newClusters);
-    // triggerAutoSave(newClusters);
-    
-    setSaving(true);
+
     try {
-        await api.addPhotosToExistingCluster(clusterId, photoIds);
-        toast.success(`Added ${photoIds.length} photos to place`);
+      // Optimistically update UI
+      const optimisticClusters = clusters.map(c => {
+        let newPhotos = c.photos;
+
+        // Remove photos from source clusters
+        const photosToRemoveFromHere = photosToMoveParam.filter(p => p.clusterId === c.id).map(p => p.id);
+        if (photosToRemoveFromHere.length > 0) {
+            newPhotos = c.photos.filter(p => !photosToRemoveFromHere.includes(p.id.toString()));
+        }
+        
+        // Add photos to target cluster
+        if (c.id === targetClusterId) {
+            // Only add unique photos and sort
+            const existingPhotoIdsInTarget = new Set(newPhotos.map(p => p.id));
+            const uniqueMovedPhotos = fullPhotosToMove.filter(p => !existingPhotoIdsInTarget.has(p.id));
+            newPhotos = sortPhotosByOrderIndex([...newPhotos, ...uniqueMovedPhotos]);
+        }
+        return { ...c, photos: newPhotos };
+      });
+      
+      setClusters(optimisticClusters);
+      setSelectedPhotos([]); // Clear selection after successful move
+
+      // API call
+      await api.addPhotosToExistingCluster(targetClusterId, photoIds);
+      toast.success(`Added ${photoIds.length} photos to place`);
     } catch (e) {
-        console.error("Failed to add photos", e);
-        toast.error("Failed to add photos");
-    } finally {
-        setSaving(false);
+      console.error("Failed to add photos", e);
+      toast.error("Failed to add photos");
+      setClusters(prevClusters); // Rollback clusters state
+      setSelectedPhotos(prevSelectedPhotos); // Rollback selection state
     }
   };
 
@@ -694,7 +731,7 @@ export default function Dashboard() {
                     onAddPhotosToExistingCluster={handleAddPhotosToExistingCluster}
                     onRenameCluster={handleRenameCluster}
                     onDeletePhoto={handleDeletePhoto}
-                    selectedPhotoIds={selectedPhotoIds}
+                    selectedPhotos={selectedPhotos}
                     onSelectPhoto={handleSelectPhoto}
                   />
               </div>
