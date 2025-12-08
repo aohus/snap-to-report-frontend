@@ -224,7 +224,7 @@ export default function Dashboard() {
         
         // Poll for results
         const pollInterval = 1000;
-        const maxAttempts = 30; // 30 seconds timeout
+        const maxAttempts = 180; // 30 seconds timeout
         let attempts = 0;
         
         while (attempts < maxAttempts) {
