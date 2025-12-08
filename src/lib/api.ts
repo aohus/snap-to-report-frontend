@@ -134,7 +134,7 @@ export const api = {
     const payload = {
       clusters: clusters.map(c => ({
         id: c.id,
-        name: c.name,
+        name: c.name, // Removing name to prevent overwriting edits with stale data during sync
         order_index: c.order_index,
         photo_ids: c.photos.map(p => p.id)
       }))

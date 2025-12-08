@@ -18,6 +18,7 @@ export interface Photo {
   storage_path: string;
   url: string;
   thumbnail_path?: string;
+  timestamp?: string; // ISO string from DateTime
 }
 
 export interface Cluster {

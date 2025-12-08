@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import {
@@ -20,6 +20,34 @@ import { PhotoGrid } from '@/components/PhotoGrid';
 import { ClusterBoard } from '@/components/ClusterBoard';
 import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle } from 'lucide-react';
 import { toast } from 'sonner';
+
+// Helper to sort photos within a cluster by order_index (proxy for timestamp)
+const sortPhotosByOrderIndex = (photos: Photo[]): Photo[] => {
+  return [...photos].sort((a, b) => {
+    // 1. If both have order_index, compare them.
+    if (a.order_index !== undefined && b.order_index !== undefined) {
+      if (a.order_index !== b.order_index) {
+        return a.order_index - b.order_index;
+      }
+    }
+
+    // 2. If one has order_index and the other doesn't, the one with order_index comes first.
+    if (a.order_index !== undefined && b.order_index === undefined) return -1;
+    if (a.order_index === undefined && b.order_index !== undefined) return 1;
+
+    // 3. If neither has order_index, sort by timestamp (ascending).
+    // Treat missing timestamp as Infinity (place at the end).
+    const timeA = a.timestamp ? new Date(a.timestamp).getTime() : Infinity;
+    const timeB = b.timestamp ? new Date(b.timestamp).getTime() : Infinity;
+
+    if (timeA !== timeB) {
+      return timeA - timeB;
+    }
+
+    // 4. Fallback to id for stable sort
+    return a.id.localeCompare(b.id);
+  });
+};
 
 export default function Dashboard() {
   const navigate = useNavigate();
@@ -43,92 +71,137 @@ export default function Dashboard() {
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
 
-  // Auto-save helper
-  const triggerAutoSave = (updatedClusters: Cluster[]) => {
-    if (!job) return;
+  useEffect(() => {
+    if (!jobId) return;
+
+    const fetchJobData = async () => {
+      try {
+        const data = await api.getJobDetails(jobId);
+        setJob(data);
+        if (data.clusters) {
+           const sorted = data.clusters
+              .sort((a, b) => a.order_index - b.order_index)
+              .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
+           setClusters(sorted);
+        }
+        if (data.photos) setPhotos(data.photos);
+      } catch (error) {
+        console.error("Failed to load job data", error);
+        toast.error("Failed to load job data");
+      }
+    };
+    fetchJobData();
+  }, [jobId]);
+  
+  // Sequential Sync Logic
+  const isSyncing = useRef(false);
+  const pendingSync = useRef<Cluster[] | null>(null);
+  const pendingDeletes = useRef<Set<string>>(new Set()); // For photo deletes
+  const pendingClusterDeletes = useRef<Set<string>>(new Set()); // For cluster deletes
+  const pendingRenames = useRef<Map<string, string>>(new Map()); // For cluster renames: Map<clusterId, newName>
+
+  const processSync = async () => {
+    if (!job || isSyncing.current) return; 
+
+    // If nothing to sync and nothing to delete/rename, return
+    if (!pendingSync.current &&
+        pendingDeletes.current.size === 0 &&
+        pendingClusterDeletes.current.size === 0 &&
+        pendingRenames.current.size === 0) {
+      setSaving(false); // Nothing to save, ensure indicator is off
+      return;
+    }
+
+    isSyncing.current = true;
     setSaving(true);
+
+    try {
+      // 0. Process Cluster Renames (Needs to happen before sync possibly overwrites structure)
+      if (pendingRenames.current.size > 0) {
+        // Collect current pending renames and clear ref for next batch
+        const renamesToProcess = new Map(pendingRenames.current);
+        pendingRenames.current.clear(); 
+        
+        await Promise.all(
+          Array.from(renamesToProcess.entries()).map(async ([clusterId, newName]) => {
+            try {
+              await api.updateCluster(clusterId, { new_name: newName });
+            } catch (e) {
+              console.error(`Failed to rename cluster ${clusterId} to ${newName}`, e);
+            }
+          })
+        );
+      }
+
+      // 1. Sync Structure (Clusters and Photos)
+      if (pendingSync.current) {
+        const clustersToSync = pendingSync.current;
+        pendingSync.current = null; // Clear pending queue
+        await api.syncClusters(job.id, clustersToSync);
+      }
+
+      // 2. Process Photo Deletes
+      if (pendingDeletes.current.size > 0) {
+        const idsToDelete = Array.from(pendingDeletes.current);
+        pendingDeletes.current.clear(); 
+        await Promise.all(idsToDelete.map(id => api.deletePhoto(id)));
+      }
+      
+      // 3. Process Cluster Deletes
+      if (pendingClusterDeletes.current.size > 0) {
+          const idsToDelete = Array.from(pendingClusterDeletes.current);
+          pendingClusterDeletes.current.clear();
+          await Promise.all(idsToDelete.map(id => api.deleteCluster(id)));
+      }
+
+    } catch (error) {
+      console.error("Batch Sync/Action failed", error);
+    } finally {
+      isSyncing.current = false;
+      // Check if new changes arrived while we were processing
+      if (pendingSync.current || pendingDeletes.current.size > 0 || pendingClusterDeletes.current.size > 0 || pendingRenames.current.size > 0) {
+        processSync();
+      } else {
+        setSaving(false); // Only turn off if nothing else is pending
+      }
+    }
+  };
+
+  // Auto-save helper
+  const triggerAutoSave = useCallback((updatedClusters?: Cluster[] | null) => { // updatedClusters can be optional or null
+    if (!job) return;
+
+    if (updatedClusters) { // Only update pendingSync if cluster state is provided
+      pendingSync.current = updatedClusters;
+    }
+    setSaving(true);
+
     if (saveTimer.current) clearTimeout(saveTimer.current);
 
-    saveTimer.current = setTimeout(async () => {
-      try {
-        await api.syncClusters(job.id, updatedClusters);
-        setSaving(false);
-      } catch (error) {
-        console.error("Auto-save failed", error);
-        setSaving(false);
-      }
+    saveTimer.current = setTimeout(() => {
+      processSync();
     }, 2000);
-  };
+  }, [job]);
 
-  // Load selection from local storage
-  useEffect(() => {
-    if (jobId) {
-      const saved = localStorage.getItem(`selectedPhotoIds_${jobId}`);
-      if (saved) {
-        try {
-          setSelectedPhotoIds(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse selectedPhotoIds", e);
-        }
-      }
-      isSelectionLoaded.current = true;
-    }
-  }, [jobId]);
+  // ... existing code ...
 
-  // Save selection to local storage
-  useEffect(() => {
-    if (jobId && isSelectionLoaded.current) {
-      localStorage.setItem(`selectedPhotoIds_${jobId}`, JSON.stringify(selectedPhotoIds));
-    }
-  }, [selectedPhotoIds, jobId]);
-
-  useEffect(() => {
-    if (jobId) {
-      loadJobData(jobId);
-    }
-  }, [jobId]);
-
-  const loadJobData = async (id: string) => {
-    try {
-      setLoading(true);
-      // Optimized: Fetch all job details in a single API call
-      const jobData = await api.getJobDetails(id);
-      
-      setJob(jobData);
-      setPhotos(jobData.photos);
-      setClusters(jobData.clusters);
-
-      if (jobData.status === "PROCESSING" || jobData.status === "PENDING") { // Handle PENDING as well
-        setIsClustering(true);
-      };
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to load job data');
-      navigate('/');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelectPhoto = (photoId: string) => {
-    setSelectedPhotoIds(prev =>
-      prev.includes(photoId)
-        ? prev.filter(id => id !== photoId)
-        : [...prev, photoId]
-    );
-  };
-
-  const handleUpload = async (files: File[]) => {
+  const handleUpload = async (files: FileList) => {
     if (!job) return;
+    setLoading(true);
+    setUploadProgress(0);
     try {
-      setLoading(true);
-      setUploadProgress(0);
-      await api.uploadPhotos(job.id, files, (percent) => setUploadProgress(percent));
-      toast.success('Photos uploaded successfully');
-      // Reload full data to get new photos
-      await loadJobData(job.id);
+      await api.uploadPhotos(job.id, Array.from(files), (progress) => {
+        setUploadProgress(progress);
+      });
+      
+      const jobData = await api.getJobDetails(job.id);
+      setJob(jobData);
+      if (jobData.photos) setPhotos(jobData.photos);
+      
+      toast.success("Photos uploaded successfully");
     } catch (error) {
-      toast.error('Failed to upload photos');
+      console.error("Upload failed", error);
+      toast.error("Failed to upload photos");
     } finally {
       setLoading(false);
       setUploadProgress(0);
@@ -137,44 +210,34 @@ export default function Dashboard() {
 
   const handleStartClustering = async () => {
     if (!job) return;
+    setIsClustering(true);
     try {
-      setIsClustering(true);
-      toast.info('Starting photo clustering...');
-      await api.startClustering(job.id);
-
-      // Polling for status only
-      const interval = setInterval(async () => {
-        try {
-          const jobStatus = await api.getJob(job.id); // Lightweight status check
-          if (jobStatus.status === 'COMPLETED' || jobStatus.status === 'FAILED') {
-            clearInterval(interval);
-            setIsClustering(false);
-            if (jobStatus.status === 'COMPLETED') {
-              toast.success('Clustering complete!');
-              await loadJobData(job.id); // Fetch full data only on completion
-            } else {
-              toast.error('Clustering failed. Please try again.');
-            }
-          }
-        } catch (error) {
-          clearInterval(interval);
-          setIsClustering(false);
-          toast.error('Error checking clustering status.');
-        }
-      }, 3000);
+      const newClusters = await api.startClustering(job.id);
+      const sortedClusters = newClusters
+        .sort((a, b) => a.order_index - b.order_index)
+        .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
+      
+      setClusters(sortedClusters);
+      toast.success("Photos clustered successfully");
     } catch (error) {
+      console.error("Clustering failed", error);
+      toast.error("Failed to cluster photos");
+    } finally {
       setIsClustering(false);
-      toast.error('Failed to start clustering.');
     }
   };
 
-  const handleMovePhoto = async (photoId: string, sourceClusterId: string, targetClusterId: string, targetIndex?: number) => {
-    // Deep clone to avoid mutating state directly
-    const newClusters = clusters.map(c => ({
-      ...c,
-      photos: [...c.photos]
-    }));
+  const handleSelectPhoto = (photoId: string) => {
+    setSelectedPhotoIds(prev => 
+      prev.includes(photoId) 
+        ? prev.filter(id => id !== photoId)
+        : [...prev, photoId]
+    );
+  };
 
+  const handleMovePhoto = (photoId: string, sourceClusterId: string, targetClusterId: string, newIndex: number) => {
+    const newClusters = clusters.map(c => ({...c, photos: [...c.photos]}));
+    
     const sourceCluster = newClusters.find(c => c.id === sourceClusterId);
     const targetCluster = newClusters.find(c => c.id === targetClusterId);
 
@@ -182,17 +245,10 @@ export default function Dashboard() {
 
     const photoIndex = sourceCluster.photos.findIndex(p => p.id === photoId);
     if (photoIndex === -1) return;
-
-    // Remove from source
-    const [movedPhoto] = sourceCluster.photos.splice(photoIndex, 1);
-
-    // Insert into target at specific index or append to end
-    if (targetIndex !== undefined) {
-      targetCluster.photos.splice(targetIndex, 0, movedPhoto);
-    } else {
-      targetCluster.photos.push(movedPhoto);
-    }
     
+    const [photo] = sourceCluster.photos.splice(photoIndex, 1);
+    targetCluster.photos.splice(newIndex, 0, photo);
+
     setClusters(newClusters);
     triggerAutoSave(newClusters);
   };
@@ -205,39 +261,32 @@ export default function Dashboard() {
         return c;
     });
     setClusters(newClusters);
+    
+    // Queue for deletion
+    pendingDeletes.current.add(photoId);
     triggerAutoSave(newClusters);
-
-    try {
-        await api.deletePhoto(photoId);
-        toast.success('Photo deleted');
-    } catch (error) {
-        toast.error('Failed to delete photo');
-    }
   };
 
   const handleRenameCluster = async (clusterId: string, newName: string) => {
     setClusters(prev => prev.map(c => c.id === clusterId ? { ...c, name: newName } : c));
-    try {
-      await api.updateCluster(clusterId, { new_name: newName });
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to rename place');
-    }
+    
+    // Add rename to pendingRenames queue and trigger sync
+    pendingRenames.current.set(clusterId, newName);
+    triggerAutoSave(); // No new cluster state, just trigger processing existing pending actions
   };
 
   const handleDeleteCluster = async (clusterId: string) => {
-    // if (!confirm('Are you sure you want to delete this place? Photos will be moved to reserve.')) return;
-
     const clusterToDelete = clusters.find(c => c.id === clusterId);
     const reserveCluster = clusters.find(c => c.name === 'reserve');
     
     let newClusters = clusters;
     
-    // Optimistically move photos to reserve if it exists
     if (clusterToDelete && reserveCluster && clusterToDelete.photos.length > 0) {
        newClusters = newClusters.map(c => {
            if (c.id === reserveCluster.id) {
-               return { ...c, photos: [...c.photos, ...clusterToDelete.photos] };
+               // Move photos to reserve, sorted
+               const merged = [...c.photos, ...clusterToDelete.photos];
+               return { ...c, photos: sortPhotosByOrderIndex(merged) };
            }
            return c;
        });
@@ -245,14 +294,10 @@ export default function Dashboard() {
     
     newClusters = newClusters.filter(c => c.id !== clusterId);
     setClusters(newClusters);
+    
+    // Queue for cluster deletion
+    pendingClusterDeletes.current.add(clusterId);
     triggerAutoSave(newClusters);
-
-    try {
-      await api.deleteCluster(clusterId);
-      toast.success('Place deleted');
-    } catch (error) {
-      toast.error('Failed to delete place');
-    }
   };
 
   const handleMoveCluster = async (clusterId: string, direction: 'up' | 'down') => {
@@ -267,12 +312,10 @@ export default function Dashboard() {
 
     const newClusters = [...clusters];
     
-    // Swap order_index values
     const tempOrder = currentCluster.order_index;
     currentCluster.order_index = targetCluster.order_index;
     targetCluster.order_index = tempOrder;
 
-    // Sort by order_index
     newClusters.sort((a, b) => a.order_index - b.order_index);
     setClusters(newClusters);
     triggerAutoSave(newClusters);
@@ -281,12 +324,13 @@ export default function Dashboard() {
   const handleCreateCluster = async (orderIndex: number, photoIds: string[] = [], clusterId?: string) => {
     if (!job) return;
     try {
-      // API call needed to get valid ID
       const newCluster = await api.createCluster(job.id, `${job.title}`, orderIndex, photoIds);
       
-      // Insert into local state
-      const newClusters = [...clusters, newCluster].sort((a, b) => a.order_index - b.order_index);
+      const sortedNewClusterPhotos = sortPhotosByOrderIndex(newCluster.photos || []);
+
+      const newClusters = [...clusters, { ...newCluster, photos: sortedNewClusterPhotos }].sort((a, b) => a.order_index - b.order_index);
       setClusters(newClusters);
+      triggerAutoSave(newClusters); // Trigger sync for the new cluster
 
       if (photoIds.length > 0) {
         const remainingSelection = selectedPhotoIds.filter(id => !photoIds.includes(id));
@@ -302,40 +346,25 @@ export default function Dashboard() {
 
   const handleAddPhotosToExistingCluster = async (clusterId: string, photoIds: string[]) => {
     if (!job || photoIds.length === 0) return;
-    try {
-      await api.addPhotosToExistingCluster(clusterId, photoIds);
+    
+    // Update local state ONLY. Sync will handle the backend association.
+    const newClusters = clusters.map(c => {
+      let newPhotos = c.photos.filter(p => !photoIds.includes(p.id));
       
-      // Update local state by moving photos
-      const newClusters = clusters.map(c => {
-        // Remove moved photos from any cluster
-        let newPhotos = c.photos.filter(p => !photoIds.includes(p.id));
-        
-        // If this is the target cluster, add the photos
-        if (c.id === clusterId) {
-          // Find the photo objects from the current clusters structure
-          const movedPhotos = clusters
-            .flatMap(cl => cl.photos)
-            .filter(p => photoIds.includes(p.id));
-            
-          // Deduplicate just in case
-          const uniqueMovedPhotos = Array.from(new Map(movedPhotos.map(p => [p.id, p])).values());
+      if (c.id === clusterId) {
+        const movedPhotos = clusters
+          .flatMap(cl => cl.photos)
+          .filter(p => photoIds.includes(p.id));
           
-          newPhotos = [...newPhotos, ...uniqueMovedPhotos];
-        }
-        return { ...c, photos: newPhotos };
-      });
-      setClusters(newClusters);
-      triggerAutoSave(newClusters);
-
-      // Remove used photos from selection
-      const remainingSelection = selectedPhotoIds.filter(id => !photoIds.includes(id));
-      setSelectedPhotoIds(remainingSelection);
-
-      toast.success(`Added ${photoIds.length} photos to place.`);
-    } catch (error) {
-      console.error(error);
-      toast.error('Failed to add photos to place');
-    }
+        const uniqueMovedPhotos = Array.from(new Map(movedPhotos.map(p => [p.id, p])).values());
+        newPhotos = sortPhotosByOrderIndex([...newPhotos, ...uniqueMovedPhotos]);
+      }
+      return { ...c, photos: newPhotos };
+    });
+    
+    setClusters(newClusters);
+    triggerAutoSave(newClusters);
+    toast.success(`Added ${photoIds.length} photos to place`);
   };
 
   const handleExport = () => {
