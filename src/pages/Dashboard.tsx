@@ -286,12 +286,49 @@ export default function Dashboard() {
   };
 
   const handleMovePhoto = async (photoId: string, sourceClusterId: string, targetClusterId: string, newIndex: number) => {
-    const newClusters = clusters.map(c => ({...c, photos: [...c.photos]}));
+    if (!job) return;
+
+    let realTargetClusterId = targetClusterId;
+    let createdReserveCluster: Cluster | null = null;
+
+    // 1. Handle "reserve" target special case
+    // If dropped on "reserve" zone but no reserve cluster exists in state with that ID
+    if (targetClusterId === 'reserve') {
+        const existingReserve = clusters.find(c => c.name === 'reserve');
+        if (existingReserve) {
+            realTargetClusterId = existingReserve.id;
+        } else {
+            // Create reserve cluster immediately
+            try {
+                createdReserveCluster = await api.createCluster(job.id, 'reserve', -1, []);
+                // Ensure photos is initialized
+                createdReserveCluster.photos = []; 
+                realTargetClusterId = createdReserveCluster.id;
+            } catch (e) {
+                console.error("Failed to create reserve cluster auto-magically", e);
+                toast.error("Failed to move to reserve (creation failed)");
+                return;
+            }
+        }
+    }
+
+    // 2. Update Local State
+    // We need to use functional update or get fresh state if we just added a cluster, 
+    // but since we might have added `createdReserveCluster`, let's construct the new list carefully.
+    
+    const currentClusters = createdReserveCluster 
+        ? [...clusters, createdReserveCluster] 
+        : [...clusters];
+
+    const newClusters = currentClusters.map(c => ({...c, photos: [...c.photos]}));
     
     const sourceCluster = newClusters.find(c => c.id === sourceClusterId);
-    const targetCluster = newClusters.find(c => c.id === targetClusterId);
+    const targetCluster = newClusters.find(c => c.id === realTargetClusterId);
 
-    if (!sourceCluster || !targetCluster) return;
+    if (!sourceCluster || !targetCluster) {
+        console.error("Source or Target cluster not found during move", { sourceClusterId, realTargetClusterId });
+        return;
+    }
 
     const photoIndex = sourceCluster.photos.findIndex(p => p.id === photoId);
     if (photoIndex === -1) return;
@@ -299,43 +336,41 @@ export default function Dashboard() {
     const [photo] = sourceCluster.photos.splice(photoIndex, 1);
     targetCluster.photos.splice(newIndex, 0, photo);
 
+    // If source cluster is 'reserve' and becomes empty, do we delete it?
+    // User said: "사진 길이가 0이 되어도 칸이 유지되는 것이 유일한 다른점" -> So we KEEP it.
+    // But other clusters? Typically we keep them unless explicitly deleted.
+
     setClusters(newClusters);
     
-    // triggerAutoSave(newClusters);
-    if (!job) return;
     setSaving(true);
     try {
-        const clustersToSync = [sourceCluster];
-        if (sourceClusterId !== targetClusterId) {
-            clustersToSync.push(targetCluster);
-        }
-        await api.syncClusters(job.id, clustersToSync);
+        // Atomic Move API
+        await api.movePhoto(photoId, realTargetClusterId, newIndex);
     } catch (e) {
-        console.error("Failed to sync move", e);
+        console.error("Failed to move photo", e);
         toast.error("Failed to save move");
+        // Revert? (Complex, maybe just reload)
     } finally {
         setSaving(false);
     }
   };
 
   const handleDeletePhoto = async (photoId: string, clusterId: string) => {
-    const newClusters = clusters.map(c => {
+    // Optimistic UI update with functional state to prevent stale closures
+    setClusters(prev => prev.map(c => {
         if (c.id === clusterId) {
-            return { ...c, photos: c.photos.filter(p => p.id !== photoId) };
+            return { ...c, photos: c.photos.filter(p => p.id.toString() !== photoId.toString()) };
         }
         return c;
-    });
-    setClusters(newClusters);
+    }));
     
-    // Queue for deletion
-    // pendingDeletes.current.add(photoId);
-    // triggerAutoSave(newClusters);
     setSaving(true);
     try {
         await api.deletePhoto(photoId);
     } catch (e) {
         console.error("Failed to delete photo", e);
         toast.error("Failed to delete photo");
+        // Optional: Revert state if needed (requires fetching or undo logic)
     } finally {
         setSaving(false);
     }
@@ -415,7 +450,11 @@ export default function Dashboard() {
     if (!job) return;
     setSaving(true);
     try {
-        await api.syncClusters(job.id, [currentCluster, targetCluster]);
+        // Swap orders atomically
+        await Promise.all([
+            api.updateCluster(currentCluster.id, { order_index: currentCluster.order_index }),
+            api.updateCluster(targetCluster.id, { order_index: targetCluster.order_index })
+        ]);
     } catch (e) {
         console.error("Failed to move cluster", e);
         toast.error("Failed to move cluster");
@@ -470,18 +509,7 @@ export default function Dashboard() {
     
     setSaving(true);
     try {
-        // Find source clusters from 'clusters' (before state update) to identify what needs syncing
-        const sourceClusterIds = new Set<string>();
-        clusters.forEach(c => {
-            if (c.photos.some(p => photoIds.includes(p.id))) {
-                sourceClusterIds.add(c.id);
-            }
-        });
-        sourceClusterIds.add(clusterId); // Add target
-        
-        const clustersToSync = newClusters.filter(c => sourceClusterIds.has(c.id));
-        await api.syncClusters(job.id, clustersToSync);
-        
+        await api.addPhotosToExistingCluster(clusterId, photoIds);
         toast.success(`Added ${photoIds.length} photos to place`);
     } catch (e) {
         console.error("Failed to add photos", e);

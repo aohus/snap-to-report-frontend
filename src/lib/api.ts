@@ -299,11 +299,15 @@ export const api = {
     }
   },
 
-  movePhoto: async (photoId: string, targetClusterId: string): Promise<void> => {
+  movePhoto: async (photoId: string, targetClusterId: string, orderIndex?: number): Promise<void> => {
+    const body: any = { target_cluster_id: targetClusterId };
+    if (orderIndex !== undefined) {
+        body.order_index = orderIndex;
+    }
     const response = await fetch(`${API_BASE_URL}/photos/${photoId}/move`, {
       method: 'POST',
       headers: authJsonHeaders(),
-      body: JSON.stringify({ target_cluster_id: targetClusterId }),
+      body: JSON.stringify(body),
     });
     return handleResponse<void>(response);
   },
