@@ -66,7 +66,7 @@ export default function Dashboard() {
   const [exportMetadata, setExportMetadata] = useState({
     title: '',
     construction_type: '',
-    client_name: '',
+    company_name: '',
   });
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
@@ -568,7 +568,7 @@ export default function Dashboard() {
     setExportMetadata({
       title: job.title,
       construction_type: job.construction_type || job.title,
-      client_name: job.client_name || '',
+      company_name: job.company_name || '',
     });
     setExportDialogOpen(true);
   };
@@ -772,13 +772,13 @@ export default function Dashboard() {
               />
             </div>
             <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="client_name" className="text-right">
+              <Label htmlFor="company_name" className="text-right">
                 시행처
               </Label>
               <Input
-                id="client_name"
-                value={exportMetadata.client_name}
-                onChange={(e) => setExportMetadata({ ...exportMetadata, client_name: e.target.value })}
+                id="company_name"
+                value={exportMetadata.company_name}
+                onChange={(e) => setExportMetadata({ ...exportMetadata, company_name: e.target.value })}
                 className="col-span-3"
               />
             </div>
