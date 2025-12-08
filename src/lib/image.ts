@@ -7,10 +7,11 @@
 import ImageWorker from './image.worker?worker';
 
 // Determine concurrency based on hardware (clamp between 2 and 6)
-const CONCURRENCY = Math.min(Math.max((navigator.hardwareConcurrency || 4) - 1, 2), 6);
+// CPU 집약적인 압축 작업을 처리할 Worker의 수
+const COMPRESSION_CONCURRENCY = Math.min(Math.max((navigator.hardwareConcurrency || 4) - 1, 2), 6);
 
 const workers: Worker[] = [];
-for (let i = 0; i < CONCURRENCY; i++) {
+for (let i = 0; i < COMPRESSION_CONCURRENCY; i++) {
   workers.push(new ImageWorker());
 }
 
@@ -39,8 +40,9 @@ workers.forEach((worker) => {
     if (error) {
       pending.reject(new Error(error));
     } else {
+      // Worker에서 받은 Blob을 File 객체로 재구성
       const file = new File([blob], pending.fileName, {
-        type: "image/jpeg",
+        type: "image/jpeg", // JPEG으로 압축했으므로 타입 고정
         lastModified: Date.now(),
       });
       pending.resolve(file);
@@ -54,11 +56,15 @@ export async function compressImage(
   maxHeight: number = 1920,
   quality: number = 0.8
 ): Promise<File> {
-  return new Promise<File>((resolve, reject) => {
+  return new Promise<File>(async (resolve, reject) => {
     const id = messageId++;
-    const fileName = file.name.replace(/\.\w+$/, ".jpg");
+    // 압축 후 파일명은 .jpg로 변경
+    const fileName = file.name.replace(/\.\w+$/, ".jpg"); 
 
     pendingResolves.set(id, { resolve, reject, fileName });
+
+    // Transferable Object 사용: File을 ArrayBuffer로 변환하여 메모리 복사 최소화
+    const arrayBuffer = await file.arrayBuffer();
 
     // Select worker round-robin
     const worker = workers[nextWorkerIndex];
@@ -66,11 +72,15 @@ export async function compressImage(
 
     worker.postMessage({
       id,
-      file,
+      arrayBuffer, // Transferable Object
+      fileType: file.type,
+      fileName: file.name,
+      fileLastModified: file.lastModified,
       maxWidth,
       maxHeight,
       quality,
-    });
+    }, [arrayBuffer]); // ArrayBuffer 소유권을 Worker로 이전
+
   }).catch((err) => {
     console.warn("Worker compression failed, returning original file:", err);
     return file;
@@ -78,6 +88,7 @@ export async function compressImage(
 }
 
 export function isJPEGFile(file: File): boolean {
+  // JPEG 파일만 압축 로직을 태웁니다.
   return (
     file.type === "image/jpeg" ||
     file.name.toLowerCase().endsWith(".jpg") ||

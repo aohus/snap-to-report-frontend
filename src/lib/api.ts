@@ -176,33 +176,35 @@ export const api = {
     });
     return handleResponse<Cluster[]>(response);
   },
-
-  // Photo Management
+// Photo Management
+  // Presigned URL 요청을 배치(Batch) 처리하도록 개선
   getUploadUrls: async (jobId: string, files: { filename: string; content_type: string }[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
+    // files 배열 전체를 한 번에 백엔드로 전송
     const fileInfos = files.map(f => ({ filename: f.filename, content_type: f.content_type }));
-    console.log("calling presigned with:", fileInfos);
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
       method: 'POST',
       headers: authJsonHeaders(),
       body: JSON.stringify(fileInfos),
     });
-    console.log("calling presigned with:", response);
     return handleResponse(response);
   },
 
+  // 업로드 완료 통보 (후속 비동기 처리 트리거)
   notifyUploadComplete: async (jobId: string, uploadedFiles: { filename: string; storage_path: string }[]): Promise<Photo[]> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/complete`, {
       method: 'POST',
       headers: authJsonHeaders(),
       body: JSON.stringify(uploadedFiles),
     });
-    return []; 
+    return handleResponse(response); 
   },
 
+  // 메인 업로드 로직: 압축/업로드 병렬화 + Fallback 로직 포함
   uploadPhotos: async (jobId: string, files: File[], onProgress?: (percent: number) => void): Promise<Photo[]> => {
     try {
       const totalFiles = files.length;
       let completedFiles = 0;
+      let uploadedFilesInfo: { filename: string; storage_path: string }[] = [];
 
       const updateProgress = () => {
         if (onProgress) {
@@ -211,58 +213,87 @@ export const api = {
         }
       };
 
-      // Task Queue Pattern with Concurrency Limit
-      const MAX_CONCURRENCY = 3; 
+      const MAX_CONCURRENCY = 3; // 네트워크 I/O 동시 처리 제한
+
+      // 1. 모든 파일에 대한 압축 작업을 병렬로 시작합니다.
+      const compressionPromises = files.map(async (file, index) => {
+        let fileToUpload = file;
+        
+        if (isJPEGFile(file)) {
+          try {
+            fileToUpload = await compressImage(file);
+          } catch (e) {
+            console.warn(`Compression failed for ${file.name}, uploading original.`);
+          }
+        }
+        
+        return { originalFile: file, fileToUpload, index };
+      });
       
-      // We'll manage a queue of file indices
-      const queue = files.map((file, index) => ({ file, index }));
+      // 모든 파일의 압축이 완료될 때까지 대기
+      const compressedFiles = await Promise.all(compressionPromises);
+
+      // 2. Presigned URL을 Batch로 요청합니다.
+      const fileInfos = compressedFiles.map(({ fileToUpload }) => ({
+        filename: fileToUpload.name, // 압축된 파일명 사용
+        content_type: fileToUpload.type,
+      }));
       
+      let urls: { filename: string; upload_url: string | null; storage_path: string }[] = [];
+      let strategy = '';
+      let usePresignedStrategy = false;
+      
+      try {
+        const urlResponse = await api.getUploadUrls(jobId, fileInfos);
+        strategy = urlResponse.strategy;
+        urls = urlResponse.urls;
+        
+        if (strategy === 'presigned' && urls.length === totalFiles) {
+          usePresignedStrategy = true;
+        } else {
+          // Fallback trigger: 전략이 'presigned'가 아니거나 URL 개수가 일치하지 않음
+          throw new Error('Presigned URL strategy mismatch or invalid count.');
+        }
+      } catch (err) {
+         console.warn(`Presigned URL batch request failed or rejected. Falling back to Server Upload. Error:`, err);
+         usePresignedStrategy = false;
+      }
+      
+      // 3. 업로드 Queue 생성
+      const uploadQueue = compressedFiles.map((item, index) => ({
+        file: item.fileToUpload,
+        originalFile: item.originalFile,
+        urlInfo: usePresignedStrategy ? urls[index] : null,
+      }));
+
+      // Task Queue Pattern for Upload Concurrency
       const worker = async () => {
-        while (queue.length > 0) {
-          const item = queue.shift();
+        while (uploadQueue.length > 0) {
+          const item = uploadQueue.shift();
           if (!item) break;
-          const { file } = item;
+          const { file, originalFile, urlInfo } = item;
+          let uploadSuccessful = false;
 
           try {
-            // 1. Compression (Individual)
-            let fileToUpload = file;
-            if (isJPEGFile(file)) {
-               try {
-                 fileToUpload = await compressImage(file);
-               } catch (e) {
-                 console.warn(`Compression failed for ${file.name}, uploading original.`);
-               }
-            }
-
-            // 2. Upload (Individual)
-            // Try Presigned URL Strategy First
-            let uploadedViaPresigned = false;
-            try {
-              const fileInfo = [{ filename: file.name, content_type: fileToUpload.type }];
-              const { strategy, urls } = await api.getUploadUrls(jobId, fileInfo);
-
-              if (strategy === 'presigned' && urls.length === 1 && urls[0].upload_url) {
-                 await fetch(urls[0].upload_url, {
-                    method: 'PUT',
-                    body: fileToUpload,
-                    headers: { 'Content-Type': fileToUpload.type }
-                 });
-                 
-                 await api.notifyUploadComplete(jobId, [{
-                    filename: urls[0].filename,
-                    storage_path: urls[0].storage_path
-                 }]);
-                 uploadedViaPresigned = true;
-              }
-            } catch (err) {
-               console.warn("Presigned upload failed, falling back to server upload", err);
-            }
-
-            // Fallback to Server Upload
-            if (!uploadedViaPresigned) {
+            if (usePresignedStrategy && urlInfo?.upload_url) {
+              // A. Presigned URL Direct Upload
+              await fetch(urlInfo.upload_url, {
+                method: 'PUT',
+                body: file,
+                headers: { 'Content-Type': file.type }
+              });
+              
+              // 완료 정보 수집
+              uploadedFilesInfo.push({
+                  filename: urlInfo.filename,
+                  storage_path: urlInfo.storage_path
+              });
+              uploadSuccessful = true;
+            } else {
+              // B. Fallback: Server Upload (XHR 사용)
               const formData = new FormData();
-              // Use original filename
-              formData.append('files', fileToUpload, file.name);
+              // 서버가 원본 파일명 기반으로 처리할 수 있도록, 원본 파일명 사용 (혹은 압축된 파일명 사용에 대해 백엔드와 협의 필요)
+              formData.append('files', file, originalFile.name); 
 
               await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
@@ -273,32 +304,48 @@ export const api = {
                 xhr.onerror = () => reject(new Error('Network Error'));
                 xhr.send(formData);
               });
+              
+              // Fallback의 경우, 서버가 이미 처리 완료 통보를 받았다고 가정하거나
+              // 별도의 서버 업로드 완료 통보 API를 호출해야 함. 
+              // (기존 코드의 FormData 업로드는 별도의 complete 통보 로직이 없었으므로 여기서는 생략)
+              uploadSuccessful = true;
             }
+
           } catch (error) {
-             console.error(`Failed to process file ${file.name}`, error);
+             console.error(`Failed to upload file ${originalFile.name}`, error);
              // Continue processing other files even if one fails
           } finally {
-            completedFiles++;
-            updateProgress();
+            if (uploadSuccessful) {
+                completedFiles++;
+                updateProgress();
+            }
           }
         }
       };
 
-      const workers = Array(Math.min(files.length, MAX_CONCURRENCY))
+      // MAX_CONCURRENCY 수만큼 Upload Worker를 실행
+      const workers = Array(Math.min(uploadQueue.length, MAX_CONCURRENCY))
         .fill(null)
         .map(() => worker());
 
       await Promise.all(workers);
-
+      
+      // 4. Presigned 전략을 사용했고 성공한 파일이 있다면 최종 통보
+      if (usePresignedStrategy && uploadedFilesInfo.length > 0) {
+        // 백엔드가 비동기 처리를 시작하도록 트리거
+        await api.notifyUploadComplete(jobId, uploadedFilesInfo);
+      }
+      
+      // 5. 서버에서 최종 Photo 목록을 가져옴
       const photos = await api.getPhotos(jobId);
       return photos as unknown as Photo[];
 
     } catch (error) {
-      console.error("Upload failed", error);
+      console.error("Fatal Upload failure", error);
       throw error;
     }
   },
-
+  
   movePhoto: async (photoId: string, targetClusterId: string, orderIndex?: number): Promise<void> => {
     const body: any = { target_cluster_id: targetClusterId };
     if (orderIndex !== undefined) {
