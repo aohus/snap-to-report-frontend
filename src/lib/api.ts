@@ -114,13 +114,13 @@ export const api = {
   },
 
   // Cluster/Place Management
-  startClustering: async (jobId: string): Promise<Cluster[]> => {
+  startClustering: async (jobId: string): Promise<any> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/cluster`, { 
       method: 'POST',
       headers: authJsonHeaders(), 
       body: JSON.stringify({ min_samples: 3, max_dist_m: 8.0, max_alt_diff_m: 20.0 }),
    });
-    return handleResponse<Cluster[]>(response);
+    return handleResponse<any>(response);
   },
 
   getClusters: async (jobId: string): Promise<Cluster[]> => {

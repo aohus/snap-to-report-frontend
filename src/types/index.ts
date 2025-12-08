@@ -26,7 +26,6 @@ export interface Cluster {
   job_id: string;
   name: string;
   order_index: number;
-  reserve: boolean;
   photos: Photo[];
 }
 

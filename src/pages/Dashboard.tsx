@@ -212,13 +212,62 @@ export default function Dashboard() {
     if (!job) return;
     setIsClustering(true);
     try {
-      const newClusters = await api.startClustering(job.id);
+      const result = await api.startClustering(job.id);
+      console.log("startClustering response:", result);
+
+      let newClusters: Cluster[] = [];
+
+      // Check for PENDING status
+      if (result && (result.status === 'PENDING' || result.status === 'PROCESSING')) {
+        toast.info("Clustering started in background...");
+        
+        // Poll for results
+        const pollInterval = 1000;
+        const maxAttempts = 30; // 30 seconds timeout
+        let attempts = 0;
+        
+        while (attempts < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          try {
+             // We can check clusters or job status. Assuming checking clusters count.
+             // Ideally the backend should provide a status endpoint or getJob should return status.
+             // For now, let's check if we get clusters.
+             const clusters = await api.getClusters(job.id);
+             if (clusters && clusters.length > 0) {
+               newClusters = clusters;
+               break;
+             }
+             // Optional: If backend supports job status, check that here.
+          } catch (e) {
+            console.warn("Polling error", e);
+          }
+          attempts++;
+        }
+        
+        if (newClusters.length === 0) {
+           toast.warning("Clustering finished but no places were found, or it timed out.");
+           // Fetch one last time just in case
+           const clusters = await api.getClusters(job.id);
+           if (clusters) newClusters = clusters;
+        }
+
+      } else if (Array.isArray(result)) {
+        newClusters = result;
+      } else if (result && typeof result === 'object' && Array.isArray((result as any).clusters)) {
+        newClusters = (result as any).clusters;
+      } else {
+        console.warn("Unexpected clustering response format", result);
+        throw new Error("Invalid clustering response format");
+      }
+
       const sortedClusters = newClusters
-        .sort((a, b) => a.order_index - b.order_index)
+        .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
         .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
       
       setClusters(sortedClusters);
-      toast.success("Photos clustered successfully");
+      if (sortedClusters.length > 0) {
+        toast.success(`Analysis complete. Found ${sortedClusters.length} places.`);
+      }
     } catch (error) {
       console.error("Clustering failed", error);
       toast.error("Failed to cluster photos");
