@@ -168,20 +168,31 @@ export default function Dashboard() {
     }
   };
 
-  const handleMovePhoto = async (photoId: string, sourceClusterId: string, targetClusterId: string) => {
-    const newClusters = clusters.map(c => {
-      if (c.id === sourceClusterId) {
-        return { ...c, photos: c.photos.filter(p => p.id !== photoId) };
-      }
-      if (c.id === targetClusterId) {
-        const sourceCluster = clusters.find(cl => cl.id === sourceClusterId);
-        const photo = sourceCluster?.photos.find(p => p.id === photoId);
-        if (photo) {
-          return { ...c, photos: [...c.photos, photo] };
-        }
-      }
-      return c;
-    });
+  const handleMovePhoto = async (photoId: string, sourceClusterId: string, targetClusterId: string, targetIndex?: number) => {
+    // Deep clone to avoid mutating state directly
+    const newClusters = clusters.map(c => ({
+      ...c,
+      photos: [...c.photos]
+    }));
+
+    const sourceCluster = newClusters.find(c => c.id === sourceClusterId);
+    const targetCluster = newClusters.find(c => c.id === targetClusterId);
+
+    if (!sourceCluster || !targetCluster) return;
+
+    const photoIndex = sourceCluster.photos.findIndex(p => p.id === photoId);
+    if (photoIndex === -1) return;
+
+    // Remove from source
+    const [movedPhoto] = sourceCluster.photos.splice(photoIndex, 1);
+
+    // Insert into target at specific index or append to end
+    if (targetIndex !== undefined) {
+      targetCluster.photos.splice(targetIndex, 0, movedPhoto);
+    } else {
+      targetCluster.photos.push(movedPhoto);
+    }
+    
     setClusters(newClusters);
     triggerAutoSave(newClusters);
   };
@@ -194,6 +205,7 @@ export default function Dashboard() {
         return c;
     });
     setClusters(newClusters);
+    triggerAutoSave(newClusters);
 
     try {
         await api.deletePhoto(photoId);
@@ -233,6 +245,7 @@ export default function Dashboard() {
     
     newClusters = newClusters.filter(c => c.id !== clusterId);
     setClusters(newClusters);
+    triggerAutoSave(newClusters);
 
     try {
       await api.deleteCluster(clusterId);

@@ -10,7 +10,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 interface ClusterBoardProps {
   clusters: Cluster[];
-  onMovePhoto: (photoId: string, sourceClusterId: string, targetClusterId: string) => void;
+  onMovePhoto: (photoId: string, sourceClusterId: string, targetClusterId: string, targetIndex?: number) => void;
   onCreateCluster: (order_index: number, photoIds: string[]) => void;
   onAddPhotosToExistingCluster: (clusterId: string, photoIds: string[]) => void;
   onRenameCluster: (clusterId: string, newName: string) => void;
@@ -37,8 +37,9 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
     const photoId = draggableId;
     const sourceClusterId = source.droppableId;
     const targetClusterId = destination.droppableId;
+    const targetIndex = destination.index;
 
-    onMovePhoto(photoId, sourceClusterId, targetClusterId);
+    onMovePhoto(photoId, sourceClusterId, targetClusterId, targetIndex);
   };
 
   const reserveCluster = clusters.find(c => c.name === 'reserve');
@@ -85,13 +86,31 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
       <div className="flex flex-col md:flex-row h-full gap-4 md:gap-8">
         {/* Reserve Area */}
         {/* Always Left Column on Desktop. Top Row on Mobile. */}
-        <div className="flex-shrink-0 flex flex-col bg-gray-200 rounded-xl md:rounded-2xl border-2 border-gray-300 overflow-hidden w-full md:w-[460px] h-auto md:h-full max-h-[220px] md:max-h-none">
-          <div className="p-2 md:p-3 bg-gray-300 border-b border-gray-400 flex items-center gap-2 sticky top-0 z-10">
-            <Archive className="w-4 h-4 md:w-5 md:h-5 text-gray-700" />
-            <h3 className="text-base md:text-lg font-bold text-gray-800">임시 보관</h3>
-            <span className="ml-auto bg-gray-600 text-white px-2 py-0.5 rounded-full text-xs md:text-sm">
-              {reserveCluster?.photos.length || 0}
-            </span>
+        <div 
+          className={`
+            flex-shrink-0 flex flex-col bg-gray-200 rounded-xl md:rounded-2xl border-2 border-gray-300 overflow-hidden 
+            w-full transition-all duration-300 ease-in-out
+            ${(reserveCluster?.photos.length || 0) === 0 ? 'md:w-[230px]' : 'md:w-[460px]'}
+            h-auto md:h-full max-h-[220px] md:max-h-none
+          `}
+        >
+          <div className="p-2 md:p-3 bg-gray-300 border-b border-gray-400 flex items-center justify-center md:justify-start gap-2 sticky top-0 z-10 h-[50px]">
+            <Archive className="w-4 h-4 md:w-5 md:h-5 text-gray-700 flex-shrink-0" />
+            <div className={`
+              flex items-center gap-2 overflow-hidden transition-all duration-300
+              ${(reserveCluster?.photos.length || 0) === 0 ? 'w-0 opacity-0 md:hidden' : 'w-auto opacity-100'}
+            `}>
+              <h3 className="text-base md:text-lg font-bold text-gray-800 whitespace-nowrap">임시 보관</h3>
+              <span className="ml-auto bg-gray-600 text-white px-2 py-0.5 rounded-full text-xs md:text-sm">
+                {reserveCluster?.photos.length || 0}
+              </span>
+            </div>
+            {/* Show count badge in collapsed mode */}
+             {(reserveCluster?.photos.length || 0) === 0 && (
+                <span className="hidden md:flex bg-gray-600 text-white w-5 h-5 items-center justify-center rounded-full text-xs">
+                  0
+                </span>
+             )}
           </div>
           
           <Droppable droppableId={reserveCluster?.id.toString() || 'reserve'} direction={isMobile ? "horizontal" : "vertical"}>
@@ -106,11 +125,14 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     : 'overflow-y-auto overflow-x-hidden flex flex-col gap-4'
                   }
                   ${snapshot.isDraggingOver ? 'bg-blue-100/50' : ''}
+                  ${(reserveCluster?.photos.length || 0) === 0 ? 'items-center' : ''}
                 `}
               >
                 {reserveCluster?.photos.length === 0 && (
-                  <div className="text-center text-gray-500 m-auto px-2 w-full">
-                    <p className="text-sm md:text-base">Drag extra photos here.</p>
+                  <div className="text-center text-gray-500 m-auto px-2 w-full flex flex-col items-center">
+                    <p className={`text-sm md:text-base transition-opacity duration-200 ${(reserveCluster?.photos.length || 0) === 0 ? 'hidden md:block md:opacity-0 md:group-hover:opacity-100' : ''}`}>
+                      Drag extra photos here.
+                    </p>
                   </div>
                 )}
                 {reserveCluster?.photos.map((photo, index) => (

@@ -244,8 +244,7 @@ export function PlaceRow({
                 {!isCompact && <p className="text-xs md:text-lg hidden md:block">Drag photos here</p>}
               </div>
             )}
-            {[...cluster.photos]
-              .sort((a, b) => a.order_index - b.order_index) // 숫자 오름차순 정렬
+            {cluster.photos
               .map((photo, index) => (
                 <div key={photo.id}>
                   <PhotoCard 

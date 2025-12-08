@@ -134,6 +134,7 @@ export const api = {
     const payload = {
       clusters: clusters.map(c => ({
         id: c.id,
+        name: c.name,
         order_index: c.order_index,
         photo_ids: c.photos.map(p => p.id)
       }))
@@ -200,9 +201,6 @@ export const api = {
 
   uploadPhotos: async (jobId: string, files: File[], onProgress?: (percent: number) => void): Promise<Photo[]> => {
     try {
-      // 1. Get Upload URLs (Required for initialization)
-      // await api.getUploadUrls(jobId, files);
-      
       const totalFiles = files.length;
       let completedFiles = 0;
 
@@ -213,126 +211,85 @@ export const api = {
         }
       };
 
-      // Optimization: Parallel Batch Uploads
-      // We use a queue-based worker pattern to limit concurrency while maximizing throughput.
-      const BATCH_SIZE = 5;
-      const MAX_CONCURRENCY = 3; // Limit parallel requests to avoid browser stalling
+      // Task Queue Pattern with Concurrency Limit
+      const MAX_CONCURRENCY = 3; 
+      
+      // We'll manage a queue of file indices
+      const queue = files.map((file, index) => ({ file, index }));
+      
+      const worker = async () => {
+        while (queue.length > 0) {
+          const item = queue.shift();
+          if (!item) break;
+          const { file } = item;
 
-      // Create all batches first
-      const batches: File[][] = [];
-      for (let i = 0; i < files.length; i += BATCH_SIZE) {
-        batches.push(files.slice(i, i + BATCH_SIZE));
-      }
-
-      // Worker function to process batches from the queue
-      const uploadWorker = async () => {
-        while (batches.length > 0) {
-          const batch = batches.shift();
-          if (!batch) break;
-
-          // Conditionally compress images before upload to improve speed, only for JPEGs
-          const compressedBatch = await Promise.all(
-            batch.map(async (file) => {
-              try {
-                if (isJPEGFile(file)) { // Only compress if it's a JPEG
-                  return await compressImage(file);
-                } else {
-                  console.log(`Skipping compression for non-JPEG file: ${file.name}`);
-                  return file; // Return original file if not JPEG
-                }
-              } catch (error) {
-                console.warn(`Compression failed for ${file.name}, uploading original.`, error);
-                return file;
-              }
-            })
-          );
-
-          let uploadedViaPresigned = false;
-
-          // Try Presigned URL Strategy First
           try {
-            // Use original filenames but compressed file types for requesting upload URLs
-            const fileInfos = compressedBatch.map((f, i) => ({
-              filename: batch[i].name,
-              content_type: f.type,
-            }));
-
-            const { strategy, urls } = await api.getUploadUrls(jobId, fileInfos);
-            console.log("PRESIGNED RESPONSE:", { strategy, urls });
-
-            if (strategy === 'presigned' && urls.length === compressedBatch.length) {
-              // Upload directly to storage (S3/GCS)
-              await Promise.all(compressedBatch.map((file, idx) => {
-                const urlInfo = urls[idx];
-                if (!urlInfo.upload_url) throw new Error('Missing upload URL');
-                
-                return fetch(urlInfo.upload_url, {
-                  method: 'PUT',
-                  body: file,
-                  headers: {
-                    'Content-Type': file.type, // Important for some providers
-                  }
-                });
-              }));
-
-              // Notify backend of completion
-              await api.notifyUploadComplete(jobId, urls.map(u => ({
-                filename: u.filename,
-                storage_path: u.storage_path
-              })));
-              
-              uploadedViaPresigned = true;
+            // 1. Compression (Individual)
+            let fileToUpload = file;
+            if (isJPEGFile(file)) {
+               try {
+                 fileToUpload = await compressImage(file);
+               } catch (e) {
+                 console.warn(`Compression failed for ${file.name}, uploading original.`);
+               }
             }
-          } catch (error) {
-            console.warn("Presigned upload failed, falling back to server upload:", error);
-            // Fallthrough to standard upload
-          }
-          
-          if (!uploadedViaPresigned) {
-            const formData = new FormData();
-            // Explicitly use original filename (batch[i].name) because compressed file might have 'blob' or different name
-            compressedBatch.forEach((file, i) => formData.append('files', file, batch[i].name));
-            
+
+            // 2. Upload (Individual)
+            // Try Presigned URL Strategy First
+            let uploadedViaPresigned = false;
             try {
+              const fileInfo = [{ filename: file.name, content_type: fileToUpload.type }];
+              const { strategy, urls } = await api.getUploadUrls(jobId, fileInfo);
+
+              if (strategy === 'presigned' && urls.length === 1 && urls[0].upload_url) {
+                 await fetch(urls[0].upload_url, {
+                    method: 'PUT',
+                    body: fileToUpload,
+                    headers: { 'Content-Type': fileToUpload.type }
+                 });
+                 
+                 await api.notifyUploadComplete(jobId, [{
+                    filename: urls[0].filename,
+                    storage_path: urls[0].storage_path
+                 }]);
+                 uploadedViaPresigned = true;
+              }
+            } catch (err) {
+               console.warn("Presigned upload failed, falling back to server upload", err);
+            }
+
+            // Fallback to Server Upload
+            if (!uploadedViaPresigned) {
+              const formData = new FormData();
+              // Use original filename
+              formData.append('files', fileToUpload, file.name);
+
               await new Promise((resolve, reject) => {
                 const xhr = new XMLHttpRequest();
                 xhr.open('POST', `${API_BASE_URL}/jobs/${jobId}/photos`);
-                
                 const accessToken = AuthService.getToken();
-                if (accessToken) {
-                  xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
-                }
-                
-                xhr.onload = () => {
-                  if (xhr.status >= 200 && xhr.status < 300) {
-                     resolve(undefined);
-                  } else {
-                     reject(new Error(xhr.statusText));
-                  }
-                };
-                
+                if (accessToken) xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
+                xhr.onload = () => (xhr.status >= 200 && xhr.status < 300) ? resolve(undefined) : reject(new Error(xhr.statusText));
                 xhr.onerror = () => reject(new Error('Network Error'));
                 xhr.send(formData);
               });
-            } catch (error) {
-              // If one batch fails, we re-throw to stop the process or handle retry logic.
-              throw error;
             }
+          } catch (error) {
+             console.error(`Failed to process file ${file.name}`, error);
+             // Continue processing other files even if one fails
+          } finally {
+            completedFiles++;
+            updateProgress();
           }
-
-          completedFiles += batch.length;
-          updateProgress();
         }
       };
 
-      // Start workers
-      const workers = Array(Math.min(batches.length, MAX_CONCURRENCY))
+      const workers = Array(Math.min(files.length, MAX_CONCURRENCY))
         .fill(null)
-        .map(() => uploadWorker());
+        .map(() => worker());
 
       await Promise.all(workers);
 
-      // After all batches, fetch actual photos to satisfy return type
       const photos = await api.getPhotos(jobId);
       return photos as unknown as Photo[];
 
