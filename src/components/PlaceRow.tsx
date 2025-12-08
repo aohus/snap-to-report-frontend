@@ -71,8 +71,8 @@ export function PlaceRow({
   };
 
   const handleCreateEmpty = async () => {
-    const orderIndex = cluster.order_index;
-    onCreate(orderIndex, []); // Always create an empty cluster from this button
+    const orderIndex = cluster.order_index + 1; // Insert Below
+    onCreate(orderIndex, []); 
   };
 
   const photoCount = cluster.photos.length;
@@ -194,12 +194,12 @@ export function PlaceRow({
                                       <span>선택 사진 여기 추가 ({selectedPhotoIds.length})</span>
                                     </DropdownMenuItem>
                                     <DropdownMenuItem
-                                      onClick={() => onCreate(cluster.order_index, selectedPhotoIds)}
+                                      onClick={() => onCreate(cluster.order_index + 1, selectedPhotoIds)}
                                     >
                                       <MoveDown className="mr-2 h-4 w-4" />
                                       <span>선택 사진 아래 추가 ({selectedPhotoIds.length})</span>
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => onCreate(cluster.order_index, [])}>
+                                    <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, [])}>
                                       <Plus className="mr-2 h-4 w-4" />
                                       <span>빈 장소 추가</span>
                                     </DropdownMenuItem>

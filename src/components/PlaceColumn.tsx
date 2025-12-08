@@ -63,7 +63,7 @@ export function PlaceColumn({
   };
 
   const handleCreateEmpty = async () => {
-    const orderIndex = cluster.order_index;
+    const orderIndex = cluster.order_index + 1;
     onCreate(orderIndex, []); 
   };
 
@@ -155,12 +155,12 @@ export function PlaceColumn({
                   <span>선택 사진 여기 추가</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem 
-                  onClick={() => onCreate(cluster.order_index, selectedPhotoIds)}
+                  onClick={() => onCreate(cluster.order_index + 1, selectedPhotoIds)}
                 >
                   <ArrowRight className="mr-2 h-4 w-4" />
                   <span>선택 사진 옆에 추가</span>
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onCreate(cluster.order_index, [])}>
+                <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, [])}>
                   <Plus className="mr-2 h-4 w-4" />
                   <span>빈 장소 추가</span>
                 </DropdownMenuItem>
