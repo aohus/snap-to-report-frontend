@@ -467,10 +467,17 @@ export default function Dashboard() {
     if (!job) return;
     try {
       const newCluster = await api.createCluster(job.id, `${job.title}`, orderIndex, photoIds);
-      
       const sortedNewClusterPhotos = sortPhotosByOrderIndex(newCluster.photos || []);
+      
+      // Shift existing clusters
+      const shiftedClusters = clusters.map(c => {
+        if (c.order_index >= orderIndex) {
+          return { ...c, order_index: c.order_index + 1 };
+        }
+        return c;
+      });
 
-      const newClusters = [...clusters, { ...newCluster, photos: sortedNewClusterPhotos }].sort((a, b) => a.order_index - b.order_index);
+      const newClusters = [...shiftedClusters, { ...newCluster, photos: sortedNewClusterPhotos }].sort((a, b) => a.order_index - b.order_index);
       setClusters(newClusters);
       // triggerAutoSave(newClusters); // Trigger sync for the new cluster
 
@@ -491,12 +498,12 @@ export default function Dashboard() {
     
     // Update local state ONLY. Sync will handle the backend association.
     const newClusters = clusters.map(c => {
-      let newPhotos = c.photos.filter(p => !photoIds.includes(p.id));
+      let newPhotos = c.photos.filter(p => !photoIds.includes(p.id.toString()));
       
       if (c.id === clusterId) {
         const movedPhotos = clusters
           .flatMap(cl => cl.photos)
-          .filter(p => photoIds.includes(p.id));
+          .filter(p => photoIds.includes(p.id.toString()));
           
         const uniqueMovedPhotos = Array.from(new Map(movedPhotos.map(p => [p.id, p])).values());
         newPhotos = sortPhotosByOrderIndex([...newPhotos, ...uniqueMovedPhotos]);
