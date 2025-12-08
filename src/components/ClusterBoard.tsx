@@ -90,7 +90,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
           className={`
             flex-shrink-0 flex flex-col bg-gray-200 rounded-xl md:rounded-2xl border-2 border-gray-300 overflow-hidden 
             w-full transition-all duration-300 ease-in-out
-            ${(reserveCluster?.photos.length || 0) === 0 ? 'md:w-[230px]' : 'md:w-[460px]'}
+            ${(reserveCluster?.photos.length || 0) === 0 ? 'md:w-[360px]' : 'md:w-[460px]'}
             h-auto md:h-full max-h-[220px] md:max-h-none
           `}
         >
