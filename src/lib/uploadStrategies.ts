@@ -32,7 +32,24 @@ export async function uploadViaResumable(
 
         // 308: 청크 업로드 성공 (진행 중), 200/201: 전체 완료
         if (response.status === 308 || response.status === 200 || response.status === 201) {
-          start = end;
+          
+          let nextStart = end;
+
+          if (response.status === 308) {
+             // 308 응답 헤더에서 GCS가 알려주는 정확한 다음 시작 위치를 파싱합니다.
+             const rangeHeader = response.headers.get('range'); // 예: 'bytes=0-1048575'
+             if (rangeHeader) {
+                // 'bytes=0-XXXXX'에서 마지막 바이트 번호 + 1이 다음 시작 위치입니다.
+                const match = rangeHeader.match(/(\d+)\s*$/); 
+                if (match && match[1]) {
+                    // 마지막 바이트 인덱스(match[1]) + 1
+                    nextStart = parseInt(match[1], 10) + 1;
+                }
+             }
+          }
+          
+          start = nextStart; // GCS가 알려준 위치 또는 현재 청크의 끝으로 업데이트
+
           const percent = Math.min(Math.round((start / totalBytes) * 100), 100);
           onProgress(percent);
           break; // 성공 시 while(retries) 탈출 -> 다음 청크로
