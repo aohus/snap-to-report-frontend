@@ -38,25 +38,20 @@ export async function uploadViaResumable(
         //   break; // 성공 시 while(retries) 탈출 -> 다음 청크로
         // } else {
         if (response.status === 308 || response.status === 200 || response.status === 201) {
-          
           let nextStart = end;
 
           if (response.status === 308) {
-            console.log("=== 308 응답 헤더 목록 ===");
-              response.headers.forEach((value, key) => {
-                console.log(`${key}: ${value}`);
-              });
-                      
-            const rangeHeader = response.headers.get('Range');
-            console.log("Range Header 값:", rangeHeader); 
-             if (rangeHeader) {
-                // 'bytes=0-XXXXX'에서 마지막 바이트 번호 + 1이 다음 시작 위치입니다.
-                const match = rangeHeader.match(/(\d+)\s*$/); 
-                if (match && match[1]) {
-                    // 마지막 바이트 인덱스(match[1]) + 1
-                    nextStart = parseInt(match[1], 10) + 1;
-                }
-             }
+            const rangeHeader = response.headers.get('range'); // 값: "bytes=0-5242879"
+             
+            if (rangeHeader) {
+              // 수정된 정규식: "bytes=0-" 뒤에 오는 숫자들을 잡습니다.
+              const match = rangeHeader.match(/bytes=\d+-(\d+)/); 
+              
+              if (match && match[1]) {
+                  // 저장된 마지막 바이트(5242879) + 1 = 5242880 (다음 시작 위치)
+                  nextStart = parseInt(match[1], 10) + 1;
+              }
+            }
           }
           
           start = nextStart; // GCS가 알려준 위치 또는 현재 청크의 끝으로 업데이트
