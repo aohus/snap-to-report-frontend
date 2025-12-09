@@ -4,98 +4,98 @@ import piexif from "piexifjs";
 const picaInstance = pica();
 
 self.onmessage = async (e) => {
-  // Transferable ArrayBuffer를 직접 받습니다.
+  // Transferable ArrayBuffer를 받습니다.
   const { id, arrayBuffer, fileType, fileName, fileLastModified, maxWidth, maxHeight, quality } = e.data;
 
-  try {
-    // 1. ArrayBuffer -> File/BinaryString
-    const originalBinary = arrayBufferToBinaryString(arrayBuffer);
-    const file = new File([arrayBuffer], fileName, { type: fileType, lastModified: fileLastModified });
+  // ArrayBuffer를 File 객체로 변환
+  const file = new File([arrayBuffer], fileName, { type: fileType, lastModified: fileLastModified });
 
-    // 2. Extract EXIF
-    let originalExif = null;
+  try {
+    // 1. Extract EXIF
+    let originalExifObj = null;
     const isJPEG = isJPEGFile(file);
+    
     if (isJPEG) {
       try {
-        originalExif = piexif.load(originalBinary);
+        const binaryString = await arrayBufferToBinaryString(arrayBuffer);
+        originalExifObj = piexif.load(binaryString);
       } catch (err) {
+        console.warn(`EXIF loading failed for ${fileName}.`, err);
         // ignore exif errors
       }
     }
 
-    // 3. Create Bitmap (Off-main-thread)
+    // 2. Create Bitmap & Resize (Off-main-thread)
     const bitmap = await createImageBitmap(file);
 
-    // 4. Resize Logic using OffscreenCanvas
     const { width, height } = calculateSize(bitmap.width, bitmap.height, maxWidth, maxHeight);
     const offscreen = new OffscreenCanvas(width, height);
     
-    // Pica resize
-    await picaInstance.resize(bitmap, offscreen, {
-      quality: 3,
-      alpha: false
-    });
+    try {
+      await picaInstance.resize(bitmap, offscreen, {
+        quality: 3,
+        alpha: false
+      });
+    } catch (picaError) {
+      console.warn("Pica resize failed, falling back to native drawImage.", picaError);
+      const ctx = offscreen.getContext("2d");
+      if (ctx) {
+        ctx.imageSmoothingEnabled = true;
+        ctx.imageSmoothingQuality = "high";
+        ctx.drawImage(bitmap, 0, 0, width, height);
+      } else {
+         throw picaError;
+      }
+    }
 
-    // 5. Export to Blob
+    // 3. Export to Blob
     const resizedBlob = await offscreen.convertToBlob({
       type: "image/jpeg",
       quality: quality
     });
 
-    // 6. Insert EXIF (Optimized for ArrayBuffer/Blob)
-    if (originalExif && resizedBlob && isJPEG) {
-        
-        // Blob -> ArrayBuffer (async)
-        const resizedArrayBuffer = await resizedBlob.arrayBuffer();
-        
-        // ArrayBuffer -> Binary String (for piexif.insert)
-        const resizedBinary = arrayBufferToBinaryString(resizedArrayBuffer);
-        
+    // 4. Insert EXIF
+    if (originalExifObj && resizedBlob && isJPEG) {
         try {
-            const newJpegBinary = piexif.insert(piexif.dump(originalExif), resizedBinary);
+            // Blob -> ArrayBuffer -> BinaryString
+            const resizedArrayBuffer = await resizedBlob.arrayBuffer();
+            const resizedBinaryString = await arrayBufferToBinaryString(resizedArrayBuffer);
             
-            // Binary String -> ArrayBuffer -> Final Blob
-            const finalBlob = binaryStringToBlob(newJpegBinary, "image/jpeg");
+            // Dump EXIF obj to string
+            const exifStr = piexif.dump(originalExifObj);
+            
+            // Insert EXIF into resized image string
+            const finalBinaryString = piexif.insert(exifStr, resizedBinaryString);
+            
+            // BinaryString -> ArrayBuffer -> Blob
+            const finalArrayBuffer = binaryStringToArrayBuffer(finalBinaryString);
+            const finalBlob = new Blob([finalArrayBuffer], { type: "image/jpeg" });
             
             self.postMessage({ id, blob: finalBlob });
         } catch (e) {
+            console.error("Failed to insert EXIF, falling back to compressed blob.", e);
             // Fallback: EXIF 삽입 실패 시 압축된 Blob만 반환
-            self.postMessage({ id, blob: resizedBlob });
+            self.postMessage({ id, blob: resizedBlob, warning: "EXIF insert failed." });
         }
     } else {
         self.postMessage({ id, blob: resizedBlob });
     }
 
   } catch (error) {
-    self.postMessage({ id, error: error instanceof Error ? error.message : "Unknown error" });
+    // createImageBitmap 실패, Pica resize 실패 등 처리
+    const errorMessage = error instanceof Error ? error.message : "Unknown compression error";
+    
+    // 이 에러는 주로 Fingerprinting Protection이나 이미지 로드 실패 시 발생
+    self.postMessage({ id, error: errorMessage, warning: "Compression failed, using original file." });
   }
 };
 
+// -----------------------------------------------------------------
+// Helper Functions
+// -----------------------------------------------------------------
+
 function isJPEGFile(file: File): boolean {
   return file.type === "image/jpeg" || file.name.toLowerCase().endsWith(".jpg") || file.name.toLowerCase().endsWith(".jpeg");
-}
-
-function arrayBufferToBinaryString(buffer: ArrayBuffer): string {
-  // 이 동기 루프가 병목이 될 수 있지만, 현재 piexifjs 사용을 위해 불가피함.
-  // 32768 (32KB) 단위로 쪼개 성능을 개선함.
-  let binary = "";
-  const bytes = new Uint8Array(buffer);
-  const len = bytes.byteLength;
-  const chunkSize = 32768; // 32KB
-  
-  for (let i = 0; i < len; i += chunkSize) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize) as unknown as number[]);
-  }
-  return binary;
-}
-
-function binaryStringToBlob(binary: string, mime: string): Blob {
-    const len = binary.length;
-    const u8arr = new Uint8Array(len);
-    for (let i = 0; i < len; i++) {
-        u8arr[i] = binary.charCodeAt(i);
-    }
-    return new Blob([u8arr], { type: mime });
 }
 
 function calculateSize(srcW: number, srcH: number, maxW: number, maxH: number) {
@@ -104,4 +104,29 @@ function calculateSize(srcW: number, srcH: number, maxW: number, maxH: number) {
         width: Math.round(srcW * ratio),
         height: Math.round(srcH * ratio)
     };
+}
+
+/**
+ * ArrayBuffer를 바이너리 문자열(Latin-1)로 변환합니다.
+ * FileReader를 사용하여 대용량 파일도 빠르고 안정적으로 처리합니다.
+ */
+async function arrayBufferToBinaryString(buffer: ArrayBuffer): Promise<string> {
+    return new Promise((resolve, reject) => {
+        const blob = new Blob([buffer]);
+        const reader = new FileReader();
+        reader.onload = () => {
+            resolve(reader.result as string);
+        };
+        reader.onerror = reject;
+        reader.readAsBinaryString(blob);
+    });
+}
+
+function binaryStringToArrayBuffer(binary: string): ArrayBuffer {
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes.buffer;
 }

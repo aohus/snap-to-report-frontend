@@ -119,6 +119,9 @@ dependencies:
   exif-js:
     specifier: ^2.3.0
     version: 2.3.0
+  exif-ts:
+    specifier: ^2.1.1
+    version: 2.1.1
   framer-motion:
     specifier: ^11.0.0
     version: 11.18.2(react-dom@19.1.1)(react@19.1.1)
@@ -3557,6 +3560,10 @@ packages:
 
   /exif-js@2.3.0:
     resolution: {integrity: sha512-1Og9pAzG2FZRVlaavH8bB8BTeHcjMdJhKmeQITkX+uLRCD0xPtKAdZ2clZmQdJ56p9adXtJ8+jwrGp/4505lYg==}
+    dev: false
+
+  /exif-ts@2.1.1:
+    resolution: {integrity: sha512-w5Kq/7QsfQyNy7SFiXW1e3ar/am9poXN+FKjH7evwjoCf8b0nUs2+Tojjz7OvlEdRkG9tLCAJjzkbKYxYLjZHw==}
     dev: false
 
   /fast-deep-equal@3.1.3:

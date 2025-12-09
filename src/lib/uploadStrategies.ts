@@ -30,13 +30,6 @@ export async function uploadViaResumable(
           }
         });
 
-        // // 308: 청크 업로드 성공 (진행 중), 200/201: 전체 완료
-        // if (response.status === 308 || response.status === 200 || response.status === 201) {
-        //   start = end;
-        //   const percent = Math.min(Math.round((start / totalBytes) * 100), 100);
-        //   onProgress(percent);
-        //   break; // 성공 시 while(retries) 탈출 -> 다음 청크로
-        // } else {
         if (response.status === 308 || response.status === 200 || response.status === 201) {
           let nextStart = end;
 

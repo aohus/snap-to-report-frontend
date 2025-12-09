@@ -236,7 +236,7 @@ export const api = {
       // ---------------------------------------------------------
       // Step 2: 전략 및 URL 확보 (Batch Request)
       // ---------------------------------------------------------
-      let strategy = 'server_fallback'; // 기본값
+      let strategy = 'proxy'; // 기본값
       let urls: any[] = [];
       
       try {
@@ -256,7 +256,7 @@ export const api = {
           }
       } catch (e) {
           console.warn("Failed to get upload URLs, falling back to server upload.", e);
-          strategy = 'server_fallback';
+          strategy = 'proxy';
       }
 
 
