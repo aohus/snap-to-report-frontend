@@ -30,14 +30,20 @@ export async function uploadViaResumable(
           }
         });
 
-        // 308: 청크 업로드 성공 (진행 중), 200/201: 전체 완료
+        // // 308: 청크 업로드 성공 (진행 중), 200/201: 전체 완료
+        // if (response.status === 308 || response.status === 200 || response.status === 201) {
+        //   start = end;
+        //   const percent = Math.min(Math.round((start / totalBytes) * 100), 100);
+        //   onProgress(percent);
+        //   break; // 성공 시 while(retries) 탈출 -> 다음 청크로
+        // } else {
         if (response.status === 308 || response.status === 200 || response.status === 201) {
           
           let nextStart = end;
 
           if (response.status === 308) {
              // 308 응답 헤더에서 GCS가 알려주는 정확한 다음 시작 위치를 파싱합니다.
-             const rangeHeader = response.headers.get('range'); // 예: 'bytes=0-1048575'
+             const rangeHeader = response.headers.get('Range'); // 예: 'bytes=0-1048575'
              if (rangeHeader) {
                 // 'bytes=0-XXXXX'에서 마지막 바이트 번호 + 1이 다음 시작 위치입니다.
                 const match = rangeHeader.match(/(\d+)\s*$/); 
