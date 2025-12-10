@@ -188,11 +188,13 @@ export const api = {
   getUploadUrls: async (jobId: string, files: { filename: string; content_type: string }[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
     // files 배열 전체를 한 번에 백엔드로 전송
     const fileInfos = files.map(f => ({ filename: f.filename, content_type: f.content_type }));
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
-      method: 'POST',
-      headers: authJsonHeaders(),
-      body: JSON.stringify(fileInfos),
-    });
+          const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
+            method: 'POST',
+            headers: {
+              ...authJsonHeaders(),
+              'Origin': window.location.origin, // Add Origin header
+            },
+            body: JSON.stringify(fileInfos),    });
     return handleResponse(response);
   },
 
