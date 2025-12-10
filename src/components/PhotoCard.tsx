@@ -2,7 +2,7 @@ import React from 'react'; // React.memo 사용을 위해 import
 import { Draggable } from '@hello-pangea/dnd';
 import { Photo } from '@/types';
 // import { api } from '@/lib/api'; // 사용되지 않아 제거 가능
-import { X } from 'lucide-react';
+import { X, Tags } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface PhotoCardProps {
@@ -13,6 +13,7 @@ interface PhotoCardProps {
   onSelect?: () => void;
   isSelected?: boolean;
   isCompact?: boolean;
+  onEditLabels?: (id: string) => void;
 }
 
 // React.memo로 감싸서 props가 변하지 않으면 리렌더링 방지
@@ -23,7 +24,8 @@ export const PhotoCard = React.memo(function PhotoCard({
   isReserve, 
   onSelect, 
   isSelected,
-  isCompact = false
+  isCompact = false,
+  onEditLabels
 }: PhotoCardProps) {
   return (
     <Draggable draggableId={photo.id.toString()} index={index}>
@@ -55,19 +57,43 @@ export const PhotoCard = React.memo(function PhotoCard({
             </div>
           )}
 
-          {/* Delete Button */}
-          {onDelete && (
-            <Button 
-              variant="destructive" 
-              size="icon" 
-              className={`absolute top-1 right-1 z-10 opacity-0 group-hover:opacity-100 transition-opacity shadow-sm ${isCompact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7'}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                onDelete(photo.id);
-              }}
-            >
-              <X className={isCompact ? "w-2.5 h-2.5" : "w-3 h-3 md:w-4 md:h-4"} />
-            </Button>
+          <div className="absolute top-1 right-1 flex gap-1 z-10">
+             {/* Edit Labels Button */}
+             {onEditLabels && (
+                <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className={`opacity-0 group-hover:opacity-100 transition-opacity shadow-sm ${isCompact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7'}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onEditLabels(photo.id.toString());
+                    }}
+                >
+                    <Tags className={isCompact ? "w-2.5 h-2.5" : "w-3 h-3 md:w-4 md:h-4"} />
+                </Button>
+             )}
+
+            {/* Delete Button */}
+            {onDelete && (
+                <Button 
+                variant="destructive" 
+                size="icon" 
+                className={`opacity-0 group-hover:opacity-100 transition-opacity shadow-sm ${isCompact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7'}`}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete(photo.id);
+                }}
+                >
+                <X className={isCompact ? "w-2.5 h-2.5" : "w-3 h-3 md:w-4 md:h-4"} />
+                </Button>
+            )}
+          </div>
+
+          {/* Labels Overlay */}
+          {photo.labels && Object.keys(photo.labels).length > 0 && (
+             <div className="absolute bottom-2 left-2 right-2 bg-black/60 text-white text-[10px] p-1 rounded backdrop-blur-sm truncate z-10 pointer-events-none">
+                {Object.entries(photo.labels).map(([k, v]) => `${k}:${v}`).join(', ')}
+             </div>
           )}
 
           {/* Image */}
@@ -91,6 +117,7 @@ export const PhotoCard = React.memo(function PhotoCard({
   return (
     prevProps.photo.id === nextProps.photo.id &&
     prevProps.photo.thumbnail_path === nextProps.photo.thumbnail_path &&
+    prevProps.photo.labels === nextProps.photo.labels &&
     prevProps.index === nextProps.index &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isReserve === nextProps.isReserve &&

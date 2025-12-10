@@ -19,9 +19,10 @@ interface ClusterBoardProps {
   onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
   selectedPhotos: { id: string, clusterId: string }[];
   onSelectPhoto: (photoId: string, clusterId: string) => void;
+  onEditLabels: (photoId: string) => void;
 }
 
-export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotos, onSelectPhoto }: ClusterBoardProps) {
+export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotos, onSelectPhoto, onEditLabels }: ClusterBoardProps) {
   const isMobile = useIsMobile();
   const [isCompact, setIsCompact] = useState(false);
   const [isVerticalMode, setIsVerticalMode] = useState(false); // false = Horizontal Mode (Reserve Top), true = Vertical Mode (Reserve Left)
@@ -147,6 +148,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                       onSelect={() => onSelectPhoto(photo.id.toString(), reserveCluster.id)}
                       isSelected={selectedPhotoIds.includes(photo.id.toString())}
                       isCompact={isCompact}
+                      onEditLabels={onEditLabels}
                     />
                   </div>
                 ))}
@@ -234,6 +236,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     selectedPhotos={selectedPhotos}
                     onSelectPhoto={onSelectPhoto}
                     isCompact={isCompact}
+                    onEditLabels={onEditLabels}
                   />
                 ) : (
                   <PlaceRow
@@ -250,6 +253,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     isCompact={isCompact}
                     isCollapsed={collapsedClusterIds.has(cluster.id)}
                     onToggleCollapse={() => toggleClusterCollapse(cluster.id)}
+                    onEditLabels={onEditLabels}
                   />
                 )
               ))}

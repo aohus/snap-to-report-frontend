@@ -18,7 +18,7 @@ import { Job, Cluster, Photo } from '@/types';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { PhotoGrid } from '@/components/PhotoGrid';
 import { ClusterBoard } from '@/components/ClusterBoard';
-import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle, Settings, Edit2 } from 'lucide-react';
+import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle, Settings, Edit2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
@@ -64,7 +64,15 @@ export default function Dashboard() {
   const isSelectionLoaded = useRef(false);
   const [saving, setSaving] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
+  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   
+  // Label Editing State
+  const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
+  const [editLabelData, setEditLabelData] = useState<Record<string, string>>({});
+  const [batchLabelKey, setBatchLabelKey] = useState('');
+  const [batchLabelValue, setBatchLabelValue] = useState('');
+
   // Export & Preview State
   const [exportMetadata, setExportMetadata] = useState({
     title: '',
@@ -114,6 +122,75 @@ export default function Dashboard() {
     };
     fetchJobData();
   }, [jobId]);
+
+  const handleEditLabels = (photoId: string) => {
+      const photo = clusters.flatMap(c => c.photos).find(p => p.id === photoId);
+      if (photo) {
+          setEditingPhotoId(photoId);
+          setEditLabelData(photo.labels || {});
+      }
+  };
+
+  const handleSaveLabels = async () => {
+      if (!editingPhotoId) return;
+      
+      const newLabels = { ...editLabelData };
+      
+      // Optimistic update
+      setClusters(prev => prev.map(c => ({
+          ...c,
+          photos: c.photos.map(p => p.id === editingPhotoId ? { ...p, labels: newLabels } : p)
+      })));
+      
+      setEditingPhotoId(null);
+      
+      try {
+          await api.updatePhoto(editingPhotoId, { labels: newLabels });
+          toast.success("라벨이 저장되었습니다.");
+      } catch (e) {
+          console.error("Failed to save labels", e);
+          toast.error("라벨 저장 실패");
+      }
+  };
+
+  const handleBatchAddLabel = async () => {
+      if (!batchLabelKey.trim() || selectedPhotos.length === 0) return;
+      
+      const key = batchLabelKey.trim();
+      const value = batchLabelValue.trim();
+      
+      // Optimistic Update
+      setClusters(prev => prev.map(c => ({
+          ...c,
+          photos: c.photos.map(p => {
+              if (selectedPhotos.some(sp => sp.id === p.id)) {
+                  return { ...p, labels: { ...p.labels, [key]: value } };
+              }
+              return p;
+          })
+      })));
+      
+      setBatchLabelKey('');
+      setBatchLabelValue('');
+      
+      // Batch API call (parallel requests for now)
+      try {
+          await Promise.all(selectedPhotos.map(sp => {
+              // We need to get current labels to merge? 
+              // The API updates the whole labels object or partial?
+              // My API implementation: `photo.labels = payload.labels`. It REPLACES.
+              // So I need to fetch current labels or use what I have in state.
+              const photo = clusters.flatMap(c => c.photos).find(p => p.id === sp.id);
+              const currentLabels = photo?.labels || {};
+              const newLabels = { ...currentLabels, [key]: value };
+              return api.updatePhoto(sp.id, { labels: newLabels });
+          }));
+          toast.success(`${selectedPhotos.length}개 사진에 라벨 일괄 추가 완료`);
+      } catch (e) {
+          console.error("Batch add label failed", e);
+          toast.error("일괄 추가 실패");
+      }
+  };
 
   const handleUpload = async (files: FileList) => {
     if (!job) return;
@@ -537,7 +614,10 @@ export default function Dashboard() {
           clearInterval(interval);
           setExporting(false);
           toast.success('PDF Export Successful');
-          if (status.pdf_url) window.open(status.pdf_url, '_blank');
+          if (status.pdf_url) {
+            setDownloadUrl(status.pdf_url);
+            setDownloadDialogOpen(true);
+          }
         } else if (status.status === 'FAILED') {
           clearInterval(interval);
           setExporting(false);
@@ -577,7 +657,30 @@ export default function Dashboard() {
           </div>
         </div>
         {clusters.length > 0 && (
-          <div className="flex items-center gap-2 md:gap-4">
+          <div className="flex items-center gap-2 md:gap-4 flex-1 justify-end">
+            {/* Batch Label Input */}
+            {selectedPhotos.length > 0 && (
+                <div className="flex items-center gap-2 bg-blue-50 px-2 py-1 rounded-md border border-blue-200 mr-auto ml-4 hidden md:flex">
+                <span className="text-xs font-bold text-blue-700 whitespace-nowrap">일괄 라벨:</span>
+                <Input 
+                    placeholder="항목" 
+                    className="h-8 w-20 text-xs bg-white"
+                    value={batchLabelKey}
+                    onChange={(e) => setBatchLabelKey(e.target.value)}
+                />
+                <Input 
+                    placeholder="내용" 
+                    className="h-8 w-24 text-xs bg-white"
+                    value={batchLabelValue}
+                    onChange={(e) => setBatchLabelValue(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleBatchAddLabel()}
+                />
+                <Button size="sm" className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs" onClick={handleBatchAddLabel}>
+                    <Plus className="w-3 h-3 mr-1" /> 추가
+                </Button>
+                </div>
+            )}
+
             <div className="hidden lg:flex flex-col items-end mr-4">
                 <div className="flex items-center gap-2 mb-1">
                   {saving ? (
@@ -597,23 +700,25 @@ export default function Dashboard() {
             <Button 
               variant="default" 
               size="sm" 
-              className="md:text-lg bg-indigo-600 hover:bg-indigo-700 shadow-md md:h-11 md:px-8"
+              className="md:text-base bg-blue-600 hover:bg-blue-700 shadow-md"
+              // className="md:text-lg bg-blue-600 hover:bg-blue-700 shadow-md md:h-11 md:px-8"
               onClick={handleStartClustering}
               disabled={isClustering}
             >
-              {isClustering ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <FileDown className="w-4 h-4 md:w-5 md:h-5 md:mr-2" />}
+              {isClustering ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <></>}
               <span className="hidden md:inline">사진 분류 다시하기</span>
               <span className="md:hidden">재분류</span>
             </Button>
             <Button 
               variant="default" 
               size="sm" 
-              className="md:text-lg bg-indigo-600 hover:bg-indigo-700 shadow-md md:h-11 md:px-8"
+              // className="md:text-lg bg-blue-600 hover:bg-blue-700 shadow-md md:h-11 md:px-8"
+              className="md:text-base bg-blue-600 hover:bg-blue-700 shadow-md"
               onClick={handleExport}
               disabled={exporting || clusters.length === 0}
             >
               {exporting ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <FileDown className="w-4 h-4 md:w-5 md:h-5 md:mr-2" />}
-              <span className="hidden md:inline">PDF 내보내기</span>
+              <span className="hidden md:inline">PDF 미리보기</span>
               <span className="md:hidden">PDF</span>
             </Button>
           </div>
@@ -672,12 +777,73 @@ export default function Dashboard() {
                     onDeletePhoto={handleDeletePhoto}
                     selectedPhotos={selectedPhotos}
                     onSelectPhoto={handleSelectPhoto}
+                    onEditLabels={handleEditLabels}
                   />
               </div>
             </>
           )}
         </div>
       </main>
+
+      <Dialog open={!!editingPhotoId} onOpenChange={(open) => !open && setEditingPhotoId(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>사진 라벨 수정</DialogTitle>
+             <DialogDescription>
+               사진에 표시될 라벨 정보를 수정합니다.
+             </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
+             {Object.entries(editLabelData).map(([key, value]) => (
+                <div key={key} className="grid grid-cols-[1fr_2fr_auto] items-center gap-2">
+                   <Input 
+                     value={key} 
+                     className="bg-gray-50"
+                     readOnly
+                     placeholder="Key" 
+                   />
+                   <Input 
+                     value={value} 
+                     onChange={(e) => {
+                       setEditLabelData({...editLabelData, [key]: e.target.value});
+                     }} 
+                     placeholder="Value" 
+                   />
+                   <Button size="icon" variant="ghost" className="text-red-500 hover:bg-red-50" onClick={() => {
+                       const newLabels = {...editLabelData};
+                       delete newLabels[key];
+                       setEditLabelData(newLabels);
+                   }}>
+                      <LogOut className="w-4 h-4 rotate-180" />
+                   </Button>
+                </div>
+             ))}
+             <div className="relative my-2">
+                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
+                <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-muted-foreground">새 항목 추가</span></div>
+             </div>
+             <div className="grid grid-cols-[1fr_2fr_auto] items-center gap-2">
+                <Input id="new-key" placeholder="항목명" />
+                <Input id="new-value" placeholder="내용" />
+                <Button size="icon" variant="outline" onClick={() => {
+                    const keyEl = document.getElementById('new-key') as HTMLInputElement;
+                    const valEl = document.getElementById('new-value') as HTMLInputElement;
+                    if(keyEl.value) {
+                        setEditLabelData({...editLabelData, [keyEl.value]: valEl.value});
+                        keyEl.value = '';
+                        valEl.value = '';
+                    }
+                }}>
+                   <Plus className="w-4 h-4" />
+                </Button>
+             </div>
+          </div>
+          <DialogFooter>
+             <Button variant="outline" onClick={() => setEditingPhotoId(null)}>취소</Button>
+             <Button onClick={handleSaveLabels}>저장</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
         <DialogContent className="max-w-[95vw] w-full md:max-w-[1400px] h-[90vh] flex flex-col p-0 gap-0 bg-gray-50">
@@ -743,7 +909,7 @@ export default function Dashboard() {
                  <div className="flex items-center justify-between w-[450px]">
                     <h3 className="text-lg font-bold text-gray-700">첫장 미리보기 (예시)</h3>
                     <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 gap-2 text-sm text-gray-600 hover:text-blue-600" onClick={() => toast.info("개별 사진/클러스터 수정 페이지로 이동 (구현 예정)")}>
+                        <Button variant="ghost" size="sm" className="h-8 gap-2 text-sm text-gray-600 hover:text-blue-600" onClick={() => navigate(`/jobs/${job.id}/edit`)}>
                            <Edit2 className="w-4 h-4" /> 개별 수정
                         </Button>
                         <Popover>
@@ -818,7 +984,7 @@ export default function Dashboard() {
                              const photo = previewPhotos[idx];
                              return (
                                 <div key={label} className="flex-1 flex border-b border-black last:border-b-0 min-h-0">
-                                    <div className="w-24 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">
+                                    <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">
                                         {label}
                                     </div>
                                     <div className="flex-1 relative p-1 flex items-center justify-center overflow-hidden bg-gray-50/10">
@@ -861,6 +1027,31 @@ export default function Dashboard() {
           <DialogFooter className="p-5 bg-white border-t shrink-0 gap-4">
              <Button variant="outline" size="lg" className="text-lg px-8" onClick={() => setExportDialogOpen(false)}>취소</Button>
             <Button type="submit" size="lg" className="text-lg px-8 bg-blue-600 hover:bg-blue-700" onClick={handleConfirmExport}>PDF 내보내기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={downloadDialogOpen} onOpenChange={setDownloadDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>PDF 내보내기 완료</DialogTitle>
+            <DialogDescription>
+              성공적으로 PDF가 생성되었습니다. 아래 버튼을 눌러 다운로드하세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-6">
+            <Button size="lg" className="w-full gap-2 text-lg h-12 bg-green-600 hover:bg-green-700" onClick={() => {
+              if (downloadUrl) window.open(downloadUrl, '_blank');
+              setDownloadDialogOpen(false);
+            }}>
+              <FileDown className="w-6 h-6" />
+              PDF 다운로드
+            </Button>
+          </div>
+          <DialogFooter className="sm:justify-start">
+            <Button type="button" variant="secondary" onClick={() => setDownloadDialogOpen(false)}>
+              닫기
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -23,6 +23,7 @@ interface PlaceColumnProps {
   selectedPhotos: { id: string, clusterId: string }[];
   onSelectPhoto: (photoId: string, clusterId: string) => void;
   isCompact?: boolean; // Kept for compatibility, though column might ignore it or use it for card size
+  onEditLabels: (photoId: string) => void;
 }
 
 export function PlaceColumn({ 
@@ -35,7 +36,8 @@ export function PlaceColumn({
   onMoveCluster, 
   selectedPhotos, 
   onSelectPhoto,
-  isCompact = false
+  isCompact = false,
+  onEditLabels
 }: PlaceColumnProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -202,6 +204,7 @@ export function PlaceColumn({
                   onSelect={() => onSelectPhoto(photo.id.toString(), cluster.id)}
                   isSelected={selectedPhotoIds.includes(photo.id.toString())}
                   isCompact={isCompact} 
+                  onEditLabels={onEditLabels}
                 />
               ))}
             </div>

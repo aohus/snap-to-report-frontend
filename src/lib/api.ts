@@ -373,6 +373,15 @@ export const api = {
     return handleResponse<void>(response);
   },
 
+  updatePhoto: async (photoId: string, data: { labels?: Record<string, string> }): Promise<Photo> => {
+    const response = await fetch(`${API_BASE_URL}/photos/${photoId}`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Photo>(response);
+  },
+
   addPhotosToExistingCluster: async (clusterId: string, photoIds: string[]): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/clusters/${clusterId}/add_photos`, {
       method: 'POST',

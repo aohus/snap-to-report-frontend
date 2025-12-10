@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Signup from './pages/Signup';
 import JobList from './pages/JobList';
 import Dashboard from './pages/Dashboard';
+import JobEditor from './pages/JobEditor';
 import NotFound from './pages/NotFound';
 import { AuthService } from './lib/auth';
 
@@ -29,6 +30,7 @@ const App = () => (
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<JobList />} />
             <Route path="/jobs/:jobId" element={<Dashboard />} />
+            <Route path="/jobs/:jobId/edit" element={<JobEditor />} />
           </Route>
           
           <Route path="*" element={<NotFound />} />

@@ -19,6 +19,7 @@ export interface Photo {
   url: string;
   thumbnail_path?: string;
   timestamp?: string; // ISO string from DateTime
+  labels?: Record<string, string>;
 }
 
 export interface Cluster {

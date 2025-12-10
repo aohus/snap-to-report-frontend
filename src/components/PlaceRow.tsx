@@ -25,6 +25,7 @@ interface PlaceRowProps {
   isCompact?: boolean;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onEditLabels: (photoId: string) => void;
 }
 
 
@@ -40,7 +41,8 @@ export function PlaceRow({
   onSelectPhoto,
   isCompact = false,
   isCollapsed = false,
-  onToggleCollapse
+  onToggleCollapse,
+  onEditLabels
 }: PlaceRowProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -256,6 +258,7 @@ export function PlaceRow({
                     onSelect={() => onSelectPhoto(photo.id.toString(), cluster.id)}
                     isSelected={selectedPhotoIds.includes(photo.id.toString())}
                     isCompact={isCompact}
+                    onEditLabels={onEditLabels}
                   />
                 </div>
             ))}
