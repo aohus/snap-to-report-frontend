@@ -29,9 +29,16 @@ function authHeadersWithoutContentType(): HeadersInit {
 }
 
 async function handleResponse<T>(response: Response): Promise<T> {
-  // if (response.status === 401) {
-  //   AuthService.getCurrentUser()
-  // }
+  // Check for auto-refreshed token in headers
+  const authHeader = response.headers.get('Authorization');
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    AuthService.setToken(authHeader.replace('Bearer ', ''));
+  }
+
+  if (response.status === 401) {
+    AuthService.logout();
+    throw new Error('Unauthorized');
+  }
   
   if (!response.ok) {
     // 응답 바디가 JSON이 아닐 수도 있으므로 try-catch

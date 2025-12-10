@@ -84,7 +84,7 @@ export class AuthService {
 
     if (!response.ok) {
       if (response.status === 401) {
-        this.removeToken();
+        this.logout();
       }
       throw new Error('Failed to get user info');
     }
@@ -94,5 +94,6 @@ export class AuthService {
 
   static logout(): void {
     this.removeToken();
+    window.location.href = '/login';
   }
 }
