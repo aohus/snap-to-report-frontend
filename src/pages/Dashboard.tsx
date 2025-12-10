@@ -18,8 +18,9 @@ import { Job, Cluster, Photo } from '@/types';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { PhotoGrid } from '@/components/PhotoGrid';
 import { ClusterBoard } from '@/components/ClusterBoard';
-import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle } from 'lucide-react';
+import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle, Settings, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 
 // Helper to sort photos within a cluster by order_index (proxy for timestamp)
 const sortPhotosByOrderIndex = (photos: Photo[]): Photo[] => {
@@ -63,11 +64,32 @@ export default function Dashboard() {
   const isSelectionLoaded = useRef(false);
   const [saving, setSaving] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
+  
+  // Export & Preview State
   const [exportMetadata, setExportMetadata] = useState({
     title: '',
-    construction_type: '',
-    company_name: '',
+    construction_type: '', // This will serve as the cluster name override for the preview if needed, or job type
+    cover_company_name: '',
+    label_company_name: '',
   });
+  const [labelSettings, setLabelSettings] = useState<{ id: string; key: string; value: string; isAutoDate?: boolean }[]>([
+    { id: 'date', key: '일자', value: '', isAutoDate: true },
+    { id: 'company', key: '시행처', value: '' },
+  ]);
+
+  const addLabelItem = () => {
+    const id = Math.random().toString(36).substr(2, 9);
+    setLabelSettings([...labelSettings, { id, key: '새 라벨', value: '' }]);
+  };
+
+  const removeLabelItem = (id: string) => {
+    setLabelSettings(labelSettings.filter(l => l.id !== id));
+  };
+
+  const updateLabelItem = (id: string, field: 'key' | 'value', newValue: string) => {
+    setLabelSettings(labelSettings.map(l => l.id === id ? { ...l, [field]: newValue } : l));
+  };
+  
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialLoad = useRef(true);
 
@@ -92,99 +114,6 @@ export default function Dashboard() {
     };
     fetchJobData();
   }, [jobId]);
-  
-  /* Sequential Sync Logic - DEPRECATED (Preserved as requested)
-  const isSyncing = useRef(false);
-  const pendingSync = useRef<Cluster[] | null>(null);
-  const pendingDeletes = useRef<Set<string>>(new Set()); // For photo deletes
-  const pendingClusterDeletes = useRef<Set<string>>(new Set()); // For cluster deletes
-  const pendingRenames = useRef<Map<string, string>>(new Map()); // For cluster renames: Map<clusterId, newName>
-
-  const processSync = async () => {
-    if (!job || isSyncing.current) return; 
-
-    // If nothing to sync and nothing to delete/rename, return
-    if (!pendingSync.current &&
-        pendingDeletes.current.size === 0 &&
-        pendingClusterDeletes.current.size === 0 &&
-        pendingRenames.current.size === 0) {
-      setSaving(false); // Nothing to save, ensure indicator is off
-      return;
-    }
-
-    isSyncing.current = true;
-    setSaving(true);
-
-    try {
-      // 0. Process Cluster Renames (Needs to happen before sync possibly overwrites structure)
-      if (pendingRenames.current.size > 0) {
-        // Collect current pending renames and clear ref for next batch
-        const renamesToProcess = new Map(pendingRenames.current);
-        pendingRenames.current.clear(); 
-        
-        await Promise.all(
-          Array.from(renamesToProcess.entries()).map(async ([clusterId, newName]) => {
-            try {
-              await api.updateCluster(clusterId, { new_name: newName });
-            } catch (e) {
-              console.error(`Failed to rename cluster ${clusterId} to ${newName}`, e);
-            }
-          })
-        );
-      }
-
-      // 1. Sync Structure (Clusters and Photos)
-      if (pendingSync.current) {
-        const clustersToSync = pendingSync.current;
-        pendingSync.current = null; // Clear pending queue
-        await api.syncClusters(job.id, clustersToSync);
-      }
-
-      // 2. Process Photo Deletes
-      if (pendingDeletes.current.size > 0) {
-        const idsToDelete = Array.from(pendingDeletes.current);
-        pendingDeletes.current.clear(); 
-        await Promise.all(idsToDelete.map(id => api.deletePhoto(id)));
-      }
-      
-      // 3. Process Cluster Deletes
-      if (pendingClusterDeletes.current.size > 0) {
-          const idsToDelete = Array.from(pendingClusterDeletes.current);
-          pendingClusterDeletes.current.clear();
-          await Promise.all(idsToDelete.map(id => api.deleteCluster(id)));
-      }
-
-    } catch (error) {
-      console.error("Batch Sync/Action failed", error);
-    } finally {
-      isSyncing.current = false;
-      // Check if new changes arrived while we were processing
-      if (pendingSync.current || pendingDeletes.current.size > 0 || pendingClusterDeletes.current.size > 0 || pendingRenames.current.size > 0) {
-        processSync();
-      } else {
-        setSaving(false); // Only turn off if nothing else is pending
-      }
-    }
-  };
-
-  // Auto-save helper
-  const triggerAutoSave = useCallback((updatedClusters?: Cluster[] | null) => { // updatedClusters can be optional or null
-    if (!job) return;
-
-    if (updatedClusters) { // Only update pendingSync if cluster state is provided
-      pendingSync.current = updatedClusters;
-    }
-    setSaving(true);
-
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-
-    saveTimer.current = setTimeout(() => {
-      processSync();
-    }, 2000);
-  }, [job]);
-  */
-
-  // ... existing code ...
 
   const handleUpload = async (files: FileList) => {
     if (!job) return;
@@ -565,11 +494,26 @@ export default function Dashboard() {
 
   const handleExport = () => {
     if (!job) return;
+    
+    // Initialize preview with current job data or existing cluster data
+    // Use the first cluster's name as the default construction_type for the preview if available and not set
+    const firstClusterName = clusters.length > 0 && clusters[0].name !== 'reserve' ? clusters[0].name : '';
+    
     setExportMetadata({
       title: job.title,
-      construction_type: job.construction_type || job.title,
-      company_name: job.company_name || '',
+      // If we have a stored construction type, use it. Otherwise, default to first cluster name or job title.
+      construction_type: job.construction_type || firstClusterName || job.title,
+      cover_company_name: job.company_name || '',
+      label_company_name: job.company_name || '',
     });
+    
+    // Reset or keep label settings? Let's keep defaults or previous if we had persistence.
+    // For now, reset company value to job.company_name if empty
+    setLabelSettings(prev => prev.map(l => {
+        if (l.id === 'company' && !l.value) return { ...l, value: job.company_name || '' };
+        return l;
+    }));
+    
     setExportDialogOpen(true);
   };
 
@@ -579,7 +523,13 @@ export default function Dashboard() {
     setExporting(true);
     
     try {
-      await api.startExport(job.id);
+      // Construct payload with detailed label settings
+      const payload = {
+        ...exportMetadata,
+        labels: labelSettings
+      };
+
+      await api.startExport(job.id, payload);
       
       const interval = setInterval(async () => {
         const status = await api.getExportStatus(job.id);
@@ -602,6 +552,10 @@ export default function Dashboard() {
 
   const completedPlaces = clusters.filter(c => c.name !== 'reserve' && c.photos.length === 3).length;
   const totalPlaces = clusters.filter(c => c.name !== 'reserve').length;
+
+  // Prepare preview data
+  const previewCluster = clusters.find(c => c.name !== 'reserve') || clusters[0];
+  const previewPhotos = previewCluster?.photos || [];
 
   if (!job) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
 
@@ -700,21 +654,6 @@ export default function Dashboard() {
             </div>
           ) : (
             <>
-              {/* Instructions Bar */}
-              {/* <div className="flex-shrink-0 bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-center gap-4 shadow-sm mb-2">
-                <div className="bg-blue-100 px-2 py-1 rounded-full">
-                  <LayoutGrid className="w-4 h-4 text-blue-600" />
-                </div>
-                <div className="flex-1">
-                  <p className="text-lg text-blue-900 font-medium">
-                    Drag photos to arrange. Keep <strong>3 photos</strong> per place. Use the <strong>Reserve</strong> on the left for extras.
-                  </p>
-                </div>
-                <Button size="lg" variant="outline" className="text-lg border-blue-200 hover:bg-blue-100" onClick={handleCreateCluster}>
-                  <Plus className="w-6 h-6 mr-2" /> 장소 추가
-                </Button>
-              </div> */}
-              
               {/* Main Board */}
                 <div
                   className={`flex-1 overflow-hidden transition duration-200 ${
@@ -741,50 +680,187 @@ export default function Dashboard() {
       </main>
 
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>PDF 내보내기 설정</DialogTitle>
-            <DialogDescription>
-              내보내기 전 작업 정보를 확인하고 수정할 수 있습니다.
+        <DialogContent className="max-w-[95vw] w-full md:max-w-[1400px] h-[90vh] flex flex-col p-0 gap-0 bg-gray-50">
+          <DialogHeader className="p-6 bg-white border-b shrink-0">
+            <DialogTitle className="text-xl">PDF 내보내기 설정</DialogTitle>
+            <DialogDescription className="text-base">
+              내보내기 전 표지와 첫 장을 미리보고 수정할 수 있습니다.
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">
-                작업명
-              </Label>
-              <Input
-                id="title"
-                value={exportMetadata.title}
-                onChange={(e) => setExportMetadata({ ...exportMetadata, title: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="construction_type" className="text-right">
-                공종명
-              </Label>
-              <Input
-                id="construction_type"
-                value={exportMetadata.construction_type}
-                onChange={(e) => setExportMetadata({ ...exportMetadata, construction_type: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="company_name" className="text-right">
-                시행처
-              </Label>
-              <Input
-                id="company_name"
-                value={exportMetadata.company_name}
-                onChange={(e) => setExportMetadata({ ...exportMetadata, company_name: e.target.value })}
-                className="col-span-3"
-              />
+          
+          <div className="flex-1 overflow-y-auto p-8">
+            <div className="flex flex-col xl:flex-row gap-12 justify-center items-start min-h-[700px]">
+              
+              {/* Cover Preview (Left) */}
+              <div className="flex flex-col items-center gap-4">
+                 <h3 className="text-lg font-bold text-gray-700">표지 미리보기</h3>
+                 <div className="w-[450px] h-[636px] bg-white shadow-xl flex flex-col items-center justify-between p-12 relative hover:ring-2 hover:ring-blue-300 transition-all">
+                    {/* Top Title */}
+                    <div className="mt-20 w-full text-center">
+                        <input
+                           className="w-full text-center text-3xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
+                           value={exportMetadata.title}
+                           onChange={(e) => setExportMetadata({...exportMetadata, title: e.target.value})}
+                           placeholder="작업명 입력"
+                        />
+                        <div className="mt-16 bg-gray-100 border border-gray-300 px-10 py-4 inline-block">
+                             <span className="text-3xl font-bold tracking-widest">사 진 대 지</span>
+                        </div>
+                    </div>
+
+                    {/* Bottom Company */}
+                    <div className="mb-20 w-full text-center">
+                        {exportMetadata.cover_company_name ? (
+                            <input
+                                className="w-full text-center text-xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
+                                value={exportMetadata.cover_company_name}
+                                onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
+                            />
+                        ) : (
+                            <div 
+                                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-xl text-gray-400 cursor-text hover:border-blue-400 hover:text-blue-500 transition-colors"
+                                onClick={() => setExportMetadata({...exportMetadata, cover_company_name: ' '})} // trigger input
+                            >
+                                시행처 입력 (클릭)
+                            </div>
+                        )}
+                        {/* Fallback input if empty but focused */}
+                        {exportMetadata.cover_company_name === ' ' && (
+                             <input
+                                className="w-full text-center text-2xl font-bold border-b-2 border-blue-500 focus:outline-none bg-transparent absolute bottom-20 left-0 px-12"
+                                autoFocus
+                                value={exportMetadata.cover_company_name}
+                                onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
+                                onBlur={() => { if(exportMetadata.cover_company_name.trim() === '') setExportMetadata({...exportMetadata, cover_company_name: ''}) }}
+                            />
+                        )}
+                    </div>
+                 </div>
+              </div>
+
+              {/* Page 1 Preview (Right) */}
+              <div className="flex flex-col items-center gap-4">
+                 <div className="flex items-center justify-between w-[450px]">
+                    <h3 className="text-lg font-bold text-gray-700">첫장 미리보기 (예시)</h3>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="sm" className="h-8 gap-2 text-sm text-gray-600 hover:text-blue-600" onClick={() => toast.info("개별 사진/클러스터 수정 페이지로 이동 (구현 예정)")}>
+                           <Edit2 className="w-4 h-4" /> 개별 수정
+                        </Button>
+                        <Popover>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-8 gap-2 text-sm border-gray-300">
+                            <Settings className="w-4 h-4" /> 라벨 설정
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-80">
+                            <div className="grid gap-4">
+                                <div className="space-y-2">
+                                    <h4 className="font-medium leading-none">라벨 텍스트 설정</h4>
+                                    <p className="text-xs text-muted-foreground">사진 위에 표시될 정보를 설정합니다.</p>
+                                </div>
+                                <div className="grid gap-2">
+                                    {labelSettings.map((label) => (
+                                        <div key={label.id} className="grid grid-cols-[1fr_2fr_auto] items-center gap-2">
+                                            <Input 
+                                                className="h-8 text-sm px-2" 
+                                                value={label.key}
+                                                onChange={(e) => updateLabelItem(label.id, 'key', e.target.value)}
+                                                placeholder="항목"
+                                            />
+                                            <div className="relative">
+                                                <Input 
+                                                    className="h-8 text-sm px-2" 
+                                                    value={label.value}
+                                                    onChange={(e) => updateLabelItem(label.id, 'value', e.target.value)}
+                                                    placeholder={label.isAutoDate ? "자동 (촬영일자)" : "내용"}
+                                                />
+                                            </div>
+                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeLabelItem(label.id)}>
+                                                <LogOut className="w-4 h-4 rotate-180" />
+                                            </Button>
+                                        </div>
+                                    ))}
+                                    <Button variant="outline" size="sm" className="w-full h-8 text-sm mt-1" onClick={addLabelItem}>
+                                        + 항목 추가
+                                    </Button>
+                                </div>
+                                {labelSettings.some(l => l.isAutoDate) && (
+                                    <p className="text-xs text-blue-600">
+                                        * 일자 항목을 비워두면 사진의 촬영 날짜가 자동으로 표시됩니다.
+                                    </p>
+                                )}
+                            </div>
+                        </PopoverContent>
+                        </Popover>
+                    </div>
+                 </div>
+
+                 <div className="w-[450px] h-[636px] bg-white shadow-xl p-8 relative text-sm flex flex-col">
+                     <div className="text-center text-3xl font-bold mb-6 tracking-widest">사 진 대 지</div>
+                     
+                     {/* Table Structure */}
+                     <div className="border border-black flex-1 flex flex-col w-full overflow-hidden">
+                        {/* Header Row */}
+                        <div className="h-10 flex border-b border-black shrink-0">
+                            <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">공종</div>
+                            <div className="flex-1 flex items-center px-2">
+                                <input 
+                                    className="w-full bg-transparent focus:outline-none font-bold text-lg"
+                                    value={exportMetadata.construction_type}
+                                    onChange={(e) => setExportMetadata({...exportMetadata, construction_type: e.target.value})}
+                                    placeholder="공종/제목 입력"
+                                />
+                            </div>
+                        </div>
+
+                        {/* Rows */}
+                        {['전', '중', '후'].map((label, idx) => {
+                             const photo = previewPhotos[idx];
+                             return (
+                                <div key={label} className="flex-1 flex border-b border-black last:border-b-0 min-h-0">
+                                    <div className="w-24 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">
+                                        {label}
+                                    </div>
+                                    <div className="flex-1 relative p-1 flex items-center justify-center overflow-hidden bg-gray-50/10">
+                                        {photo ? (
+                                            <>
+                                                <img 
+                                                    src={api.getPhotoUrl(photo.url)} 
+                                                    alt={label} 
+                                                    className="w-full h-full object-contain"
+                                                />
+                                                {/* Label Box Overlay */}
+                                                <div className="absolute top-3 left-3 bg-white/95 border border-gray-300 p-2 shadow-sm rounded-sm text-xs leading-relaxed z-10 whitespace-nowrap">
+                                                    {labelSettings.map(l => (
+                                                        <div key={l.id}>
+                                                            <span className="font-bold text-gray-800">{l.key} :</span>{' '}
+                                                            <span className="text-gray-900">
+                                                                {l.isAutoDate && !l.value 
+                                                                    ? (photo.timestamp ? format(new Date(photo.timestamp), 'yyyy.MM.dd') : '-') 
+                                                                    : (l.value || '-')
+                                                                }
+                                                            </span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="text-gray-300 font-medium">No Photo</div>
+                                        )}
+                                    </div>
+                                </div>
+                             )
+                        })}
+                     </div>
+                 </div>
+              </div>
+
             </div>
           </div>
-          <DialogFooter>
-            <Button type="submit" onClick={handleConfirmExport}>내보내기</Button>
+          
+          <DialogFooter className="p-5 bg-white border-t shrink-0 gap-4">
+             <Button variant="outline" size="lg" className="text-lg px-8" onClick={() => setExportDialogOpen(false)}>취소</Button>
+            <Button type="submit" size="lg" className="text-lg px-8 bg-blue-600 hover:bg-blue-700" onClick={handleConfirmExport}>PDF 내보내기</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
