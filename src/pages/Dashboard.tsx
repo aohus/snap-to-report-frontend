@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { v4 as uuidv4 } from "uuid";
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -18,9 +19,9 @@ import { Job, Cluster, Photo } from '@/types';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { PhotoGrid } from '@/components/PhotoGrid';
 import { ClusterBoard } from '@/components/ClusterBoard';
-import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle, Settings, Edit2, Plus } from 'lucide-react';
+import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle, Settings, Edit2, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover"
 
 // Helper to sort photos within a cluster by order_index (proxy for timestamp)
 const sortPhotosByOrderIndex = (photos: Photo[]): Photo[] => {
@@ -84,8 +85,13 @@ export default function Dashboard() {
   ]);
 
   const addLabelItem = () => {
-    const id = Math.random().toString(36).substr(2, 9);
-    setLabelSettings([...labelSettings, { id, key: '새 라벨', value: '' }]);
+    const newItem = {
+      id: uuidv4(),
+      key: "새 라벨",
+      value: "",
+    };
+
+    setLabelSettings(prev => [...prev, newItem]);
   };
 
   const removeLabelItem = (id: string) => {
@@ -579,12 +585,42 @@ export default function Dashboard() {
       cover_company_name: job.company_name || '',
     });
     
-    // Reset or keep label settings? Let's keep defaults or previous if we had persistence.
-    // For now, reset company value to job.company_name if empty
-    setLabelSettings(prev => prev.map(l => {
-        if (l.id === 'company' && !l.value) return { ...l, value: job.company_name || '' };
-        return l;
-    }));
+    // Gather all unique label keys from all photos (to discover new custom labels)
+    const allPhotoLabels = new Set<string>();
+    clusters.forEach(cluster => {
+      cluster.photos.forEach(photo => {
+        if (photo.labels) {
+          Object.keys(photo.labels).forEach(key => allPhotoLabels.add(key));
+        }
+      });
+    });
+
+    // Update labelSettings with new keys found in photos, but DO NOT reset existing settings
+    setLabelSettings(prev => {
+        const newSettings = [...prev];
+        const existingKeys = new Set(newSettings.map(s => s.key));
+
+        // Ensure defaults if they were never initialized (though useState does this)
+        // But if user deleted them, they stay deleted.
+        
+        allPhotoLabels.forEach(labelKey => {
+            if (!existingKeys.has(labelKey)) {
+                newSettings.push({ 
+                    id: `custom-${labelKey}`, 
+                    key: labelKey, 
+                    value: '', 
+                    isAutoDate: false 
+                });
+            }
+        });
+        
+        // Ensure company name is synced if the user hasn't overridden it, 
+        // BUT only if 'company' key still exists in the settings.
+        return newSettings.map(l => {
+            if (l.id === 'company' && !l.value) return { ...l, value: job.company_name || '' };
+            return l;
+        });
+    });
     
     setExportDialogOpen(true);
   };
@@ -707,7 +743,7 @@ export default function Dashboard() {
                   완료 장소: {completedPlaces} / {totalPlaces} 
                 </span>
             </div>
-            <Button 
+            {/* <Button 
               variant="default" 
               size="sm" 
               className="md:text-base bg-blue-600 hover:bg-blue-700 shadow-md"
@@ -718,12 +754,17 @@ export default function Dashboard() {
               {isClustering ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <></>}
               <span className="hidden md:inline">사진 분류 다시하기</span>
               <span className="md:hidden">재분류</span>
+            </Button> */}
+            <Button 
+              className="h-12 text-lg bg-blue-600 hover:bg-blue-700 px-6"
+              onClick={() => { navigate(`/jobs/${job.id}/edit`); }}
+            >
+              <span className="hidden md:inline">라벨 수정하기</span>
+              <span className="md:hidden">라벨수정</span>
             </Button>
             <Button 
-              variant="default" 
-              size="sm" 
-              // className="md:text-lg bg-blue-600 hover:bg-blue-700 shadow-md md:h-11 md:px-8"
-              className="md:text-base bg-blue-600 hover:bg-blue-700 shadow-md"
+              variant="outline" 
+              className="h-12 text-lg border-blue-600 text-blue-700"
               onClick={handleExport}
               disabled={exporting || clusters.length === 0}
             >
@@ -824,7 +865,7 @@ export default function Dashboard() {
                        delete newLabels[key];
                        setEditLabelData(newLabels);
                    }}>
-                      <LogOut className="w-4 h-4 rotate-180" />
+                      <X className="w-4 h-4 rotate-180" />
                    </Button>
                 </div>
              ))}
@@ -919,8 +960,8 @@ export default function Dashboard() {
                  <div className="flex items-center justify-between w-[450px]">
                     <h3 className="text-lg font-bold text-gray-700">첫장 미리보기 (예시)</h3>
                     <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 gap-2 text-sm text-gray-600 hover:text-blue-600" onClick={() => navigate(`/jobs/${job.id}/edit`)}>
-                           <Edit2 className="w-4 h-4" /> 개별 수정
+                        <Button variant="ghost" size="sm" className="h-8 gap-2 text-sm text-gray-600 hover:text-blue-600" onClick={() => navigate(`/jobs/${job.id}/edit`, { state: { labelSettings } })}>
+                           <Edit2 className="w-4 h-4" /> 라벨 전체 보기
                         </Button>
                         <Popover>
                         <PopoverTrigger asChild>
@@ -952,13 +993,24 @@ export default function Dashboard() {
                                                 />
                                             </div>
                                             <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeLabelItem(label.id)}>
-                                                <LogOut className="w-4 h-4 rotate-180" />
+                                                <X className="w-4 h-4 rotate-180" />
                                             </Button>
                                         </div>
                                     ))}
-                                    <Button variant="outline" size="sm" className="w-full h-8 text-sm mt-1" onClick={addLabelItem}>
-                                        + 항목 추가
-                                    </Button>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <Button variant="outline" size="sm" className="flex-1 h-8 text-sm" onClick={addLabelItem}>
+                                          + 항목 추가
+                                      </Button>
+                                      <PopoverClose asChild>
+                                        <Button 
+                                          variant="outline" 
+                                          size="sm" 
+                                          className="h-8 text-sm"
+                                        >
+                                          저장
+                                        </Button>
+                                      </PopoverClose>
+                                    </div>
                                 </div>
                                 {labelSettings.some(l => l.isAutoDate) && (
                                     <p className="text-xs text-blue-600">
@@ -980,12 +1032,7 @@ export default function Dashboard() {
                         <div className="h-10 flex border-b border-black shrink-0">
                             <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">공종</div>
                             <div className="flex-1 flex items-center px-2">
-                                <input 
-                                    className="w-full bg-transparent focus:outline-none font-bold text-lg"
-                                    value={exportMetadata.construction_type}
-                                    onChange={(e) => setExportMetadata({...exportMetadata, construction_type: e.target.value})}
-                                    placeholder="공종/제목 입력"
-                                />
+                                {previewCluster.name || '공종명 없음'}
                             </div>
                         </div>
 
@@ -1001,23 +1048,26 @@ export default function Dashboard() {
                                         {photo ? (
                                             <>
                                                 <img 
-                                                    src={api.getPhotoUrl(photo.url)} 
+                                                    src={photo.thumbnail_path || photo.url} 
                                                     alt={label} 
                                                     className="w-full h-full object-contain"
                                                 />
                                                 {/* Label Box Overlay */}
                                                 <div className="absolute top-3 left-3 bg-white/95 border border-gray-300 p-2 shadow-sm rounded-sm text-xs leading-relaxed z-10 whitespace-nowrap">
-                                                    {labelSettings.map(l => (
-                                                        <div key={l.id}>
-                                                            <span className="font-bold text-gray-800">{l.key} :</span>{' '}
-                                                            <span className="text-gray-900">
-                                                                {l.isAutoDate && !l.value 
-                                                                    ? (photo.timestamp ? format(new Date(photo.timestamp), 'yyyy.MM.dd') : '-') 
-                                                                    : (l.value || '-')
-                                                                }
-                                                            </span>
-                                                        </div>
-                                                    ))}
+                                                    {labelSettings.map(l => {
+                                                        const val = l.isAutoDate && !l.value 
+                                                            ? (photo.timestamp ? format(new Date(photo.timestamp), 'yyyy.MM.dd') : '-') 
+                                                            : (l.value || '');
+                                                        
+                                                        if (!val) return null;
+
+                                                        return (
+                                                            <div key={l.id}>
+                                                                <span className="font-bold text-gray-800">{l.key} :</span>{' '}
+                                                                <span className="text-gray-900">{val}</span>
+                                                            </div>
+                                                        );
+                                                    })}
                                                 </div>
                                             </>
                                         ) : (
@@ -1044,9 +1094,9 @@ export default function Dashboard() {
       <Dialog open={downloadDialogOpen} onOpenChange={setDownloadDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>PDF 내보내기 완료</DialogTitle>
+            <DialogTitle>PDF 생성 완료!</DialogTitle>
             <DialogDescription>
-              성공적으로 PDF가 생성되었습니다. 아래 버튼을 눌러 다운로드하세요.
+              아래 버튼을 눌러 다운로드하세요.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center py-6">
