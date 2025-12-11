@@ -400,7 +400,7 @@ export const api = {
   },
 
   // Export
-  startExport: async (jobId: string, metadata?: { title?: string, construction_type?: string, cover_company_name?: string, label_company_name?: string, labels?: any }): Promise<ExportStatus> => {
+  startExport: async (jobId: string, metadata?: { cover_title?: string, cover_company_name?: string, labels?: { visible_keys: string[], overrides: Record<string, string> } }): Promise<ExportStatus> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/export`, {
       method: 'POST',
       headers: authJsonHeaders(),

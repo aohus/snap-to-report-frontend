@@ -32,10 +32,8 @@ export default function JobEditor() {
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [exportMetadata, setExportMetadata] = useState({
-    title: '',
-    construction_type: '',
+    cover_title: '',
     cover_company_name: '',
-    label_company_name: '',
   });
   const [labelSettings, setLabelSettings] = useState<{ id: string; key: string; value: string; isAutoDate?: boolean }[]>([
     { id: 'date', key: '일자', value: '', isAutoDate: true },
@@ -251,10 +249,8 @@ export default function JobEditor() {
     const firstClusterName = clusters.length > 0 && clusters[0].name !== 'reserve' ? clusters[0].name : '';
     
     setExportMetadata({
-      title: job.title,
-      construction_type: job.construction_type || firstClusterName || job.title,
+      cover_title: job.title,
       cover_company_name: job.company_name || '',
-      label_company_name: job.company_name || '',
     });
     
     // Gather all unique label keys from all photos
@@ -298,9 +294,24 @@ export default function JobEditor() {
     setExporting(true);
     
     try {
+      // Best Practice: Send configuration (schema) only.
+      const visible_keys: string[] = [];
+      const overrides: Record<string, string> = {};
+
+      labelSettings.forEach(l => {
+          visible_keys.push(l.key);
+          // If a value is provided, it's a global override.
+          if (l.value) {
+              overrides[l.key] = l.value;
+          }
+      });
+
       const payload = {
         ...exportMetadata,
-        labels: labelSettings
+        labels: {
+            visible_keys,
+            overrides
+        }
       };
 
       await api.startExport(job.id, payload);
@@ -546,8 +557,8 @@ export default function JobEditor() {
                     <div className="mt-20 w-full text-center">
                         <input
                            className="w-full text-center text-3xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
-                           value={exportMetadata.title}
-                           onChange={(e) => setExportMetadata({...exportMetadata, title: e.target.value})}
+                           value={exportMetadata.cover_title}
+                           onChange={(e) => setExportMetadata({...exportMetadata, cover_title: e.target.value})}
                            placeholder="작업명 입력"
                         />
                         <div className="mt-16 bg-gray-100 border border-gray-300 px-10 py-4 inline-block">
