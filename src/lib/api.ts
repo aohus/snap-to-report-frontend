@@ -282,9 +282,26 @@ export const api = {
 
 
       // ---------------------------------------------------------
-      // Step 4: 워커 루프 정의 (병렬 처리)
+      // Step 4: 워커 루프 정의 (병렬 처리) 및 배치 전송
       // ---------------------------------------------------------
       const MAX_CONCURRENCY = 3; 
+      const NOTIFY_BATCH_SIZE = 30; // 30개씩 모아서 전송
+      const successfulUploadsQueue: { filename: string; storage_path: string }[] = [];
+
+      // 큐 비우기 함수 (API 호출)
+      const flushNotifyQueue = async () => {
+          if (successfulUploadsQueue.length === 0) return;
+          const chunk = successfulUploadsQueue.splice(0, successfulUploadsQueue.length); // 큐에서 꺼내기
+          try {
+              if (strategy === 'resumable' || strategy === 'presigned') {
+                  await api.notifyUploadComplete(jobId, chunk);
+              }
+          } catch (e) {
+              console.error("Failed to notify upload batch", e);
+              // 실패한 항목들을 다시 큐에 넣을지 여부는 정책에 따라 결정.
+              // 여기서는 일단 로그만 남김. (재시도 로직이 필요하다면 추가)
+          }
+      };
 
       const worker = async () => {
         while (uploadQueue.length > 0) {
@@ -302,7 +319,7 @@ export const api = {
                 // 1. Resumable (GCS Session URL)
                 await uploadViaResumable(file, urlInfo.upload_url, currentProgressCallback);
                 
-                successfulUploadsInfo.push({
+                successfulUploadsQueue.push({
                     filename: urlInfo.filename,
                     storage_path: urlInfo.storage_path
                 });
@@ -311,7 +328,7 @@ export const api = {
                 // 2. Presigned (Single PUT)
                 await uploadViaPresigned(file, urlInfo.upload_url, currentProgressCallback);
 
-                successfulUploadsInfo.push({
+                successfulUploadsQueue.push({
                     filename: urlInfo.filename,
                     storage_path: urlInfo.storage_path
                 });
@@ -325,6 +342,11 @@ export const api = {
                 // notifyUploadComplete에 보낼 경로 정보가 다를 수 있음. 
                 // 하지만 일관성을 위해 필요한 경우 여기서도 정보를 추가할 수 있음.
                 // (일반적으로 서버 업로드 시엔 notifyUploadComplete가 필요 없는 경우가 많으나 로직 통일을 위해 생략 가능)
+            }
+
+            // 배치 사이즈 도달 시 전송
+            if (successfulUploadsQueue.length >= NOTIFY_BATCH_SIZE) {
+                await flushNotifyQueue();
             }
 
           } catch (error) {
@@ -345,10 +367,8 @@ export const api = {
 
       await Promise.all(workers);
 
-      // Resumable/Presigned 전략 사용 시에만 명시적 완료 통보가 필요함
-      if ((strategy === 'resumable' || strategy === 'presigned') && successfulUploadsInfo.length > 0) {
-        await api.notifyUploadComplete(jobId, successfulUploadsInfo);
-      }
+      // 남은 큐 비우기
+      await flushNotifyQueue();
 
       // 💡 수정됨: Cluster[]를 Photo[]로 변환하여 반환
       const photos = await api.getPhotos(jobId);
