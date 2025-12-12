@@ -586,7 +586,7 @@ export default function JobEditor() {
                                         {photo ? (
                                             <>
                                                 <img 
-                                                    src={photo.thumbnail_path || photo.url} 
+                                                    src={photo.thumbnail_url || photo.url} 
                                                     alt={label} 
                                                     className="w-full h-full object-contain"
                                                 />

@@ -743,10 +743,9 @@ export default function Dashboard() {
                   완료 장소: {completedPlaces} / {totalPlaces} 
                 </span>
             </div>
-            {/* <Button 
-              variant="default" 
-              size="sm" 
-              className="md:text-base bg-blue-600 hover:bg-blue-700 shadow-md"
+            <Button 
+              variant="outline" 
+              className="h-12 text-lg border-blue-600 text-blue-700"
               // className="md:text-lg bg-blue-600 hover:bg-blue-700 shadow-md md:h-11 md:px-8"
               onClick={handleStartClustering}
               disabled={isClustering}
@@ -754,17 +753,17 @@ export default function Dashboard() {
               {isClustering ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <></>}
               <span className="hidden md:inline">사진 분류 다시하기</span>
               <span className="md:hidden">재분류</span>
-            </Button> */}
-            <Button 
-              className="h-12 text-lg bg-blue-600 hover:bg-blue-700 px-6"
-              onClick={() => { navigate(`/jobs/${job.id}/edit`); }}
-            >
-              <span className="hidden md:inline">라벨 수정하기</span>
-              <span className="md:hidden">라벨수정</span>
             </Button>
             <Button 
               variant="outline" 
               className="h-12 text-lg border-blue-600 text-blue-700"
+              onClick={() => { navigate(`/jobs/${job.id}/edit`); }}
+              >
+              <span className="hidden md:inline">라벨 수정하기</span>
+              <span className="md:hidden">라벨수정</span>
+            </Button>
+            <Button 
+              className="h-12 text-lg bg-blue-600 hover:bg-blue-700 px-6"
               onClick={handleExport}
               disabled={exporting || clusters.length === 0}
             >
@@ -1032,7 +1031,7 @@ export default function Dashboard() {
                         <div className="h-10 flex border-b border-black shrink-0">
                             <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">공종</div>
                             <div className="flex-1 flex items-center px-2">
-                                {previewCluster.name || '공종명 없음'}
+                                {previewCluster?.name || '공종명 없음'}
                             </div>
                         </div>
 
@@ -1048,7 +1047,7 @@ export default function Dashboard() {
                                         {photo ? (
                                             <>
                                                 <img 
-                                                    src={photo.thumbnail_path || photo.url} 
+                                                    src={photo.thumbnail_url || photo.url} 
                                                     alt={label} 
                                                     className="w-full h-full object-contain"
                                                 />

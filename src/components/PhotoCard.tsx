@@ -100,7 +100,7 @@ export const PhotoCard = React.memo(function PhotoCard({
           <div className="flex-1 overflow-hidden bg-gray-100">
             <img
               // 1. 썸네일이 있다면 우선 사용, 없다면 원본 사용 (백엔드 필드 확인 필요)
-              src={photo.thumbnail_path || photo.url} 
+              src={photo.thumbnail_url || photo.url} 
               alt={photo.original_filename}
               className="w-full h-full object-cover transition-transform group-hover:scale-105"
               loading="lazy"
@@ -116,7 +116,7 @@ export const PhotoCard = React.memo(function PhotoCard({
   // 드래그 앤 드롭 시 불필요한 리렌더링을 강력하게 막고 싶다면 사용합니다.
   return (
     prevProps.photo.id === nextProps.photo.id &&
-    prevProps.photo.thumbnail_path === nextProps.photo.thumbnail_path &&
+    prevProps.photo.thumbnail_url === nextProps.photo.thumbnail_url &&
     prevProps.photo.labels === nextProps.photo.labels &&
     prevProps.index === nextProps.index &&
     prevProps.isSelected === nextProps.isSelected &&
