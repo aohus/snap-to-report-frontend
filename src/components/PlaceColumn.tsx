@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
 import { Cluster } from '@/types';
 import { PhotoCard } from './PhotoCard';
@@ -42,22 +42,12 @@ export function PlaceColumn({
   const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState(cluster.name || `Place ${cluster.order_index + 1}`);
-  const prevPhotoCount = useRef(cluster.photos.length);
   
   const selectedPhotoIds = selectedPhotos.map(p => p.id);
 
   useEffect(() => {
     setName(cluster.name || `Place ${cluster.order_index + 1}`);
   }, [cluster.name, cluster.order_index]);
-
-  useEffect(() => {
-    if (prevPhotoCount.current > 0 && cluster.photos.length === 0) {
-      if (cluster.name !== 'reserve') {
-        onDeleteCluster(cluster.id);
-      }
-    }
-    prevPhotoCount.current = cluster.photos.length;
-  }, [cluster.photos.length, cluster.id, cluster.name, onDeleteCluster]);
 
   const handleSave = () => {
     if (name.trim() && name.trim() !== cluster.name) {

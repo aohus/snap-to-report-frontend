@@ -297,6 +297,37 @@ export default function Dashboard() {
     });
   };
 
+  const handleDeleteCluster = async (clusterId: string) => {
+    // Optimistic update using functional state to ensure safety in async contexts
+    setClusters(prev => {
+        const clusterToDelete = prev.find(c => c.id === clusterId);
+        if (!clusterToDelete) return prev;
+        
+        // Remove cluster
+        let newClusters = prev.filter(c => c.id !== clusterId);
+        
+        // Re-index subsequent clusters
+        newClusters = newClusters.map(c => {
+            if (c.order_index > clusterToDelete.order_index) {
+                return { ...c, order_index: c.order_index - 1 };
+            }
+            return c;
+        });
+        
+        return newClusters;
+    });
+
+    setSaving(true);
+    try {
+        await api.deleteCluster(clusterId);
+    } catch (e) {
+        console.error("Failed to delete cluster", e);
+        toast.error("Failed to delete cluster");
+    } finally {
+        setSaving(false);
+    }
+  };
+
   const handleMovePhoto = async (photoId: string, sourceClusterId: string, targetClusterId: string, newIndex: number) => {
     if (!job) return;
 
@@ -358,6 +389,11 @@ export default function Dashboard() {
     try {
         // Atomic Move API
         await api.movePhoto(photoId, realTargetClusterId, newIndex);
+
+        // Check if source cluster became empty (and is not 'reserve')
+        if (sourceCluster && sourceCluster.photos.length === 0 && sourceCluster.name !== 'reserve') {
+             await handleDeleteCluster(sourceCluster.id);
+        }
     } catch (e) {
         console.error("Failed to move photo", e);
         toast.error("Failed to save move");
@@ -406,38 +442,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleDeleteCluster = async (clusterId: string) => {
-    const clusterToDelete = clusters.find(c => c.id === clusterId);
-    
-    // We are deleting the cluster and its photos. 
-    // Do NOT move photos to reserve.
-    
-    let newClusters = clusters.filter(c => c.id !== clusterId);
-    
-    if (clusterToDelete) {
-       newClusters = newClusters.map(c => {
-         if (c.order_index > clusterToDelete.order_index) {
-            return { ...c, order_index: c.order_index - 1 };
-         }
-         return c;
-       });
-    }
 
-    setClusters(newClusters);
-    
-    // Queue for cluster deletion
-    // pendingClusterDeletes.current.add(clusterId);
-    // triggerAutoSave(newClusters);
-    setSaving(true);
-    try {
-        await api.deleteCluster(clusterId);
-    } catch (e) {
-        console.error("Failed to delete cluster", e);
-        toast.error("Failed to delete cluster");
-    } finally {
-        setSaving(false);
-    }
-  };
 
   const handleMoveCluster = async (clusterId: string, direction: 'up' | 'down') => {
     const currentIndex = clusters.findIndex(c => c.id === clusterId);
