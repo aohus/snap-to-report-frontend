@@ -77,10 +77,10 @@ export default function JobEditor() {
                 const timeB = b.timestamp ? new Date(b.timestamp).getTime() : Infinity;
                 return timeA - timeB;
             }).map(p => {
-                // [중요] 초기 로딩 시 시행일자/시행처가 라벨에 없다면 기본값으로 채워넣음 (수정/삭제 가능하도록)
+                // [중요] 초기 로딩 시 일자/시행처가 라벨에 없다면 기본값으로 채워넣음 (수정/삭제 가능하도록)
                 const initialLabels = { ...(p.labels || {}) };
-                if (!initialLabels['시행일자']) {
-                    initialLabels['시행일자'] = p.timestamp ? format(new Date(p.timestamp), 'yyyy-MM-dd') : '';
+                if (!initialLabels['일자']) {
+                    initialLabels['일자'] = p.timestamp ? format(new Date(p.timestamp), 'yyyy.MM.dd') : '';
                 }
                 if (!initialLabels['시행처']) {
                     initialLabels['시행처'] = data.company_name || '';
@@ -112,6 +112,58 @@ export default function JobEditor() {
           const allIds = new Set(clusters.map(c => c.id));
           setSelectedClusterIds(allIds);
       }
+  };
+
+  const handleExport = () => {
+    if (!job) return;
+    
+    // Initialize preview with current job data or existing cluster data
+    // Use the first cluster's name as the default construction_type for the preview if available and not set
+    const firstClusterName = clusters.length > 0 && clusters[0].name !== 'reserve' ? clusters[0].name : '';
+    
+    setExportMetadata({
+      cover_title: job.title,
+      cover_company_name: job.company_name || '',
+    });
+    
+    // Gather all unique label keys from all photos (to discover new custom labels)
+    const allPhotoLabels = new Set<string>();
+    clusters.forEach(cluster => {
+      cluster.photos.forEach(photo => {
+        if (photo.labels) {
+          Object.keys(photo.labels).forEach(key => allPhotoLabels.add(key));
+        }
+      });
+    });
+
+    // Update labelSettings with new keys found in photos, but DO NOT reset existing settings
+    setLabelSettings(prev => {
+        const newSettings = [...prev];
+        const existingKeys = new Set(newSettings.map(s => s.key));
+
+        // Ensure defaults if they were never initialized (though useState does this)
+        // But if user deleted them, they stay deleted.
+        
+        allPhotoLabels.forEach(labelKey => {
+            if (!existingKeys.has(labelKey)) {
+                newSettings.push({ 
+                    id: `custom-${labelKey}`, 
+                    key: labelKey, 
+                    value: '', 
+                    isAutoDate: false 
+                });
+            }
+        });
+        
+        // Ensure company name is synced if the user hasn't overridden it, 
+        // BUT only if 'company' key still exists in the settings.
+        return newSettings.map(l => {
+            if (l.id === 'company' && !l.value) return { ...l, value: job.company_name || '' };
+            return l;
+        });
+    });
+    
+    setExportDialogOpen(true);
   };
 
   const handleConfirmExport = async () => {
@@ -291,12 +343,12 @@ export default function JobEditor() {
   };
 
   // --- Render Helpers ---
-  // 정렬: 시행일자 -> 시행처 -> 나머지 가나다순
+  // 정렬: 일자 -> 시행처 -> 나머지 가나다순
   const getSortedLabels = (labels: Record<string, string> = {}) => {
       const keys = Object.keys(labels);
       return keys.sort((a, b) => {
-          if (a === '시행일자') return -1;
-          if (b === '시행일자') return 1;
+          if (a === '일자') return -1;
+          if (b === '일자') return 1;
           if (a === '시행처') return -1;
           if (b === '시행처') return 1;
           return a.localeCompare(b);
@@ -323,9 +375,14 @@ export default function JobEditor() {
               {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
               저장하기
             </Button>
-            <Button variant="outline" onClick={() => setExportDialogOpen(true)} className="h-12 text-lg border-blue-600 text-blue-700">
-              <FileDown className="w-5 h-5 mr-2" />
-              PDF 미리보기
+            <Button 
+              className="h-12 text-lg bg-blue-600 hover:bg-blue-700 px-6"
+              onClick={handleExport}
+              disabled={exporting || clusters.length === 0}
+            >
+              {exporting ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <FileDown className="w-4 h-4 md:w-5 md:h-5 md:mr-2" />}
+              <span className="hidden md:inline">PDF 미리보기</span>
+              <span className="md:hidden">PDF</span>
             </Button>
         </div>
       </header>
@@ -431,7 +488,7 @@ export default function JobEditor() {
                                                         }}>확인</Button>
                                                     </div>
                                                     <div className="text-xs text-gray-500">
-                                                        * 삭제된 '시행일자', '시행처'도 여기서 다시 추가할 수 있습니다.
+                                                        * 삭제된 '일자', '시행처'도 여기서 다시 추가할 수 있습니다.
                                                     </div>
                                                 </div>
                                             </PopoverContent>
@@ -443,14 +500,14 @@ export default function JobEditor() {
                                             <div key={key} className="flex items-center group">
                                                 {/* Label Name */}
                                                 <div className={LABEL_TEXT}>
-                                                    {key === '시행일자' && <CalendarIcon className="w-4 h-4 inline mr-1 mb-1"/>}
+                                                    {key === '일자' && <CalendarIcon className="w-4 h-4 inline mr-1 mb-1"/>}
                                                     {key === '시행처' && <MapPin className="w-4 h-4 inline mr-1 mb-1"/>}
                                                     {key}
                                                 </div>
 
                                                 {/* Label Input */}
                                                 <div className="flex-1 relative">
-                                                    {key === '시행일자' ? (
+                                                    {key === '일자' ? (
                                                         <Input 
                                                             type="date"
                                                             className={`${INPUT_CLASS} pl-4`}
