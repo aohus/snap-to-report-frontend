@@ -112,6 +112,11 @@ export default function Dashboard() {
       try {
         const data = await api.getJobDetails(jobId);
         setJob(data);
+
+        if (data.status === 'PENDING' || data.status === 'PROCESSING') {
+          setIsClustering(true);
+        }
+
         if (data.clusters) {
            const sorted = data.clusters
               .sort((a, b) => a.order_index - b.order_index)
@@ -126,6 +131,51 @@ export default function Dashboard() {
     };
     fetchJobData();
   }, [jobId]);
+
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout;
+    let attempts = 0;
+
+    const checkStatus = async () => {
+      if (!isClustering || !jobId) return;
+
+      try {
+        const jobData = await api.getJob(jobId);
+        
+        if (jobData.status === 'COMPLETED') {
+           const fullData = await api.getJobDetails(jobId);
+           setJob(fullData);
+           if (fullData.clusters) {
+              const sorted = fullData.clusters
+                  .sort((a, b) => a.order_index - b.order_index)
+                  .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
+              setClusters(sorted);
+              toast.success(`Analysis complete. Found ${sorted.length} places.`);
+           }
+           setIsClustering(false);
+           return; 
+        } else if (jobData.status === 'FAILED') {
+           setIsClustering(false);
+           toast.error("Clustering failed.");
+           return;
+        }
+
+        attempts++;
+        const delay = Math.min(2000 * Math.pow(1.5, attempts), 10000); 
+        timeoutId = setTimeout(checkStatus, delay);
+
+      } catch (e) {
+        console.warn("Polling error", e);
+        timeoutId = setTimeout(checkStatus, 5000); 
+      }
+    };
+
+    if (isClustering) {
+       timeoutId = setTimeout(checkStatus, 1000);
+    }
+
+    return () => clearTimeout(timeoutId);
+  }, [isClustering, jobId]);
 
   const handleEditLabels = (photoId: string) => {
       const photo = clusters.flatMap(c => c.photos).find(p => p.id === photoId);
@@ -226,63 +276,25 @@ export default function Dashboard() {
       const result = await api.startClustering(job.id);
       console.log("startClustering response:", result);
 
-      let newClusters: Cluster[] = [];
-
-      // Check for PENDING status
-      if (result && (result.status === 'PENDING' || result.status === 'PROCESSING')) {
-        toast.info("Clustering started in background...");
-        
-        // Poll for results
-        const pollInterval = 1000;
-        const maxAttempts = 180; // 30 seconds timeout
-        let attempts = 0;
-        
-        while (attempts < maxAttempts) {
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
-          try {
-             // We can check clusters or job status. Assuming checking clusters count.
-             // Ideally the backend should provide a status endpoint or getJob should return status.
-             // For now, let's check if we get clusters.
-             const clusters = await api.getClusters(job.id);
-             if (clusters && clusters.length > 0) {
-               newClusters = clusters;
-               break;
-             }
-             // Optional: If backend supports job status, check that here.
-          } catch (e) {
-            console.warn("Polling error", e);
+      // Check for immediate results (backward compatibility)
+      if (Array.isArray(result) || (result && Array.isArray(result.clusters))) {
+          const newClusters: Cluster[] = Array.isArray(result) ? result : result.clusters;
+          const sortedClusters = newClusters
+            .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
+            .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
+          
+          setClusters(sortedClusters);
+          if (sortedClusters.length > 0) {
+            toast.success(`Analysis complete. Found ${sortedClusters.length} places.`);
           }
-          attempts++;
-        }
-        
-        if (newClusters.length === 0) {
-           toast.warning("Clustering finished but no places were found, or it timed out.");
-           // Fetch one last time just in case
-           const clusters = await api.getClusters(job.id);
-           if (clusters) newClusters = clusters;
-        }
-
-      } else if (Array.isArray(result)) {
-        newClusters = result;
-      } else if (result && typeof result === 'object' && Array.isArray((result as any).clusters)) {
-        newClusters = (result as any).clusters;
+          setIsClustering(false);
       } else {
-        console.warn("Unexpected clustering response format", result);
-        throw new Error("Invalid clustering response format");
-      }
-
-      const sortedClusters = newClusters
-        .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-        .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
-      
-      setClusters(sortedClusters);
-      if (sortedClusters.length > 0) {
-        toast.success(`Analysis complete. Found ${sortedClusters.length} places.`);
+         // Assume PENDING/PROCESSING - The useEffect will handle polling
+         toast.info("Clustering started in background...");
       }
     } catch (error) {
       console.error("Clustering failed", error);
       toast.error("Failed to cluster photos");
-    } finally {
       setIsClustering(false);
     }
   };
