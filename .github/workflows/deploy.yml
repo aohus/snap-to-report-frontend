@@ -21,26 +21,44 @@ jobs:
             sudo sync && sudo sysctl -w vm.drop_caches=3 || true
             docker system prune -f || true
 
+            # 0.1 Swap Space 설정 (4GB) - 메모리 부족 방지
+            if [ ! -f /swapfile ]; then
+              echo "Creating 4GB swap file..."
+              sudo fallocate -l 4G /swapfile
+              sudo chmod 600 /swapfile
+              sudo mkswap /swapfile
+              sudo swapon /swapfile
+              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+            else
+              echo "Swap file already exists."
+            fi
+
+            # Swap 활성화 확인
+            sudo swapon --show
+
             # 1. 작업 디렉토리 생성 및 이동
             mkdir -p snap-to-report
             cd snap-to-report
 
-            # 2. Backend 리포지토리 업데이트
+            # 2. Backend 리포지토리 (docker-compose.prod.yml 파일 확보를 위해 필요하지만 업데이트는 하지 않음)
             if [ ! -d "backend" ]; then
-              git clone https://github.com/aohus/snap-to-report-api.git backend
-            else
-              cd backend && git pull origin main && cd ..
+               # 없으면 clone만 하고 업데이트는 하지 않음
+               git clone https://github.com/aohus/snap-to-report-api.git backend
             fi
-
-            # 3. Frontend 리포지토리 업데이트
+            
+            # 3. Frontend 리포지토리 업데이트 (Frontend만 업데이트)
             if [ ! -d "frontend" ]; then
               git clone https://github.com/aohus/snap-to-report-frontend.git frontend
             else
-              cd frontend && git pull origin main && cd ..
+              cd frontend
+              git fetch origin
+              git reset --hard origin/main
+              cd ..
             fi
 
-            # 4. 환경 변수 파일 (.env) 생성 (Backend, Frontend 구분이 없으므로 루트에 하나만 생성하여 공유)
+            # 4. 환경 변수 파일 (.env) 생성
             cat <<EOF > .env
+            GCP_VM_HOST=${{ secrets.GCP_VM_HOST }}
             POSTGRES_USER=${{ secrets.POSTGRES_USER }}
             POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
             POSTGRES_DB=${{ secrets.POSTGRES_DB }}
@@ -53,18 +71,18 @@ jobs:
             ALLOWED_ORIGINS="*"
             EOF
 
-            # 5. GCS Key 파일 생성 (root에 생성 후 backend 컨테이너에 마운트)
+            # 5. GCS Key 파일 생성 (Frontend에는 필요 없지만 Compose 실행 시 참조될 수 있음)
             echo '${{ secrets.GCS_SA_KEY_JSON }}' > gcs-key.json
 
-            # 6. docker-compose.prod.yml 복사 또는 생성 (Backend 리포지토리에 파일이 있다면 복사, 없다면 여기서 생성)
+            # 6. docker-compose.prod.yml 복사 (Backend 리포지토리에서 가져옴)
             cp backend/docker-compose.prod.yml . 
 
-            # 7. Docker Compose 재시작 --build 옵션으로 변경된 코드를 기반으로 이미지를 새로 빌드합니다.
-            # BuildKit 활성화로 빌드 속도 및 캐시 효율 향상
+            # 7. Frontend 서비스만 재배포
             export COMPOSE_DOCKER_CLI_BUILD=1
             export DOCKER_BUILDKIT=1
-            docker compose -f docker-compose.prod.yml up -d --build
+            
+            # web 서비스만 빌드 및 재시작
+            docker compose -f docker-compose.prod.yml up -d --build web
 
-            # 8. 불필요한 이미지 정리 (용량 확보)
-            # 주의: 빌드 캐시를 유지하기 위해 'image prune'만 사용하고 'builder prune'은 하지 않음
+            # 8. 불필요한 이미지 정리
             docker image prune -f

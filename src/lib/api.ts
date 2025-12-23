@@ -7,10 +7,10 @@ const API_BASE_URL = '/api';
 
 // JSON 요청용 + Authorization 헤더 조합
 function authJsonHeaders(): HeadersInit {
-  const h: HeadersInit = { 
+  const h: HeadersInit = {
     'Content-Type': 'application/json',
   };
-  
+
   const accessToken = AuthService.getToken();
   if (accessToken) {
     h['Authorization'] = `Bearer ${accessToken}`;
@@ -39,7 +39,7 @@ async function handleResponse<T>(response: Response): Promise<T> {
     AuthService.logout();
     throw new Error('Unauthorized');
   }
-  
+
   if (!response.ok) {
     // 응답 바디가 JSON이 아닐 수도 있으므로 try-catch
     let errorMessage = response.statusText;
@@ -64,8 +64,8 @@ async function handleResponse<T>(response: Response): Promise<T> {
 export const api = {
   // Job Management
   getJobs: async (): Promise<Job[]> => {
-    const response = await fetch(`${API_BASE_URL}/jobs`, { 
-      headers: authJsonHeaders(), 
+    const response = await fetch(`${API_BASE_URL}/jobs`, {
+      headers: authJsonHeaders(),
     });
     return handleResponse<Job[]>(response);
   },
@@ -77,15 +77,15 @@ export const api = {
 
     const response = await fetch(`${API_BASE_URL}/jobs`, {
       method: 'POST',
-      headers: authJsonHeaders(), 
+      headers: authJsonHeaders(),
       body: JSON.stringify(body),
     });
     return handleResponse<Job>(response);
   },
 
   getJob: async (jobId: string): Promise<Job> => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, { 
-      headers: authJsonHeaders(), 
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
+      headers: authJsonHeaders(),
     });
     return handleResponse<Job>(response);
   },
@@ -100,41 +100,41 @@ export const api = {
   },
 
   getJobDetails: async (jobId: string): Promise<Job & { photos: Photo[], clusters: Cluster[] }> => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/details`, { 
-      headers: authJsonHeaders(), 
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/details`, {
+      headers: authJsonHeaders(),
     });
     return handleResponse<Job & { photos: Photo[], clusters: Cluster[] }>(response);
   },
 
   deleteJob: async (jobId: string): Promise<Job> => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, { 
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
       method: 'DELETE',
-      headers: authJsonHeaders(), 
+      headers: authJsonHeaders(),
     });
     return handleResponse<Job>(response);
   },
 
   getPhotos: async (jobId: string): Promise<Photo[]> => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos`, { 
-      headers: authJsonHeaders(), 
-   });
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos`, {
+      headers: authJsonHeaders(),
+    });
     return handleResponse<Photo[]>(response);
   },
 
   // Cluster/Place Management
   startClustering: async (jobId: string): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/cluster`, { 
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/cluster`, {
       method: 'POST',
-      headers: authJsonHeaders(), 
+      headers: authJsonHeaders(),
       body: JSON.stringify({ min_samples: 3, max_dist_m: 8.0, max_alt_diff_m: 20.0 }),
-   });
+    });
     return handleResponse<any>(response);
   },
 
   getClusters: async (jobId: string): Promise<Cluster[]> => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/clusters`, { 
-      headers: authJsonHeaders(), 
-   });
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/clusters`, {
+      headers: authJsonHeaders(),
+    });
     return handleResponse<Cluster[]>(response);
   },
 
@@ -188,13 +188,14 @@ export const api = {
   getUploadUrls: async (jobId: string, files: { filename: string; content_type: string }[]): Promise<{ strategy: string; urls: { filename: string; upload_url: string | null; storage_path: string }[] }> => {
     // files 배열 전체를 한 번에 백엔드로 전송
     const fileInfos = files.map(f => ({ filename: f.filename, content_type: f.content_type }));
-          const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
-            method: 'POST',
-            headers: {
-              ...authJsonHeaders(),
-              'Origin': window.location.origin, // Add Origin header
-            },
-            body: JSON.stringify(fileInfos),    });
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/presigned`, {
+      method: 'POST',
+      headers: {
+        ...authJsonHeaders(),
+        'Origin': window.location.origin, // Add Origin header
+      },
+      body: JSON.stringify(fileInfos),
+    });
     return handleResponse(response);
   },
 
@@ -205,185 +206,136 @@ export const api = {
       headers: authJsonHeaders(),
       body: JSON.stringify(uploadedFiles),
     });
-    return handleResponse(response); 
+    return handleResponse(response);
   },
 
   uploadPhotos: async (jobId: string, files: File[], onProgressTotal?: (percent: number) => void): Promise<Photo[]> => {
     try {
+      const BATCH_SIZE = 5; // Chunk size for processing
       const totalFiles = files.length;
-      let completedFilesCount = 0;
-      
-      // 진행률 관리
       const fileProgressMap = new Map<string, number>();
+
       const updateGlobalProgress = () => {
-          if (!onProgressTotal) return;
-          let totalPercent = 0;
-          fileProgressMap.forEach(p => totalPercent += p);
-          onProgressTotal(Math.round(totalPercent / totalFiles));
+        if (!onProgressTotal) return;
+        let totalPercent = 0;
+        fileProgressMap.forEach((p) => (totalPercent += p));
+        onProgressTotal(Math.round(totalPercent / totalFiles));
       };
 
-      // ---------------------------------------------------------
-      // Step 1: 병렬 압축 (CPU-bound)
-      // ---------------------------------------------------------
-      const compressionPromises = files.map(async (file) => {
-        fileProgressMap.set(file.name, 0); // 초기화
-        let fileToUpload = file;
-        
-        if (isJPEGFile(file)) {
-          try {
-            fileToUpload = await compressImage(file);
-          } catch (e) {
-            console.warn(`Compression failed for ${file.name}, using original.`);
-          }
-        }
-        return { originalFile: file, fileToUpload };
-      });
+      // Helper to split array into chunks
+      const chunks: File[][] = [];
+      for (let i = 0; i < totalFiles; i += BATCH_SIZE) {
+        chunks.push(files.slice(i, i + BATCH_SIZE));
+      }
 
-      const compressedFiles = await Promise.all(compressionPromises);
+      for (const chunk of chunks) {
+        // ---------------------------------------------------------
+        // Step 1: Compress Chunk (Parallel)
+        // ---------------------------------------------------------
+        const compressedItems = await Promise.all(
+          chunk.map(async (file) => {
+            fileProgressMap.set(file.name, 0); // Init progress
+            let fileToUpload = file;
+            if (isJPEGFile(file)) {
+              try {
+                fileToUpload = await compressImage(file);
+              } catch (e) {
+                console.warn(`Compression failed for ${file.name}, using original.`);
+              }
+            }
+            return { originalFile: file, fileToUpload };
+          })
+        );
 
+        // ---------------------------------------------------------
+        // Step 2: Get URLs for Chunk (Batch Request)
+        // ---------------------------------------------------------
+        let strategy = 'proxy';
+        let urls: any[] = []; // Explicitly typed as any[] because response.urls structure is dynamic
 
-      // ---------------------------------------------------------
-      // Step 2: 전략 및 URL 확보 (Batch Request)
-      // ---------------------------------------------------------
-      let strategy = 'proxy'; // 기본값
-      let urls: any[] = [];
-      
-      try {
-          const fileInfos = compressedFiles.map(({ fileToUpload }) => ({
+        try {
+          const fileInfos = compressedItems.map(({ fileToUpload }) => ({
             filename: fileToUpload.name,
             content_type: fileToUpload.type,
           }));
-      
+
           const response = await api.getUploadUrls(jobId, fileInfos);
-          
-          // 백엔드 응답 검증
-          if (response && response.strategy && response.urls.length === totalFiles) {
-              strategy = response.strategy;
-              urls = response.urls;
+
+          if (response && response.strategy && response.urls.length === chunk.length) {
+            strategy = response.strategy;
+            urls = response.urls;
           } else {
-              console.warn("Invalid URL response, falling back to server upload.");
+            console.warn("Invalid URL response (length mismatch), falling back to server upload.");
           }
-      } catch (e) {
+        } catch (e) {
           console.warn("Failed to get upload URLs, falling back to server upload.", e);
           strategy = 'proxy';
-      }
+        }
 
+        // ---------------------------------------------------------
+        // Step 3: Upload Chunk (Parallel) & Notify
+        // ---------------------------------------------------------
+        const successfulUploads: { filename: string; storage_path: string }[] = [];
 
-      // ---------------------------------------------------------
-      // Step 3: 업로드 큐 생성 (전략에 따른 매핑)
-      // ---------------------------------------------------------
-      const uploadQueue = compressedFiles.map((item, index) => ({
-        file: item.fileToUpload,
-        originalName: item.originalFile.name,
-        urlInfo: urls[index] || null, // Fallback일 경우 null일 수 있음
-      }));
+        await Promise.all(
+          compressedItems.map(async (item, index) => {
+            const { originalFile, fileToUpload } = item;
+            const urlInfo = urls[index]; // Can be undefined if fallback
 
-      const successfulUploadsInfo: { filename: string; storage_path: string }[] = [];
-
-
-      // ---------------------------------------------------------
-      // Step 4: 워커 루프 정의 (병렬 처리) 및 배치 전송
-      // ---------------------------------------------------------
-      const MAX_CONCURRENCY = 3; 
-      const NOTIFY_BATCH_SIZE = 30; // 30개씩 모아서 전송
-      const successfulUploadsQueue: { filename: string; storage_path: string }[] = [];
-
-      // 큐 비우기 함수 (API 호출)
-      const flushNotifyQueue = async () => {
-          if (successfulUploadsQueue.length === 0) return;
-          const chunk = successfulUploadsQueue.splice(0, successfulUploadsQueue.length); // 큐에서 꺼내기
-          try {
-              if (strategy === 'resumable' || strategy === 'presigned') {
-                  await api.notifyUploadComplete(jobId, chunk);
-              }
-          } catch (e) {
-              console.error("Failed to notify upload batch", e);
-              // 실패한 항목들을 다시 큐에 넣을지 여부는 정책에 따라 결정.
-              // 여기서는 일단 로그만 남김. (재시도 로직이 필요하다면 추가)
-          }
-      };
-
-      const worker = async () => {
-        while (uploadQueue.length > 0) {
-          const item = uploadQueue.shift();
-          if (!item) break;
-          const { file, originalName, urlInfo } = item;
-          const currentProgressCallback = (p: number) => {
-              fileProgressMap.set(originalName, p);
+            const currentProgressCallback = (p: number) => {
+              fileProgressMap.set(originalFile.name, p);
               updateGlobalProgress();
-          };
+            };
 
-          try {
-            // *** 핵심: 전략에 따른 분기 처리 ***
-            if (strategy === 'resumable' && urlInfo?.upload_url) {
+            try {
+              if (strategy === 'resumable' && urlInfo?.upload_url) {
                 // 1. Resumable (GCS Session URL)
-                await uploadViaResumable(file, urlInfo.upload_url, currentProgressCallback);
-                
-                successfulUploadsQueue.push({
-                    filename: urlInfo.filename,
-                    storage_path: urlInfo.storage_path
+                await uploadViaResumable(fileToUpload, urlInfo.upload_url, currentProgressCallback);
+                successfulUploads.push({
+                  filename: urlInfo.filename,
+                  storage_path: urlInfo.storage_path,
                 });
-
-            } else if (strategy === 'presigned' && urlInfo?.upload_url) {
+              } else if (strategy === 'presigned' && urlInfo?.upload_url) {
                 // 2. Presigned (Single PUT)
-                await uploadViaPresigned(file, urlInfo.upload_url, currentProgressCallback);
-
-                successfulUploadsQueue.push({
-                    filename: urlInfo.filename,
-                    storage_path: urlInfo.storage_path
+                await uploadViaPresigned(fileToUpload, urlInfo.upload_url, currentProgressCallback);
+                successfulUploads.push({
+                  filename: urlInfo.filename,
+                  storage_path: urlInfo.storage_path,
                 });
-
-            } else {
+              } else {
                 // 3. Fallback (Server Proxy)
-                // strategy가 'server_fallback'이거나 'proxy'인 경우, 혹은 URL이 없는 경우
-                await uploadViaServer(jobId, file, originalName, currentProgressCallback);
-                
-                // 서버 업로드는 보통 서버가 내부적으로 저장 경로를 알기 때문에 
-                // notifyUploadComplete에 보낼 경로 정보가 다를 수 있음. 
-                // 하지만 일관성을 위해 필요한 경우 여기서도 정보를 추가할 수 있음.
-                // (일반적으로 서버 업로드 시엔 notifyUploadComplete가 필요 없는 경우가 많으나 로직 통일을 위해 생략 가능)
+                await uploadViaServer(jobId, fileToUpload, originalFile.name, currentProgressCallback);
+              }
+            } catch (error) {
+              console.error(`Failed to upload ${originalFile.name} via ${strategy}`, error);
+              // Continue with other files even if one fails
             }
+          })
+        );
 
-            // 배치 사이즈 도달 시 전송
-            if (successfulUploadsQueue.length >= NOTIFY_BATCH_SIZE) {
-                await flushNotifyQueue();
-            }
-
-          } catch (error) {
-            console.error(`Failed to upload ${originalName} via ${strategy}`, error);
-            // 개별 파일 실패 시 전체 프로세스를 멈출지, 무시할지 결정. 여기선 무시하고 진행.
-          } finally {
-            completedFilesCount++;
+        // ---------------------------------------------------------
+        // Step 4: Notify Completion for Chunk (Batch)
+        // ---------------------------------------------------------
+        if (successfulUploads.length > 0 && (strategy === 'resumable' || strategy === 'presigned')) {
+          try {
+            await api.notifyUploadComplete(jobId, successfulUploads);
+          } catch (e) {
+            console.error("Failed to notify upload batch", e);
           }
         }
-      };
-
-      // ---------------------------------------------------------
-      // Step 5: 실행 및 완료 처리
-      // ---------------------------------------------------------
-      const workers = Array(Math.min(uploadQueue.length, MAX_CONCURRENCY))
-        .fill(null)
-        .map(() => worker());
-
-      await Promise.all(workers);
-
-      // 남은 큐 비우기
-      await flushNotifyQueue();
-
-      // 💡 수정됨: Cluster[]를 Photo[]로 변환하여 반환
-      const photos = await api.getPhotos(jobId);
-      return photos
-
-      } catch (error) {
-        console.error("Fatal error in upload process", error);
-        throw error;
       }
-    },
+
+      return api.getPhotos(jobId);
+    } catch (error) {
+      console.error("Fatal error in upload process", error);
+      throw error;
+    }
+  },
 
   movePhoto: async (photoId: string, targetClusterId: string, orderIndex?: number): Promise<void> => {
     const body: any = { target_cluster_id: targetClusterId };
     if (orderIndex !== undefined) {
-        body.order_index = orderIndex;
+      body.order_index = orderIndex;
     }
     const response = await fetch(`${API_BASE_URL}/photos/${photoId}/move`, {
       method: 'POST',
@@ -430,7 +382,7 @@ export const api = {
   },
 
   getExportStatus: async (jobId: string): Promise<ExportStatus> => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/export/status`, { 
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/export/status`, {
       headers: authJsonHeaders(),
     });
     return handleResponse<ExportStatus>(response);
@@ -439,12 +391,12 @@ export const api = {
   // Helper for image URLs
   getPhotoUrl: (path: string) => {
     if (path.startsWith('http') || path.startsWith('blob')) return path;
-    return `${API_BASE_URL}/uploads/${path}`; 
+    return `${API_BASE_URL}/uploads/${path}`;
   },
 
   // Helper for image URLs
   getDownloadUrl: async (jobId: string) => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/export/download`, { 
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/export/download`, {
       headers: authJsonHeaders(),
     });
     return handleResponse<FileResponse>(response);
