@@ -1,88 +1,30 @@
-name: Deploy to GCE (Multi-Repo)
+name: Deploy to GCE
 
 on:
   push:
     branches: ["main"]
 
+env:
+  GAR_REPO: asia-northeast3-docker.pkg.dev/snap-2-report/snap-2-report-repo
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
     steps:
-      - name: Deploy using SSH
-        uses: appleboy/ssh-action@v1.0.0
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 1. Google Cloud 인증
+      - name: Login to Google Cloud
+        uses: google-github-actions/auth@v1
         with:
-          host: ${{ secrets.GCP_VM_HOST }}
-          username: ${{ secrets.GCP_VM_USERNAME }}
-          key: ${{ secrets.GCP_VM_SSH_KEY }}
-          command_timeout: "1800s" # 30 minutes
-          script: |
-            # 0. 빌드 전 메모리 및 리소스 정리
-            echo "Freeing up memory and disk space..."
-            sudo sync && sudo sysctl -w vm.drop_caches=3 || true
-            docker system prune -f || true
+          credentials_json: ${{ secrets.GCS_SA_KEY_JSON }}
 
-            # 0.1 Swap Space 설정 (4GB) - 메모리 부족 방지
-            if [ ! -f /swapfile ]; then
-              echo "Creating 4GB swap file..."
-              sudo fallocate -l 4G /swapfile
-              sudo chmod 600 /swapfile
-              sudo mkswap /swapfile
-              sudo swapon /swapfile
-              echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
-            else
-              echo "Swap file already exists."
-            fi
+      # 2. Docker 설정, 빌드 & 푸시
+      - name: Configure Docker
+        run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev
 
-            # Swap 활성화 확인
-            sudo swapon --show
-
-            # 1. 작업 디렉토리 생성 및 이동
-            mkdir -p snap-to-report
-            cd snap-to-report
-
-            # 2. Backend 리포지토리 (docker-compose.prod.yml 파일 확보를 위해 필요하지만 업데이트는 하지 않음)
-            if [ ! -d "backend" ]; then
-               # 없으면 clone만 하고 업데이트는 하지 않음
-               git clone https://github.com/aohus/snap-to-report-api.git backend
-            fi
-            
-            # 3. Frontend 리포지토리 업데이트 (Frontend만 업데이트)
-            if [ ! -d "frontend" ]; then
-              git clone https://github.com/aohus/snap-to-report-frontend.git frontend
-            else
-              cd frontend
-              git fetch origin
-              git reset --hard origin/main
-              cd ..
-            fi
-
-            # 4. 환경 변수 파일 (.env) 생성
-            cat <<EOF > .env
-            GCP_VM_HOST=${{ secrets.GCP_VM_HOST }}
-            POSTGRES_USER=${{ secrets.POSTGRES_USER }}
-            POSTGRES_PASSWORD=${{ secrets.POSTGRES_PASSWORD }}
-            POSTGRES_DB=${{ secrets.POSTGRES_DB }}
-            SECRET_KEY=${{ secrets.SECRET_KEY }}
-            ALGORITHM=${{ secrets.ALGORITHM }}
-            ACCESS_TOKEN_EXPIRE_MINUTES=${{ secrets.ACCESS_TOKEN_EXPIRE_MINUTES }}
-            STORAGE_TYPE=${{ secrets.STORAGE_TYPE }}
-            GCS_BUCKET_NAME=${{ secrets.GCS_BUCKET_NAME }}
-            CLUSTER_SERVICE_URL=${{ secrets.CLUSTER_SERVICE_URL }}
-            ALLOWED_ORIGINS="*"
-            EOF
-
-            # 5. GCS Key 파일 생성 (Frontend에는 필요 없지만 Compose 실행 시 참조될 수 있음)
-            echo '${{ secrets.GCS_SA_KEY_JSON }}' > gcs-key.json
-
-            # 6. docker-compose.prod.yml 복사 (Backend 리포지토리에서 가져옴)
-            cp backend/docker-compose.prod.yml . 
-
-            # 7. Frontend 서비스만 재배포
-            export COMPOSE_DOCKER_CLI_BUILD=1
-            export DOCKER_BUILDKIT=1
-            
-            # web 서비스만 빌드 및 재시작
-            docker compose -f docker-compose.prod.yml up -d --build web
-
-            # 8. 불필요한 이미지 정리
-            docker image prune -f
+      - name: Build and Push Web
+        run: |
+          docker build -t $GAR_REPO/s2p-web:latest .
+          docker push $GAR_REPO/s2p-web:latest
