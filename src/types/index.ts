@@ -3,6 +3,7 @@ export interface Job {
   title: string;
   construction_type?: string;
   company_name?: string;
+  active_cluster_version_id?: string; // ID of the active cluster version
   status: 'CREATED' | 'UPLOADING' | 'PROCESSING' | 'PENDING' | 'COMPLETED' | 'FAILED'| 'DELETED';
   export_status?: 'PROCESSING' | 'EXPORTED' | 'FAILED' | 'PENDING' ;
   created_at: string;
@@ -23,12 +24,23 @@ export interface Photo {
   labels?: Record<string, string>;
 }
 
+export interface Member {
+  id: string;
+  cluster_id: string; // Optional, as it might be in Reserve (null) or a specific cluster
+  photo_id: string;
+  order_index: number;
+  timestamp?: string; // ISO string from DateTime
+  labels?: Record<string, string>;
+  url: string;
+}
+
 export interface Cluster {
   id: string;
-  job_id: string;
+  // job_id: string;
+  cluster_version_id?: string;
   name: string;
   order_index: number;
-  photos: Photo[];
+  photos: Member[];
 }
 
 export interface ExportStatus {
@@ -37,10 +49,10 @@ export interface ExportStatus {
   error_message: string | null;
 }
 
-export interface MovePhotoRequest {
-  photo_id: string;
-  target_cluster_id: string;
-}
+// export interface MovePhotoRequest {
+//   photo_id: string;
+//   target_cluster_id: string;
+// }
 
 export interface Token {
   access_token: string;

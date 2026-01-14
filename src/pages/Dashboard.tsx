@@ -331,7 +331,7 @@ export default function Dashboard() {
 
     setSaving(true);
     try {
-        await api.deleteCluster(clusterId);
+        await api.deleteCluster(jobId, clusterId);
     } catch (e) {
         console.error("Failed to delete cluster", e);
         toast.error("Failed to delete cluster");
@@ -345,6 +345,8 @@ export default function Dashboard() {
 
     let realTargetClusterId = targetClusterId;
     let createdReserveCluster: Cluster | null = null;
+    const movedPhoto = clusters.find(c => c.id === sourceClusterId).photos.find(p => p.id === photoId);
+    movedPhoto.cluster_id = targetClusterId;
 
     // 1. Handle "reserve" target special case
     // If dropped on "reserve" zone but no reserve cluster exists in state with that ID
@@ -399,8 +401,7 @@ export default function Dashboard() {
     
     setSaving(true);
     try {
-        // Atomic Move API
-        await api.movePhoto(photoId, realTargetClusterId, newIndex);
+        await api.addPhotosToExistingCluster(jobId, [movedPhoto]);
 
         // Check if source cluster became empty (and is not 'reserve')
         if (sourceCluster && sourceCluster.photos.length === 0 && sourceCluster.name !== 'reserve') {
@@ -426,7 +427,7 @@ export default function Dashboard() {
     
     setSaving(true);
     try {
-        await api.deletePhoto(photoId);
+        await api.deleteClusterMember(jobId, photoId);
     } catch (e) {
         console.error("Failed to delete photo", e);
         toast.error("Failed to delete photo");
@@ -445,7 +446,7 @@ export default function Dashboard() {
 
     setSaving(true);
     try {
-        await api.updateCluster(clusterId, { new_name: newName });
+        await api.updateCluster(jobId, clusterId, { name: newName });
     } catch (e) {
         console.error("Failed to rename cluster", e);
         toast.error("Failed to rename cluster");
@@ -454,8 +455,6 @@ export default function Dashboard() {
     }
   };
 
-
-
   const handleMoveCluster = async (clusterId: string, direction: 'up' | 'down') => {
     const currentIndex = clusters.findIndex(c => c.id === clusterId);
     if (currentIndex === -1) return;
@@ -463,34 +462,85 @@ export default function Dashboard() {
     const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
     if (targetIndex < 0 || targetIndex >= clusters.length) return;
 
-    // Deep copy to avoid mutation
     const newClusters = clusters.map(c => ({...c}));
-    const currentCluster = newClusters[currentIndex];
-    const targetCluster = newClusters[targetIndex];
-    
-    const tempOrder = currentCluster.order_index;
-    currentCluster.order_index = targetCluster.order_index;
-    targetCluster.order_index = tempOrder;
+    const [movedCluster] = newClusters.splice(currentIndex, 1); // 기존 위치에서 제거
+    newClusters.splice(targetIndex, 0, movedCluster);           // 새 위치에 삽입
 
-    newClusters.sort((a, b) => a.order_index - b.order_index);
+    const prevCluster = newClusters[targetIndex - 1];
+    const nextCluster = newClusters[targetIndex + 1];
+
+    let newOrderIndex: number;
+
+    if (!prevCluster) {
+        // Case: 맨 위로 이동한 경우 (이전 아이템 없음)
+        // 다음 아이템 인덱스의 절반 혹은 적절한 차감값 사용
+        // 예: next가 100이면 50
+        newOrderIndex = nextCluster ? nextCluster.order_index / 2 : 1000; 
+    } else if (!nextCluster) {
+        // Case: 맨 아래로 이동한 경우 (다음 아이템 없음)
+        // 이전 아이템보다 큰 값 할당
+        newOrderIndex = prevCluster.order_index + 1024; 
+    } else {
+        // Case: 두 아이템 사이로 이동 (중간값 계산)
+        // (Prev + Next) / 2
+        newOrderIndex = (prevCluster.order_index + nextCluster.order_index) / 2;
+    }
+
+    // 4. 로컬 상태 업데이트
+    movedCluster.order_index = newOrderIndex;
     setClusters(newClusters);
     
     // triggerAutoSave(newClusters);
     if (!job) return;
     setSaving(true);
+    
     try {
-        // Swap orders atomically
-        await Promise.all([
-            api.updateCluster(currentCluster.id, { order_index: currentCluster.order_index }),
-            api.updateCluster(targetCluster.id, { order_index: targetCluster.order_index })
-        ]);
+        // 5. 변경된 1개의 아이템에 대해서만 업데이트 요청
+        await api.updateCluster(jobId, movedCluster.id, { order_index: newOrderIndex });
     } catch (e) {
         console.error("Failed to move cluster", e);
         toast.error("Failed to move cluster");
+        // 에러 발생 시 원래 상태로 되돌리는 로직이 필요하다면 여기에 추가 (setClusters(originalClusters))
     } finally {
         setSaving(false);
     }
   };
+
+  // const handleMoveCluster = async (clusterId: string, direction: 'up' | 'down') => {
+  //   const currentIndex = clusters.findIndex(c => c.id === clusterId);
+  //   if (currentIndex === -1) return;
+
+  //   const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+  //   if (targetIndex < 0 || targetIndex >= clusters.length) return;
+
+  //   // Deep copy to avoid mutation
+  //   const newClusters = clusters.map(c => ({...c}));
+  //   const currentCluster = newClusters[currentIndex];
+  //   const targetCluster = newClusters[targetIndex];
+    
+  //   const tempOrder = currentCluster.order_index;
+  //   currentCluster.order_index = targetCluster.order_index;
+  //   targetCluster.order_index = tempOrder;
+
+  //   newClusters.sort((a, b) => a.order_index - b.order_index);
+  //   setClusters(newClusters);
+    
+  //   // triggerAutoSave(newClusters);
+  //   if (!job) return;
+  //   setSaving(true);
+  //   try {
+  //       // Swap orders atomically
+  //       await Promise.all([
+  //           api.updateCluster(jobId, currentCluster.id, { order_index: currentCluster.order_index }),
+  //           api.updateCluster(jobId, targetCluster.id, { order_index: targetCluster.order_index })
+  //       ]);
+  //   } catch (e) {
+  //       console.error("Failed to move cluster", e);
+  //       toast.error("Failed to move cluster");
+  //   } finally {
+  //       setSaving(false);
+  //   }
+  // };
 
   const handleCreateCluster = async (orderIndex: number, photosToMoveParam: { id: string; clusterId: string }[] = []) => {
     if (!job) return;
@@ -550,10 +600,11 @@ export default function Dashboard() {
     const prevClusters = clusters; // Store current state for rollback
     const prevSelectedPhotos = selectedPhotos; // Store current selection for rollback
 
-    const photoIds = photosToMoveParam.map(p => p.id);
+    // const photoIds = photosToMoveParam.map(p => p.id);
     const fullPhotosToMove: Photo[] = photosToMoveParam.map(p => {
         return clusters.flatMap(cl => cl.photos).find(photo => photo.id === p.id) || p as any;
     });
+    const updatedPhotos = fullPhotosToMove.map(p => ({ ...p, cluster_id: targetClusterId }));
 
     try {
       // Optimistically update UI
@@ -580,8 +631,8 @@ export default function Dashboard() {
       setSelectedPhotos([]); // Clear selection after successful move
 
       // API call
-      await api.addPhotosToExistingCluster(targetClusterId, photoIds);
-      toast.success(`Added ${photoIds.length} photos to place`);
+      await api.addPhotosToExistingCluster(job.id, updatedPhotos);
+      toast.success(`Added ${updatedPhotos.length} photos to place`);
     } catch (e) {
       console.error("Failed to add photos", e);
       toast.error("Failed to add photos");

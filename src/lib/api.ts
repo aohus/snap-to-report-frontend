@@ -1,4 +1,4 @@
-import { Job, Cluster, ExportStatus, Photo, FileResponse } from '@/types';
+import { Job, Cluster, Member, ExportStatus, Photo, FileResponse } from '@/types';
 import { AuthService } from './auth';
 import { compressImage, isJPEGFile } from './image'; // Import isJPEGFile
 import { uploadViaResumable, uploadViaPresigned, uploadViaServer } from '@/lib/uploadStrategies';
@@ -123,7 +123,7 @@ export const api = {
 
   // Cluster/Place Management
   startClustering: async (jobId: string): Promise<any> => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/cluster`, {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/clustering/start`, {
       method: 'POST',
       headers: authJsonHeaders(),
       body: JSON.stringify({ min_samples: 3, max_dist_m: 8.0, max_alt_diff_m: 20.0 }),
@@ -168,17 +168,17 @@ export const api = {
     return handleResponse<Cluster>(response);
   },
 
-  updateCluster: async (clusterId: string, data: { new_name?: string; order_index?: number }): Promise<Cluster> => {
-    const response = await fetch(`${API_BASE_URL}/clusters/${clusterId}`, {
-      method: 'PATCH',
+  updateCluster: async (jobId: string, clusterId: string, data: { name?: string; order_index?: number }): Promise<Cluster> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/clusters/${clusterId}`, {
+      method: 'PUT',
       headers: authJsonHeaders(),
       body: JSON.stringify(data),
     });
     return handleResponse<Cluster>(response);
   },
 
-  deleteCluster: async (clusterId: string): Promise<Cluster[]> => {
-    const response = await fetch(`${API_BASE_URL}/clusters/${clusterId}`, {
+  deleteCluster: async (jobId: string, clusterId: string): Promise<Cluster[]> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/clusters/${clusterId}`, {
       method: 'DELETE',
       headers: authJsonHeaders(),
     });
@@ -324,8 +324,7 @@ export const api = {
           }
         }
       }
-
-      return api.getPhotos(jobId);
+      return 
     } catch (error) {
       console.error("Fatal error in upload process", error);
       throw error;
@@ -354,23 +353,30 @@ export const api = {
     return handleResponse<Photo>(response);
   },
 
-  addPhotosToExistingCluster: async (clusterId: string, photoIds: string[]): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/clusters/${clusterId}/add_photos`, {
-      method: 'POST',
+  addPhotosToExistingCluster: async (jobId: string, members: Member[]): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos`, {
+      method: 'PUT',
       headers: authJsonHeaders(),
-      body: JSON.stringify({ photo_ids: photoIds }),
+      body: JSON.stringify({ members }),
     });
     return handleResponse<void>(response);
   },
 
-  deletePhoto: async (photoId: string): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/photos/${photoId}`, {
+  deletePhoto: async (jobId: string, photoId: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/${photoId}`, {
       method: 'DELETE',
       headers: authJsonHeaders(),
     });
     return handleResponse<void>(response);
   },
 
+  deleteClusterMember: async (jobId: string, clusterMemberId: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/cluster_members/${clusterMemberId}`, {
+      method: 'DELETE',
+      headers: authJsonHeaders(),
+    });
+    return handleResponse<void>(response);
+  },
   // Export
   startExport: async (jobId: string, metadata?: { cover_title?: string, cover_company_name?: string, labels?: { visible_keys: string[], overrides: Record<string, string> } }): Promise<ExportStatus> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/export`, {

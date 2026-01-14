@@ -132,7 +132,7 @@ export default function JobList() {
                 required
               />
             </div>
-
+{/* 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">공종명 (선택)</label>
               <Input
@@ -151,7 +151,7 @@ export default function JobList() {
                 onChange={(e) => setNewCompanyName(e.target.value)}
                 className="h-10"
               />
-            </div>
+            </div> */}
             <div className="md:col-span-2 mt-2 flex justify-end">
               <Button type="submit" size="lg" className="w-full md:w-auto text-lg h-12 px-8 bg-blue-600 hover:bg-blue-700" disabled={creating || !newJobTitle.trim()}>
                 {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5 mr-2" />}
