@@ -26,5 +26,5 @@ jobs:
 
       - name: Build and Push Web
         run: |
-          docker build -t $GAR_REPO/s2p-web:latest .
-          docker push $GAR_REPO/s2p-web:latest
+          docker build -t $GAR_REPO/s2r-web:latest .
+          docker push $GAR_REPO/s2r-web:latest
