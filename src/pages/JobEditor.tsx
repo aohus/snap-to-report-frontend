@@ -261,8 +261,8 @@ export default function JobEditor() {
                       if (action === 'add') newLabels[key] = value;
                       else delete newLabels[key]; // This won't work perfectly if state wasn't updated in sync, but assuming sync
                       
-                      // For robustness, we should use the updated state clusters, but let's just trigger update
-                      promises.push(api.updatePhoto(photo.id, { labels: newLabels })); 
+                      const updatedPhoto = { ...photo, labels: newLabels };
+                      promises.push(api.updatePhoto(jobId, [updatedPhoto])); 
                   }
               }
           }
@@ -289,7 +289,7 @@ export default function JobEditor() {
   };
   
   const handleClusterNameBlur = async (clusterId: string, newName: string) => {
-    try { await api.updateCluster(clusterId, { new_name: newName }); } catch (e) {}
+    try { await api.updateCluster(jobId, clusterId, { name: newName }); } catch (e) {}
   };
 
   const handlePhotoLabelChange = (clusterId: string, photoId: string, key: string, value: string) => {
@@ -306,7 +306,12 @@ export default function JobEditor() {
   };
 
   const handlePhotoLabelBlur = async (photoId: string, labels: Record<string, string>) => {
-      try { await api.updatePhoto(photoId, { labels }); } catch (e) {}
+    const targetPhoto = clusters
+      .flatMap(c => c.photos)
+      .find(p => p.id === photoId);
+    if (!targetPhoto) return;
+    targetPhoto.labels = labels;
+    try { await api.updatePhoto(jobId, [targetPhoto]); } catch (e) {}
   };
 
   const handleDeleteLabel = async (clusterId: string, photoId: string, key: string) => {
@@ -326,7 +331,11 @@ export default function JobEditor() {
               })
           };
       }));
-      try { await api.updatePhoto(photoId, { labels: newLabels }); } catch (e) {}
+    
+      const updatedPhoto = clusters.flatMap(c => c.photos).find(p => p.id === photoId);
+      if (!updatedPhoto) return;
+      updatedPhoto.labels = newLabels;
+      try { await api.updatePhoto(jobId, [updatedPhoto]); } catch (e) {}
   };
 
   const handleSave = async () => {

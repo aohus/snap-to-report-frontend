@@ -189,17 +189,24 @@ export default function Dashboard() {
       if (!editingPhotoId) return;
       
       const newLabels = { ...editLabelData };
-      
-      // Optimistic update
+      const targetPhoto = clusters
+          .flatMap(c => c.photos)
+          .find(p => p.id === editingPhotoId);
+
+      if (!targetPhoto) return;
+
+      const updatedPhoto = { ...targetPhoto, labels: newLabels };
+
+      // Optimistic Update
       setClusters(prev => prev.map(c => ({
           ...c,
-          photos: c.photos.map(p => p.id === editingPhotoId ? { ...p, labels: newLabels } : p)
+          photos: c.photos.map(p => p.id === editingPhotoId ? updatedPhoto : p)
       })));
       
       setEditingPhotoId(null);
       
       try {
-          await api.updatePhoto(editingPhotoId, { labels: newLabels });
+          await api.updatePhoto(jobId, [updatedPhoto]);
           toast.success("라벨이 저장되었습니다.");
       } catch (e) {
           console.error("Failed to save labels", e);
@@ -237,7 +244,9 @@ export default function Dashboard() {
               const photo = clusters.flatMap(c => c.photos).find(p => p.id === sp.id);
               const currentLabels = photo?.labels || {};
               const newLabels = { ...currentLabels, [key]: value };
-              return api.updatePhoto(sp.id, { labels: newLabels });
+              const updatedPhoto = { ...photo, labels: newLabels };
+
+              return api.updatePhoto(jobId, [updatedPhoto]);
           }));
           toast.success(`${selectedPhotos.length}개 사진에 라벨 일괄 추가 완료`);
       } catch (e) {

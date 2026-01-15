@@ -331,26 +331,27 @@ export const api = {
     }
   },
 
-  movePhoto: async (photoId: string, targetClusterId: string, orderIndex?: number): Promise<void> => {
-    const body: any = { target_cluster_id: targetClusterId };
-    if (orderIndex !== undefined) {
-      body.order_index = orderIndex;
-    }
-    const response = await fetch(`${API_BASE_URL}/photos/${photoId}/move`, {
-      method: 'POST',
-      headers: authJsonHeaders(),
-      body: JSON.stringify(body),
-    });
-    return handleResponse<void>(response);
-  },
+  // movePhoto: async (photoId: string, targetClusterId: string, orderIndex?: number): Promise<void> => {
+  //   const body: any = { target_cluster_id: targetClusterId };
+  //   if (orderIndex !== undefined) {
+  //     body.order_index = orderIndex;
+  //   }
+  //   const response = await fetch(`${API_BASE_URL}/photos/${photoId}/move`, {
+  //     method: 'POST',
+  //     headers: authJsonHeaders(),
+  //     body: JSON.stringify(body),
+  //   });
+  //   return handleResponse<void>(response);
+  // },
 
-  updatePhoto: async (photoId: string, data: { labels?: Record<string, string> }): Promise<Photo> => {
-    const response = await fetch(`${API_BASE_URL}/photos/${photoId}`, {
-      method: 'PATCH',
+  // updatePhoto: async (jobId: string, data: { labels?: Record<string, string> }): Promise<Member> => {
+  updatePhoto: async (jobId: string, members: Member[]): Promise<Member> => {
+    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/cluster_members`, {
+      method: 'PUT',
       headers: authJsonHeaders(),
-      body: JSON.stringify(data),
+      body: JSON.stringify({ members }),
     });
-    return handleResponse<Photo>(response);
+    return handleResponse<Member>(response);
   },
 
   addPhotosToExistingCluster: async (jobId: string, members: Member[]): Promise<void> => {
