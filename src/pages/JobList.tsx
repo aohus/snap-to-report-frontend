@@ -17,6 +17,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 
 export default function JobList() {
@@ -24,6 +31,17 @@ export default function JobList() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [sortField, setSortField] = useState<'title' | 'created_at'>('created_at');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  const sortedJobs = [...jobs].sort((a, b) => {
+    const compareResult =
+      sortField === 'title'
+        ? a.title.localeCompare(b.title)
+        : new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+    
+    return sortOrder === 'asc' ? compareResult : -compareResult;
+  });
 
   useEffect(() => {
     loadJobs();
@@ -126,7 +144,29 @@ export default function JobList() {
         </section>
 
         <section>
-          <h2 className="text-xl font-bold text-gray-800 mb-4">작업 목록</h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-bold text-gray-800">작업 목록</h2>
+            <div className="flex gap-2">
+              <Select value={sortField} onValueChange={(val: 'title' | 'created_at') => setSortField(val)}>
+                <SelectTrigger className="w-[110px] h-9 text-sm">
+                  <SelectValue placeholder="정렬 기준" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="title">이름순</SelectItem>
+                  <SelectItem value="created_at">등록순</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortOrder} onValueChange={(val: 'asc' | 'desc') => setSortOrder(val)}>
+                <SelectTrigger className="w-[110px] h-9 text-sm">
+                  <SelectValue placeholder="정렬 순서" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="asc">오름차순</SelectItem>
+                  <SelectItem value="desc">내림차순</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
           {jobs.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-dashed border-gray-300">
@@ -134,7 +174,7 @@ export default function JobList() {
             </div>
           ) : (
             <div className="grid gap-4 grid-cols-1">
-              {jobs.map((job) => (
+              {sortedJobs.map((job) => (
                 <div
                   key={job.id}
                   onClick={() => navigate(`/jobs/${job.id}`)}
