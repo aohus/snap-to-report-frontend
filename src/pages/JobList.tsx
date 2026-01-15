@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { api } from '@/lib/api';
 import { AuthService } from '@/lib/auth';
 import { Job } from '@/types';
@@ -26,11 +25,6 @@ export default function JobList() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
-  // Form State
-  const [newJobTitle, setNewJobTitle] = useState('');
-  const [newJobConstructionType, setNewJobConstructionType] = useState('');
-  const [newCompanyName, setNewCompanyName] = useState('');
-
   useEffect(() => {
     loadJobs();
   }, []);
@@ -46,13 +40,11 @@ export default function JobList() {
     }
   };
 
-  const handleCreateJob = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newJobTitle.trim()) return;
-
+  const handleCreateJob = async () => {
     setCreating(true);
+    const title = `작업 ${jobs.length + 1}`;
     try {
-      const job = await api.createJob(newJobTitle, newJobConstructionType, newCompanyName);
+      const job = await api.createJob(title, '', '');
       toast.success('Job created successfully');
       navigate(`/jobs/${job.id}`);
     } catch (error) {
@@ -118,47 +110,19 @@ export default function JobList() {
 
       <main className="max-w-5xl mx-auto p-6 space-y-8">
         {/* Create Job Section */}
-        <section className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">작업 등록하기</h2>
-
-          <form onSubmit={handleCreateJob} className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
-            <div className="md:col-span-2">
-              <label className="block text-sm font-medium text-gray-700 mb-1">작업명 (필수)</label>
-              <Input
-                placeholder="예: 광교호수공원 제초"
-                value={newJobTitle}
-                onChange={(e) => setNewJobTitle(e.target.value)}
-                className="h-12 text-lg"
-                required
-              />
-            </div>
-{/* 
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">공종명 (선택)</label>
-              <Input
-                placeholder="예: 제초 작업"
-                value={newJobConstructionType}
-                onChange={(e) => setNewJobConstructionType(e.target.value)}
-                className="h-10"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">시행처 (선택)</label>
-              <Input
-                placeholder="예: 튼튼나무병원"
-                value={newCompanyName}
-                onChange={(e) => setNewCompanyName(e.target.value)}
-                className="h-10"
-              />
-            </div> */}
-            <div className="md:col-span-2 mt-2 flex justify-end">
-              <Button type="submit" size="lg" className="w-full md:w-auto text-lg h-12 px-8 bg-blue-600 hover:bg-blue-700" disabled={creating || !newJobTitle.trim()}>
-                {creating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Plus className="w-5 h-5 mr-2" />}
-                작업 등록
-              </Button>
-            </div>
-          </form>
+        <section className="bg-white rounded-2xl p-8 shadow-sm border border-gray-100 flex flex-col items-center text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">새로운 작업 시작하기</h2>
+          <p className="text-gray-500 mb-6">현장 사진을 업로드하고 간편하게 보고서를 만드세요.</p>
+          
+          <Button 
+            onClick={handleCreateJob} 
+            size="lg" 
+            className="w-full md:w-auto text-lg h-14 px-8 bg-blue-600 hover:bg-blue-700 rounded-xl" 
+            disabled={creating}
+          >
+            {creating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Plus className="w-5 h-5 mr-2" />}
+            작업 사진 올리기
+          </Button>
         </section>
 
         <section>
