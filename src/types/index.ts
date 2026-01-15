@@ -3,6 +3,7 @@ export interface Job {
   title: string;
   construction_type?: string;
   company_name?: string;
+  work_date?: string;
   active_cluster_version_id?: string; // ID of the active cluster version
   status: 'CREATED' | 'UPLOADING' | 'PROCESSING' | 'PENDING' | 'COMPLETED' | 'FAILED'| 'DELETED';
   export_status?: 'PROCESSING' | 'EXPORTED' | 'FAILED' | 'PENDING' ;

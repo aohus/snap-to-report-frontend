@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { AuthService } from '@/lib/auth';
 import { Job } from '@/types';
-import { Plus, Loader2, LayoutGrid, Calendar, X, ArrowRight, LogOut, FileDown } from 'lucide-react';
+import { Plus, Loader2, LayoutGrid, Calendar, X, ArrowRight, LogOut, FileDown, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
@@ -17,6 +17,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -33,6 +43,44 @@ export default function JobList() {
   const [creating, setCreating] = useState(false);
   const [sortField, setSortField] = useState<'title' | 'created_at'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Edit State
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    work_date: '',
+    company_name: '',
+    construction_type: ''
+  });
+
+  const handleEditClick = (e: React.MouseEvent, job: Job) => {
+    e.stopPropagation(); // Prevent navigation
+    setEditingJob(job);
+    setEditForm({
+      title: job.title,
+      work_date: job.work_date || '',
+      company_name: job.company_name || '',
+      construction_type: job.construction_type || ''
+    });
+  };
+
+  const handleUpdateJob = async () => {
+    if (!editingJob) return;
+    
+    try {
+      await api.updateJob(editingJob.id, {
+        title: editForm.title,
+        work_date: editForm.work_date || undefined,
+        company_name: editForm.company_name,
+        construction_type: editForm.construction_type
+      });
+      toast.success('Job updated successfully');
+      setEditingJob(null);
+      loadJobs();
+    } catch (error) {
+      toast.error('Failed to update job');
+    }
+  };
 
   const sortedJobs = [...jobs].sort((a, b) => {
     const compareResult =
@@ -152,8 +200,8 @@ export default function JobList() {
                   <SelectValue placeholder="정렬 기준" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="title">이름순</SelectItem>
                   <SelectItem value="created_at">등록순</SelectItem>
+                  <SelectItem value="title">이름순</SelectItem>
                 </SelectContent>
               </Select>
               <Select value={sortOrder} onValueChange={(val: 'asc' | 'desc') => setSortOrder(val)}>
@@ -216,6 +264,14 @@ export default function JobList() {
                         PDF 다운로드
                       </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      onClick={(e) => handleEditClick(e, job)}
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </Button>
 
                     <Button
                       variant="ghost"
@@ -235,6 +291,68 @@ export default function JobList() {
           )}
         </section>
       </main>
+
+      {/* Edit Job Dialog */}
+      <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>작업 수정</DialogTitle>
+            <DialogDescription>
+              작업 정보를 수정합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                작업명
+              </Label>
+              <Input
+                id="title"
+                value={editForm.title}
+                onChange={(e) => setEditForm({ ...editForm, title: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="work_date" className="text-right">
+                작업일자
+              </Label>
+              <Input
+                id="work_date"
+                type="date"
+                value={editForm.work_date}
+                onChange={(e) => setEditForm({ ...editForm, work_date: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="company_name" className="text-right">
+                시행처
+              </Label>
+              <Input
+                id="company_name"
+                value={editForm.company_name}
+                onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="construction_type" className="text-right">
+                공종명
+              </Label>
+              <Input
+                id="construction_type"
+                value={editForm.construction_type}
+                onChange={(e) => setEditForm({ ...editForm, construction_type: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button type="submit" onClick={handleUpdateJob}>저장</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!deleteJobId} onOpenChange={(open) => !open && setDeleteJobId(null)}>
