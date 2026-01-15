@@ -135,7 +135,7 @@ export function PhotoUploader({ onUpload, isUploading, progress }: PhotoUploader
               <div className="flex items-center justify-between mb-4">
                 <h4 className="font-medium flex items-center gap-2">
                   <FileImage className="w-4 h-4" />
-                  {selectedFiles.length}개 사진 선택됨
+                  {selectedFiles.length}개 사진 미리보기
                 </h4>
                 <Button variant="ghost" size="sm" onClick={() => setSelectedFiles([])}>
                   모두 지우기
@@ -167,8 +167,8 @@ export function PhotoUploader({ onUpload, isUploading, progress }: PhotoUploader
                 disabled={isUploading}
               >
                 {isUploading 
-                    ? '사진을 등록 중입니다...' 
-                    : '사진 등록하기'}
+                    ? '사진을 저장 중입니다...' 
+                    : '사진 저장하기'}
               </Button>
             </CardContent>
           </Card>
@@ -178,7 +178,7 @@ export function PhotoUploader({ onUpload, isUploading, progress }: PhotoUploader
       {isUploading && (
         <div className="space-y-2">
           <div className="flex justify-between text-sm">
-            <span>사진 등록 중...</span>
+            <span>사진 저장 중...</span>
             <span>{progress ? `${progress}%` : 'Please wait'}</span>
           </div>
           <Progress value={progress} className="w-full" />
