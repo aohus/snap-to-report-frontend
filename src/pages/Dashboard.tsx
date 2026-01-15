@@ -410,7 +410,7 @@ export default function Dashboard() {
     
     setSaving(true);
     try {
-        await api.addPhotosToExistingCluster(jobId, [movedPhoto]);
+        await api.updatePhoto(jobId, [movedPhoto]);
 
         // Check if source cluster became empty (and is not 'reserve')
         if (sourceCluster && sourceCluster.photos.length === 0 && sourceCluster.name !== 'reserve') {
@@ -640,7 +640,7 @@ export default function Dashboard() {
       setSelectedPhotos([]); // Clear selection after successful move
 
       // API call
-      await api.addPhotosToExistingCluster(job.id, updatedPhotos);
+      await api.updatePhoto(job.id, updatedPhotos);
       toast.success(`Added ${updatedPhotos.length} photos to place`);
     } catch (e) {
       console.error("Failed to add photos", e);

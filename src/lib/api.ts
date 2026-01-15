@@ -354,14 +354,14 @@ export const api = {
     return handleResponse<Member>(response);
   },
 
-  addPhotosToExistingCluster: async (jobId: string, members: Member[]): Promise<void> => {
-    const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos`, {
-      method: 'PUT',
-      headers: authJsonHeaders(),
-      body: JSON.stringify({ members }),
-    });
-    return handleResponse<void>(response);
-  },
+  // addPhotosToExistingCluster: async (jobId: string, members: Member[]): Promise<void> => {
+  //   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos`, {
+  //     method: 'PUT',
+  //     headers: authJsonHeaders(),
+  //     body: JSON.stringify({ members }),
+  //   });
+  //   return handleResponse<void>(response);
+  // },
 
   deletePhoto: async (jobId: string, photoId: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/${photoId}`, {
