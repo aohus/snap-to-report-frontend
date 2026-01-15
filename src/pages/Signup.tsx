@@ -10,30 +10,40 @@ import { toast } from 'sonner';
 export default function Signup() {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
-  const [registerForm, setRegisterForm] = useState({ username: '', password: '', confirmPassword: '' });
+  const [registerForm, setRegisterForm] = useState({ username: '', password: '', confirmPassword: '', company_name: '' });
+  const [usernameError, setUsernameError] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (registerForm.username.length < 6) {
-      toast.error('아이디는 최소 6자 이상이어야 합니다');
-      return;
-    }
 
-    if (registerForm.password !== registerForm.confirmPassword) {
-      toast.error('비밀번호가 일치하지 않습니다');
-      return;
+    let hasError = false;
+    setUsernameError(null); // Clear previous errors
+    setPasswordError(null);
+
+    if (registerForm.username.length < 6) {
+      setUsernameError('아이디는 최소 6자 이상이어야 합니다');
+      hasError = true;
     }
 
     if (registerForm.password.length < 6) {
-      toast.error('비밀번호는 최소 6자 이상이어야 합니다');
+      setPasswordError('비밀번호는 최소 6자 이상이어야 합니다');
+      hasError = true;
+    } else if (registerForm.password !== registerForm.confirmPassword) {
+      setPasswordError('비밀번호가 일치하지 않습니다');
+      hasError = true;
+    }
+
+    if (hasError) {
       return;
     }
 
     setIsLoading(true);
 
     try {
-      await AuthService.register(registerForm.username,registerForm.password, registerForm.company_name);
-      toast.success('회원가입 성공! 로그인해주세요.');
+      await AuthService.register(registerForm.username, registerForm.password, registerForm.company_name);
+      await AuthService.login(registerForm.username, registerForm.password); // Auto-login after successful registration
+      toast.success('회원가입 성공! 자동으로 로그인됩니다.');
       navigate('/');
       setRegisterForm({ username: '', password: '', confirmPassword: '', company_name: '' });
     } catch (error) {
@@ -53,49 +63,59 @@ export default function Signup() {
         <form onSubmit={handleSignup}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="register-username">아이디</Label>
               <Input
                 id="register-username"
                 type="text"
                 placeholder="아이디 (6자 이상)"
                 value={registerForm.username}
-                onChange={(e) => setRegisterForm({ ...registerForm, username: e.target.value })}
+                onChange={(e) => {
+                  setRegisterForm({ ...registerForm, username: e.target.value });
+                  if (usernameError) setUsernameError(null);
+                }}
                 required
-                minLength={3}
+                minLength={6}
+                className={usernameError ? 'border-red-500' : ''}
               />
+              {usernameError && <p className="text-sm text-red-500">{usernameError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="company-name">회사명(선택)</Label>
-              <Input
-                id="company-name"
-                type="text"
-                placeholder="회사명을 입력하세요"
-                value={registerForm.company_name}
-                onChange={(e) => setRegisterForm({ ...registerForm, company_name: e.target.value })}
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="register-password">비밀번호</Label>
               <Input
                 id="register-password"
                 type="password"
                 placeholder="비밀번호 (6자 이상)"
                 value={registerForm.password}
-                onChange={(e) => setRegisterForm({ ...registerForm, password: e.target.value })}
+                onChange={(e) => {
+                  setRegisterForm({ ...registerForm, password: e.target.value });
+                  if (passwordError) setPasswordError(null);
+                }}
                 required
                 minLength={6}
+                className={passwordError ? 'border-red-500' : ''}
               />
+              {passwordError && <p className="text-sm text-red-500">{passwordError}</p>}
             </div>
             <div className="space-y-2">
-              <Label htmlFor="register-confirm-password">비밀번호 확인</Label>
               <Input
                 id="register-confirm-password"
                 type="password"
-                placeholder="비밀번호를 다시 입력하세요"
+                placeholder="비밀번호 확인"
                 value={registerForm.confirmPassword}
-                onChange={(e) => setRegisterForm({ ...registerForm, confirmPassword: e.target.value })}
+                onChange={(e) => {
+                  setRegisterForm({ ...registerForm, confirmPassword: e.target.value });
+                  if (passwordError) setPasswordError(null); // Clear error on change, as mismatch affects passwordError
+                }}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Input
+                id="company-name"
+                name="company_name"
+                type="text"
+                placeholder="[선택] 사업체명"
+                value={registerForm.company_name}
+                onChange={(e) => setRegisterForm({ ...registerForm, company_name: e.target.value })}
+                required={false}
               />
             </div>
           </CardContent>

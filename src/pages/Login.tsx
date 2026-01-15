@@ -38,22 +38,20 @@ export default function Login() {
         <form onSubmit={handleLogin}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="login-username">아이디</Label>
               <Input
                 id="login-username"
                 type="text"
-                placeholder="아이디를 입력하세요"
+                placeholder="아이디"
                 value={loginForm.username}
                 onChange={(e) => setLoginForm({ ...loginForm, username: e.target.value })}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="login-password">비밀번호</Label>
               <Input
                 id="login-password"
                 type="password"
-                placeholder="비밀번호를 입력하세요"
+                placeholder="비밀번호"
                 value={loginForm.password}
                 onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
                 required
