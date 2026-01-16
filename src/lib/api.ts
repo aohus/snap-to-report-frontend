@@ -2,6 +2,7 @@ import { Job, Cluster, Member, ExportStatus, Photo, FileResponse } from '@/types
 import { AuthService } from './auth';
 import { compressImage, isJPEGFile } from './image'; // Import isJPEGFile
 import { uploadViaResumable, uploadViaPresigned, uploadViaServer } from '@/lib/uploadStrategies';
+import pLimit from 'p-limit';
 
 const API_BASE_URL = '/api';
 
@@ -209,142 +210,258 @@ export const api = {
     return handleResponse(response);
   },
 
-  uploadPhotos: async (jobId: string, files: File[], onProgressTotal?: (percent: number) => void): Promise<Photo[]> => {
-    try {
-      const BATCH_SIZE = 5; // Chunk size for processing
-      const totalFiles = files.length;
-      const fileProgressMap = new Map<string, number>();
+  uploadPhotos: async (jobId: string, files: File[], onProgressTotal?: (percent: number) => void): Promise<void> => {
+    // -------------------------------------------------------------------------
+    // Performance Strategy for 500 photos / 30s
+    // 1. Pipeline: Compression -> Upload
+    // 2. High Concurrency: ~30 uploads (network bound), ~8 compressions (CPU bound)
+    // 3. Batching: Fetch URLs in bulk, Notify completion in chunks
+    // -------------------------------------------------------------------------
+    
+    const UPLOAD_CONCURRENCY = 30; 
+    const COMPRESSION_CONCURRENCY = 8;
+    const URL_BATCH_SIZE = 50; 
+    const NOTIFY_BATCH_SIZE = 20;
 
-      const updateGlobalProgress = () => {
-        if (!onProgressTotal) return;
-        let totalPercent = 0;
-        fileProgressMap.forEach((p) => (totalPercent += p));
-        onProgressTotal(Math.round(totalPercent / totalFiles));
-      };
+    const totalFiles = files.length;
+    const fileProgressMap = new Map<string, number>();
 
-      // Helper to split array into chunks
-      const chunks: File[][] = [];
-      for (let i = 0; i < totalFiles; i += BATCH_SIZE) {
-        chunks.push(files.slice(i, i + BATCH_SIZE));
+    const updateGlobalProgress = () => {
+      if (!onProgressTotal) return;
+      let totalPercent = 0;
+      fileProgressMap.forEach((p) => (totalPercent += p));
+      onProgressTotal(Math.round(totalPercent / totalFiles));
+    };
+
+    // Prepare items with indices to preserve order and unique tracking
+    const items = files.map((file, index) => ({
+      file,
+      index,
+      compressedFile: file,
+      urlInfo: null as any
+    }));
+
+    // 1. Fetch URLs (Batched)
+    const urlLimit = pLimit(5); // Limit concurrent metadata requests
+    const chunks = [];
+    for (let i = 0; i < items.length; i += URL_BATCH_SIZE) {
+      chunks.push(items.slice(i, i + URL_BATCH_SIZE));
+    }
+
+    await Promise.all(chunks.map(chunk => urlLimit(async () => {
+      try {
+        const fileInfos = chunk.map(item => ({ 
+          filename: item.file.name, 
+          content_type: item.file.type 
+        }));
+        
+        // Assume all are presigned strategy for now, or fallback later
+        const response = await api.getUploadUrls(jobId, fileInfos);
+        
+        if (response && response.urls && response.urls.length === chunk.length) {
+            chunk.forEach((item, i) => {
+                item.urlInfo = response.urls[i];
+            });
+        }
+      } catch (e) {
+        console.error("Failed to fetch upload URLs for batch", e);
       }
+    })));
 
-      for (const chunk of chunks) {
-        // ---------------------------------------------------------
-        // Step 1: Compress Chunk (Parallel)
-        // ---------------------------------------------------------
-        const compressedItems = await Promise.all(
-          chunk.map(async (file) => {
-            fileProgressMap.set(file.name, 0); // Init progress
-            let fileToUpload = file;
-            if (isJPEGFile(file)) {
-              try {
-                fileToUpload = await compressImage(file);
-              } catch (e) {
-                console.warn(`Compression failed for ${file.name}, using original.`);
-              }
+    // 2. Pipeline Execution
+    const uploadLimit = pLimit(UPLOAD_CONCURRENCY);
+    const compressionLimit = pLimit(COMPRESSION_CONCURRENCY);
+    const notifyLimit = pLimit(1); // Serializer for notifications
+    
+    let pendingNotifications: { filename: string; storage_path: string }[] = [];
+
+    const flushNotifications = async () => {
+        await notifyLimit(async () => {
+            if (pendingNotifications.length === 0) return;
+            const batch = [...pendingNotifications];
+            pendingNotifications = [];
+            try {
+                await api.notifyUploadComplete(jobId, batch);
+            } catch (e) {
+                console.warn("Notification batch failed", e);
             }
-            return { originalFile: file, fileToUpload };
-          })
-        );
+        });
+    };
 
-        // ---------------------------------------------------------
-        // Step 2: Get URLs for Chunk (Batch Request)
-        // ---------------------------------------------------------
-        let strategy = 'proxy';
-        let urls: any[] = []; // Explicitly typed as any[] because response.urls structure is dynamic
+    await Promise.all(items.map(async (item) => {
+        // Skip if URL fetch failed (or handle fallback here? strict for now)
+        if (!item.urlInfo) return;
+
+        fileProgressMap.set(String(item.index), 0);
 
         try {
-          const fileInfos = compressedItems.map(({ fileToUpload }) => ({
-            filename: fileToUpload.name,
-            content_type: fileToUpload.type,
-          }));
-
-          const response = await api.getUploadUrls(jobId, fileInfos);
-
-          if (response && response.strategy && response.urls.length === chunk.length) {
-            strategy = response.strategy;
-            urls = response.urls;
-          } else {
-            console.warn("Invalid URL response (length mismatch), falling back to server upload.");
-          }
-        } catch (e) {
-          console.warn("Failed to get upload URLs, falling back to server upload.", e);
-          strategy = 'proxy';
-        }
-
-        // ---------------------------------------------------------
-        // Step 3: Upload Chunk (Parallel) & Notify
-        // ---------------------------------------------------------
-        const successfulUploads: { filename: string; storage_path: string }[] = [];
-
-        await Promise.all(
-          compressedItems.map(async (item, index) => {
-            const { originalFile, fileToUpload } = item;
-            const urlInfo = urls[index]; // Can be undefined if fallback
-
-            const currentProgressCallback = (p: number) => {
-              fileProgressMap.set(originalFile.name, p);
-              updateGlobalProgress();
-            };
-
-            try {
-              if (strategy === 'resumable' && urlInfo?.upload_url) {
-                // 1. Resumable (GCS Session URL)
-                await uploadViaResumable(fileToUpload, urlInfo.upload_url, currentProgressCallback);
-                successfulUploads.push({
-                  filename: urlInfo.filename,
-                  storage_path: urlInfo.storage_path,
+            // A. Compress
+            if (isJPEGFile(item.file)) {
+                await compressionLimit(async () => {
+                    try {
+                        item.compressedFile = await compressImage(item.file);
+                    } catch (e) {
+                        console.warn(`Compression failed for ${item.file.name}, using original.`);
+                    }
                 });
-              } else if (strategy === 'presigned' && urlInfo?.upload_url) {
-                // 2. Presigned (Single PUT)
-                await uploadViaPresigned(fileToUpload, urlInfo.upload_url, currentProgressCallback);
-                successfulUploads.push({
-                  filename: urlInfo.filename,
-                  storage_path: urlInfo.storage_path,
-                });
-              } else {
-                // 3. Fallback (Server Proxy)
-                await uploadViaServer(jobId, fileToUpload, originalFile.name, currentProgressCallback);
-              }
-            } catch (error) {
-              console.error(`Failed to upload ${originalFile.name} via ${strategy}`, error);
-              // Continue with other files even if one fails
             }
-          })
-        );
 
-        // ---------------------------------------------------------
-        // Step 4: Notify Completion for Chunk (Batch)
-        // ---------------------------------------------------------
-        if (successfulUploads.length > 0 && (strategy === 'resumable' || strategy === 'presigned')) {
-          try {
-            await api.notifyUploadComplete(jobId, successfulUploads);
-          } catch (e) {
-            console.error("Failed to notify upload batch", e);
-          }
+            // B. Upload
+            await uploadLimit(async () => {
+                const { upload_url, filename, storage_path } = item.urlInfo;
+                
+                const onProgress = (p: number) => {
+                    fileProgressMap.set(String(item.index), p);
+                    updateGlobalProgress();
+                };
+
+                if (upload_url) {
+                    await uploadViaPresigned(item.compressedFile, upload_url, onProgress);
+                } else {
+                    // Fallback
+                     await uploadViaServer(jobId, item.compressedFile, filename, onProgress);
+                }
+
+                // C. Queue Notification
+                await notifyLimit(async () => {
+                    pendingNotifications.push({ filename, storage_path });
+                });
+                
+                if (pendingNotifications.length >= NOTIFY_BATCH_SIZE) {
+                    flushNotifications(); // Fire and forget
+                }
+            });
+        } catch (e) {
+            console.error(`Upload failed for ${item.file.name}`, e);
         }
-      }
-      return 
-    } catch (error) {
-      console.error("Fatal error in upload process", error);
-      throw error;
-    }
+    }));
+
+    // Final flush
+    await flushNotifications();
   },
 
-  // movePhoto: async (photoId: string, targetClusterId: string, orderIndex?: number): Promise<void> => {
-  //   const body: any = { target_cluster_id: targetClusterId };
-  //   if (orderIndex !== undefined) {
-  //     body.order_index = orderIndex;
+  // uploadPhotos: async (jobId: string, files: File[], onProgressTotal?: (percent: number) => void): Promise<Photo[]> => {
+  //   try {
+  //     const BATCH_SIZE = 5; // Chunk size for processing
+  //     const totalFiles = files.length;
+  //     const fileProgressMap = new Map<string, number>();
+
+  //     const updateGlobalProgress = () => {
+  //       if (!onProgressTotal) return;
+  //       let totalPercent = 0;
+  //       fileProgressMap.forEach((p) => (totalPercent += p));
+  //       onProgressTotal(Math.round(totalPercent / totalFiles));
+  //     };
+
+  //     // Helper to split array into chunks
+  //     const chunks: File[][] = [];
+  //     for (let i = 0; i < totalFiles; i += BATCH_SIZE) {
+  //       chunks.push(files.slice(i, i + BATCH_SIZE));
+  //     }
+
+  //     for (const chunk of chunks) {
+  //       // ---------------------------------------------------------
+  //       // Step 1: Compress Chunk (Parallel)
+  //       // ---------------------------------------------------------
+  //       const compressedItems = await Promise.all(
+  //         chunk.map(async (file) => {
+  //           fileProgressMap.set(file.name, 0); // Init progress
+  //           let fileToUpload = file;
+  //           if (isJPEGFile(file)) {
+  //             try {
+  //               fileToUpload = await compressImage(file);
+  //             } catch (e) {
+  //               console.warn(`Compression failed for ${file.name}, using original.`);
+  //             }
+  //           }
+  //           return { originalFile: file, fileToUpload };
+  //         })
+  //       );
+
+  //       // ---------------------------------------------------------
+  //       // Step 2: Get URLs for Chunk (Batch Request)
+  //       // ---------------------------------------------------------
+  //       let strategy = 'proxy';
+  //       let urls: any[] = []; // Explicitly typed as any[] because response.urls structure is dynamic
+
+  //       try {
+  //         const fileInfos = compressedItems.map(({ fileToUpload }) => ({
+  //           filename: fileToUpload.name,
+  //           content_type: fileToUpload.type,
+  //         }));
+
+  //         const response = await api.getUploadUrls(jobId, fileInfos);
+
+  //         if (response && response.strategy && response.urls.length === chunk.length) {
+  //           strategy = response.strategy;
+  //           urls = response.urls;
+  //         } else {
+  //           console.warn("Invalid URL response (length mismatch), falling back to server upload.");
+  //         }
+  //       } catch (e) {
+  //         console.warn("Failed to get upload URLs, falling back to server upload.", e);
+  //         strategy = 'proxy';
+  //       }
+
+  //       // ---------------------------------------------------------
+  //       // Step 3: Upload Chunk (Parallel) & Notify
+  //       // ---------------------------------------------------------
+  //       const successfulUploads: { filename: string; storage_path: string }[] = [];
+
+  //       await Promise.all(
+  //         compressedItems.map(async (item, index) => {
+  //           const { originalFile, fileToUpload } = item;
+  //           const urlInfo = urls[index]; // Can be undefined if fallback
+
+  //           const currentProgressCallback = (p: number) => {
+  //             fileProgressMap.set(originalFile.name, p);
+  //             updateGlobalProgress();
+  //           };
+
+  //           try {
+  //             if (strategy === 'resumable' && urlInfo?.upload_url) {
+  //               // 1. Resumable (GCS Session URL)
+  //               await uploadViaResumable(fileToUpload, urlInfo.upload_url, currentProgressCallback);
+  //               successfulUploads.push({
+  //                 filename: urlInfo.filename,
+  //                 storage_path: urlInfo.storage_path,
+  //               });
+  //             } else if (strategy === 'presigned' && urlInfo?.upload_url) {
+  //               // 2. Presigned (Single PUT)
+  //               await uploadViaPresigned(fileToUpload, urlInfo.upload_url, currentProgressCallback);
+  //               successfulUploads.push({
+  //                 filename: urlInfo.filename,
+  //                 storage_path: urlInfo.storage_path,
+  //               });
+  //             } else {
+  //               // 3. Fallback (Server Proxy)
+  //               await uploadViaServer(jobId, fileToUpload, originalFile.name, currentProgressCallback);
+  //             }
+  //           } catch (error) {
+  //             console.error(`Failed to upload ${originalFile.name} via ${strategy}`, error);
+  //             // Continue with other files even if one fails
+  //           }
+  //         })
+  //       );
+
+  //       // ---------------------------------------------------------
+  //       // Step 4: Notify Completion for Chunk (Batch)
+  //       // ---------------------------------------------------------
+  //       if (successfulUploads.length > 0 && (strategy === 'resumable' || strategy === 'presigned')) {
+  //         try {
+  //           await api.notifyUploadComplete(jobId, successfulUploads);
+  //         } catch (e) {
+  //           console.error("Failed to notify upload batch", e);
+  //         }
+  //       }
+  //     }
+  //     return 
+  //   } catch (error) {
+  //     console.error("Fatal error in upload process", error);
+  //     throw error;
   //   }
-  //   const response = await fetch(`${API_BASE_URL}/photos/${photoId}/move`, {
-  //     method: 'POST',
-  //     headers: authJsonHeaders(),
-  //     body: JSON.stringify(body),
-  //   });
-  //   return handleResponse<void>(response);
   // },
 
-  // updatePhoto: async (jobId: string, data: { labels?: Record<string, string> }): Promise<Member> => {
   updatePhoto: async (jobId: string, members: Member[]): Promise<Member> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/cluster_members`, {
       method: 'PUT',
@@ -353,15 +470,6 @@ export const api = {
     });
     return handleResponse<Member>(response);
   },
-
-  // addPhotosToExistingCluster: async (jobId: string, members: Member[]): Promise<void> => {
-  //   const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos`, {
-  //     method: 'PUT',
-  //     headers: authJsonHeaders(),
-  //     body: JSON.stringify({ members }),
-  //   });
-  //   return handleResponse<void>(response);
-  // },
 
   deletePhoto: async (jobId: string, photoId: string): Promise<void> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/photos/${photoId}`, {
