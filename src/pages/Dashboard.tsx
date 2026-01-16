@@ -19,7 +19,7 @@ import { Job, Cluster, Photo } from '@/types';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { PhotoGrid } from '@/components/PhotoGrid';
 import { ClusterBoard } from '@/components/ClusterBoard';
-import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle, Settings, Edit2, Plus, X } from 'lucide-react';
+import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle, Settings, Edit2, Plus, X, RefreshCw, FileText, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover"
 
@@ -74,6 +74,15 @@ export default function Dashboard() {
   const [batchLabelKey, setBatchLabelKey] = useState('');
   const [batchLabelValue, setBatchLabelValue] = useState('');
 
+  // Job Info Editing State
+  const [editJobDialogOpen, setEditJobDialogOpen] = useState(false);
+  const [jobEditForm, setJobEditForm] = useState({
+    title: '',
+    company_name: '',
+    work_date: '',
+    construction_type: ''
+  });
+
   // Export & Preview State
   const [exportMetadata, setExportMetadata] = useState({
     cover_title: '',
@@ -112,6 +121,14 @@ export default function Dashboard() {
       try {
         const data = await api.getJobDetails(jobId);
         setJob(data);
+        
+        // Init edit form
+        setJobEditForm({
+            title: data.title,
+            company_name: data.company_name || '',
+            work_date: data.work_date ? format(new Date(data.work_date), 'yyyy-MM-dd') : '',
+            construction_type: data.construction_type || ''
+        });
 
         if (data.status === 'PENDING' || data.status === 'PROCESSING') {
           setIsClustering(true);
@@ -176,6 +193,38 @@ export default function Dashboard() {
 
     return () => clearTimeout(timeoutId);
   }, [isClustering, jobId]);
+
+  const handleUpdateJobInfo = async () => {
+      if (!job) return;
+      try {
+          const updated = await api.updateJob(job.id, {
+              title: jobEditForm.title,
+              company_name: jobEditForm.company_name,
+              work_date: jobEditForm.work_date || undefined,
+              construction_type: jobEditForm.construction_type
+          });
+          setJob(prev => prev ? ({ ...prev, ...updated }) : prev);
+          setEditJobDialogOpen(false);
+          toast.success("Job info updated");
+      } catch (e) {
+          console.error(e);
+          toast.error("Failed to update job info");
+      }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!job) return;
+    try {
+      const response = await api.getDownloadUrl(job.id);
+      if (response.path) {
+        window.open(response.path, '_blank');
+      } else {
+        toast.error("Download URL not found");
+      }
+    } catch (e) {
+      toast.error("Failed to download PDF");
+    }
+  };
 
   const handleEditLabels = (photoId: string) => {
       const photo = clusters.flatMap(c => c.photos).find(p => p.id === photoId);
@@ -515,42 +564,6 @@ export default function Dashboard() {
     }
   };
 
-  // const handleMoveCluster = async (clusterId: string, direction: 'up' | 'down') => {
-  //   const currentIndex = clusters.findIndex(c => c.id === clusterId);
-  //   if (currentIndex === -1) return;
-
-  //   const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-  //   if (targetIndex < 0 || targetIndex >= clusters.length) return;
-
-  //   // Deep copy to avoid mutation
-  //   const newClusters = clusters.map(c => ({...c}));
-  //   const currentCluster = newClusters[currentIndex];
-  //   const targetCluster = newClusters[targetIndex];
-    
-  //   const tempOrder = currentCluster.order_index;
-  //   currentCluster.order_index = targetCluster.order_index;
-  //   targetCluster.order_index = tempOrder;
-
-  //   newClusters.sort((a, b) => a.order_index - b.order_index);
-  //   setClusters(newClusters);
-    
-  //   // triggerAutoSave(newClusters);
-  //   if (!job) return;
-  //   setSaving(true);
-  //   try {
-  //       // Swap orders atomically
-  //       await Promise.all([
-  //           api.updateCluster(jobId, currentCluster.id, { order_index: currentCluster.order_index }),
-  //           api.updateCluster(jobId, targetCluster.id, { order_index: targetCluster.order_index })
-  //       ]);
-  //   } catch (e) {
-  //       console.error("Failed to move cluster", e);
-  //       toast.error("Failed to move cluster");
-  //   } finally {
-  //       setSaving(false);
-  //   }
-  // };
-
   const handleCreateCluster = async (orderIndex: number, photosToMoveParam: { id: string; clusterId: string }[] = []) => {
     if (!job) return;
 
@@ -753,8 +766,9 @@ export default function Dashboard() {
     }
   };
 
-  const completedPlaces = clusters.filter(c => c.name !== 'reserve' && c.photos.length === 3).length;
-  const totalPlaces = clusters.filter(c => c.name !== 'reserve').length;
+  const incompletePlaces = clusters.filter(c => c.name !== 'reserve' && c.photos.length < 3).length;
+  const completePlaces = clusters.filter(c => c.name !== 'reserve' && c.photos.length === 3).length;
+  const excessPlaces = clusters.filter(c => c.name !== 'reserve' && c.photos.length > 3).length;
 
   // Prepare preview data
   const previewCluster = clusters.find(c => c.name !== 'reserve') || clusters[0];
@@ -773,81 +787,89 @@ export default function Dashboard() {
           <div className="p-2 bg-blue-600 rounded-lg shadow-md hidden md:block">
             <LayoutGrid className="w-6 h-6 text-white" />
           </div>
-          <div>
-            <h1 className="text-lg md:text-2xl font-bold text-gray-900 tracking-tight truncate max-w-[150px] md:max-w-none">
-              {job.title}
-            </h1>
+          <div 
+            className="group flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded-md transition-colors"
+            onClick={() => setEditJobDialogOpen(true)}
+          >
+            <div>
+                <h1 className="text-lg md:text-2xl font-bold text-gray-900 tracking-tight truncate max-w-[150px] md:max-w-none flex items-center gap-2">
+                {job.title}
+                <Pencil className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+                </h1>
+            </div>
           </div>
         </div>
         {clusters.length > 0 && (
           <div className="flex items-center gap-2 md:gap-4 flex-1 justify-end">
-            {/* Batch Label Input */}
-            {selectedPhotos.length > 0 && (
-                <div className="flex items-center gap-2 bg-blue-50 px-2 py-1 rounded-md border border-blue-200 mr-auto ml-4 hidden md:flex">
-                <span className="text-xs font-bold text-blue-700 whitespace-nowrap">일괄 라벨:</span>
-                <Input 
-                    placeholder="항목" 
-                    className="h-8 w-20 text-xs bg-white"
-                    value={batchLabelKey}
-                    onChange={(e) => setBatchLabelKey(e.target.value)}
-                />
-                <Input 
-                    placeholder="내용" 
-                    className="h-8 w-24 text-xs bg-white"
-                    value={batchLabelValue}
-                    onChange={(e) => setBatchLabelValue(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && handleBatchAddLabel()}
-                />
-                <Button size="sm" className="h-8 px-2 bg-blue-600 hover:bg-blue-700 text-xs" onClick={handleBatchAddLabel}>
-                    <Plus className="w-3 h-3 mr-1" /> 추가
-                </Button>
+            
+            {/* Stats */}
+            <div className="hidden xl:flex items-center gap-3 mr-4 text-sm font-medium text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
+                <div className="flex items-center gap-1.5 text-orange-600">
+                    <span className="w-2 h-2 rounded-full bg-orange-500"></span>
+                    미완성: {incompletePlaces}
                 </div>
-            )}
-
-            <div className="hidden lg:flex flex-col items-end mr-4">
-                <div className="flex items-center gap-2 mb-1">
-                  {saving ? (
-                    <span className="text-xs text-blue-600 font-medium flex items-center gap-1 animate-pulse">
-                      <CloudUpload className="w-3 h-3" /> 저장 중...
-                    </span>
-                  ) : (
-                    <span className="text-xs text-gray-400 font-medium flex items-center gap-1">
-                      <CheckCircle className="w-3 h-3" /> 저장됨
-                    </span>
-                  )}
+                <div className="w-px h-3 bg-gray-300"></div>
+                <div className="flex items-center gap-1.5 text-green-600">
+                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                    완성: {completePlaces}
                 </div>
-                <span className={`text-lg font-bold ${completedPlaces === totalPlaces && totalPlaces > 0 ? 'text-green-600' : 'text-gray-600'}`}>
-                  완료 장소: {completedPlaces} / {totalPlaces} 
-                </span>
+                {excessPlaces > 0 && (
+                    <>
+                        <div className="w-px h-3 bg-gray-300"></div>
+                        <div className="flex items-center gap-1.5 text-red-600">
+                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
+                            초과: {excessPlaces}
+                        </div>
+                    </>
+                )}
             </div>
-            <Button 
+
+            {/* Re-cluster Button */}
+             <Button 
               variant="outline" 
-              className="h-12 text-lg border-blue-600 text-blue-700"
-              // className="md:text-lg bg-blue-600 hover:bg-blue-700 shadow-md md:h-11 md:px-8"
+              size="icon"
+              className="h-10 w-10 text-blue-600 border-blue-200 hover:bg-blue-50"
               onClick={handleStartClustering}
               disabled={isClustering}
+              title="사진 분류 다시하기"
             >
-              {isClustering ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <></>}
-              <span className="hidden md:inline">사진 분류 다시하기</span>
-              <span className="md:hidden">재분류</span>
+              <RefreshCw className={`w-5 h-5 ${isClustering ? 'animate-spin' : ''}`} />
             </Button>
+
+            {/* Edit Labels Link */}
             <Button 
               variant="outline" 
-              className="h-12 text-lg border-blue-600 text-blue-700"
+              className="h-10 hidden md:flex"
               onClick={() => { navigate(`/jobs/${job.id}/edit`); }}
               >
-              <span className="hidden md:inline">라벨 수정하기</span>
-              <span className="md:hidden">라벨수정</span>
+              <Edit2 className="w-4 h-4 mr-2" />
+              라벨 수정
             </Button>
-            <Button 
-              className="h-12 text-lg bg-blue-600 hover:bg-blue-700 px-6"
-              onClick={handleExport}
-              disabled={exporting || clusters.length === 0}
-            >
-              {exporting ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <FileDown className="w-4 h-4 md:w-5 md:h-5 md:mr-2" />}
-              <span className="hidden md:inline">PDF 미리보기</span>
-              <span className="md:hidden">PDF</span>
-            </Button>
+
+            {/* PDF Actions */}
+            <div className="flex items-center gap-2">
+                {/* If exported, allow download directly */}
+                {job.export_status === 'EXPORTED' && (
+                    <Button 
+                        className="h-10 bg-green-600 hover:bg-green-700 text-white"
+                        onClick={handleDownloadPDF}
+                    >
+                        <FileDown className="w-4 h-4 md:mr-2" />
+                        <span className="hidden md:inline">다운로드</span>
+                    </Button>
+                )}
+                
+                {/* Preview / Generate Button */}
+                <Button 
+                variant={job.export_status === 'EXPORTED' ? 'outline' : 'default'}
+                className={`h-10 px-4 ${job.export_status !== 'EXPORTED' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
+                onClick={handleExport} // Opens dialog
+                disabled={exporting || clusters.length === 0}
+                >
+                {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : (job.export_status === 'EXPORTED' ? <FileText className="w-4 h-4 md:mr-2" /> : <FileDown className="w-4 h-4 md:mr-2" />)}
+                <span className="hidden md:inline">{job.export_status === 'EXPORTED' ? '미리보기' : 'PDF 생성'}</span>
+                </Button>
+            </div>
           </div>
         )}
       </header>
@@ -968,6 +990,69 @@ export default function Dashboard() {
           <DialogFooter>
              <Button variant="outline" onClick={() => setEditingPhotoId(null)}>취소</Button>
              <Button onClick={handleSaveLabels}>저장</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Job Info Edit Dialog */}
+      <Dialog open={editJobDialogOpen} onOpenChange={setEditJobDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>작업 정보 수정</DialogTitle>
+            <DialogDescription>
+              작업명, 시행처 등의 기본 정보를 수정합니다.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="title" className="text-right">
+                작업명
+              </Label>
+              <Input
+                id="title"
+                value={jobEditForm.title}
+                onChange={(e) => setJobEditForm({ ...jobEditForm, title: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="work_date" className="text-right">
+                작업일자
+              </Label>
+              <Input
+                id="work_date"
+                type="date"
+                value={jobEditForm.work_date}
+                onChange={(e) => setJobEditForm({ ...jobEditForm, work_date: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="company_name" className="text-right">
+                시행처
+              </Label>
+              <Input
+                id="company_name"
+                value={jobEditForm.company_name}
+                onChange={(e) => setJobEditForm({ ...jobEditForm, company_name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="construction_type" className="text-right">
+                공종명
+              </Label>
+              <Input
+                id="construction_type"
+                value={jobEditForm.construction_type}
+                onChange={(e) => setJobEditForm({ ...jobEditForm, construction_type: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditJobDialogOpen(false)}>취소</Button>
+            <Button type="submit" onClick={handleUpdateJobInfo}>저장</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

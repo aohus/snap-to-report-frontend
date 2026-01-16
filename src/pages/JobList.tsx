@@ -251,7 +251,10 @@ export default function JobList() {
                         {job.title}
                       </h3>
                     </div>
+                  </div>
 
+                  {/* Right: Status & Menu */}
+                  <div className="flex items-center gap-4">
                     <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
                        <div className="flex items-center gap-1">
                           <Building2 className="w-3.5 h-3.5" />
@@ -268,10 +271,6 @@ export default function JobList() {
                           <span>{job.work_date ? format(new Date(job.work_date), 'yyyy.MM.dd') : '작업일 미입력'}</span>
                        </div>
                     </div>
-                  </div>
-
-                  {/* Right: Status & Menu */}
-                  <div className="flex items-center gap-4">
                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                         job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                         job.status === 'FAILED' ? 'bg-red-100 text-red-700' :
