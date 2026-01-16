@@ -41,7 +41,7 @@ export default function JobList() {
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
-  const [sortField, setSortField] = useState<'title' | 'created_at'>('created_at');
+  const [sortField, setSortField] = useState<'title' | 'created_at' | 'work_date'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Edit State
@@ -83,10 +83,18 @@ export default function JobList() {
   };
 
   const sortedJobs = [...jobs].sort((a, b) => {
-    const compareResult =
-      sortField === 'title'
-        ? a.title.localeCompare(b.title)
-        : new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+    let compareResult: number;
+    if (sortField === 'title') {
+      compareResult = a.title.localeCompare(b.title);
+    } else if (sortField === 'created_at') {
+      compareResult = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+    } else if (sortField === 'work_date') {
+      const dateA = a.work_date ? new Date(a.work_date).getTime() : 0;
+      const dateB = b.work_date ? new Date(b.work_date).getTime() : 0;
+      compareResult = dateA - dateB;
+    } else {
+      compareResult = 0; // Should not happen
+    }
     
     return sortOrder === 'asc' ? compareResult : -compareResult;
   });
@@ -195,12 +203,13 @@ export default function JobList() {
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-xl font-bold text-gray-800">작업 목록</h2>
             <div className="flex gap-2">
-              <Select value={sortField} onValueChange={(val: 'title' | 'created_at') => setSortField(val)}>
+              <Select value={sortField} onValueChange={(val: 'title' | 'created_at' | 'work_date') => setSortField(val)}>
                 <SelectTrigger className="w-[110px] h-9 text-sm">
                   <SelectValue placeholder="정렬 기준" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="created_at">등록순</SelectItem>
+                  <SelectItem value="work_date">작업일자순</SelectItem>
                   <SelectItem value="title">이름순</SelectItem>
                 </SelectContent>
               </Select>
