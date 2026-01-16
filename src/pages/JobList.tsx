@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { AuthService } from '@/lib/auth';
 import { Job } from '@/types';
-import { Plus, Loader2, LayoutGrid, Calendar, LogOut, FileDown, Pencil, Building2, Hammer, MoreVertical, Trash2 } from 'lucide-react';
+import { Plus, Loader2, LayoutGrid, Calendar, LogOut, FileDown, Pencil, Building2, Hammer, MoreVertical, Trash2, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
@@ -50,6 +50,15 @@ export default function JobList() {
   const [creating, setCreating] = useState(false);
   const [sortField, setSortField] = useState<'title' | 'created_at' | 'work_date'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+
+  // Create Job State
+  const [createJobDialogOpen, setCreateJobDialogOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    title: '',
+    work_date: '',
+    company_name: '',
+    construction_type: ''
+  });
 
   // Edit State
   const [editingJob, setEditingJob] = useState<Job | null>(null);
@@ -121,17 +130,38 @@ export default function JobList() {
     }
   };
 
-  const handleCreateJob = async () => {
+  const handleCreateJob = () => {
+    setCreateForm({
+        title: '',
+        work_date: '',
+        company_name: '',
+        construction_type: ''
+    });
+    setCreateJobDialogOpen(true);
+  };
+
+  const handleConfirmCreateJob = async () => {
     setCreating(true);
-    const title = `작업 ${jobs.length + 1}`;
     try {
-      const job = await api.createJob(title, '', '');
-      toast.success('Job created successfully');
-      navigate(`/jobs/${job.id}`);
+        const titleToUse = createForm.title.trim() || `작업 ${jobs.length + 1}`;
+        const newJob = await api.createJob(
+            titleToUse, 
+            createForm.construction_type, 
+            createForm.company_name
+        );
+
+        if (createForm.work_date) {
+            await api.updateJob(newJob.id, { work_date: createForm.work_date });
+        }
+
+        toast.success('Job created successfully');
+        navigate(`/jobs/${newJob.id}`);
     } catch (error) {
-      toast.error('Failed to create job');
+        console.error(error);
+        toast.error('Failed to create job');
     } finally {
-      setCreating(false);
+        setCreating(false);
+        setCreateJobDialogOpen(false);
     }
   };
 
@@ -316,6 +346,72 @@ export default function JobList() {
           )}
         </section>
       </main>
+
+      {/* Create Job Dialog */}
+      <Dialog open={createJobDialogOpen} onOpenChange={setCreateJobDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>새 작업 만들기</DialogTitle>
+            <DialogDescription>
+              새로운 작업의 기본 정보를 입력해주세요.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create-title" className="text-right">
+                작업명
+              </Label>
+              <Input
+                id="create-title"
+                value={createForm.title}
+                onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })}
+                className="col-span-3"
+                placeholder={`작업 ${jobs.length + 1}`}
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create-work_date" className="text-right">
+                작업일자
+              </Label>
+              <Input
+                id="create-work_date"
+                type="date"
+                value={createForm.work_date}
+                onChange={(e) => setCreateForm({ ...createForm, work_date: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create-company_name" className="text-right">
+                시행처
+              </Label>
+              <Input
+                id="create-company_name"
+                value={createForm.company_name}
+                onChange={(e) => setCreateForm({ ...createForm, company_name: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+            <div className="grid grid-cols-4 items-center gap-4">
+              <Label htmlFor="create-construction_type" className="text-right">
+                공종명
+              </Label>
+              <Input
+                id="create-construction_type"
+                value={createForm.construction_type}
+                onChange={(e) => setCreateForm({ ...createForm, construction_type: e.target.value })}
+                className="col-span-3"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateJobDialogOpen(false)}>취소</Button>
+            <Button type="submit" onClick={handleConfirmCreateJob} disabled={creating}>
+              {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : "생성"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Job Dialog */}
       <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
