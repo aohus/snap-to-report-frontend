@@ -1,7 +1,4 @@
-import pica from "pica";
 import piexif from "piexifjs";
-
-const picaInstance = pica();
 
 self.onmessage = async (e) => {
   // Transferable ArrayBuffer를 받습니다.
@@ -25,27 +22,20 @@ self.onmessage = async (e) => {
       }
     }
 
-    // 2. Create Bitmap & Resize (Off-main-thread)
+    // 2. Create Bitmap & Resize (Off-main-thread) using native drawImage
     const bitmap = await createImageBitmap(file);
 
     const { width, height } = calculateSize(bitmap.width, bitmap.height, maxWidth, maxHeight);
     const offscreen = new OffscreenCanvas(width, height);
     
-    try {
-      await picaInstance.resize(bitmap, offscreen, {
-        quality: 3,
-        alpha: false
-      });
-    } catch (picaError) {
-      console.warn("Pica resize failed, falling back to native drawImage.", picaError);
-      const ctx = offscreen.getContext("2d");
-      if (ctx) {
-        ctx.imageSmoothingEnabled = true;
-        ctx.imageSmoothingQuality = "high";
-        ctx.drawImage(bitmap, 0, 0, width, height);
-      } else {
-         throw picaError;
-      }
+    const ctx = offscreen.getContext("2d");
+    if (ctx) {
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high"; // Use high quality for native resizing
+      ctx.drawImage(bitmap, 0, 0, width, height);
+    } else {
+        // If we can't get a context, we can't resize at all.
+        throw new Error("Failed to get 2D rendering context for OffscreenCanvas.");
     }
 
     // 3. Export to Blob

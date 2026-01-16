@@ -856,11 +856,8 @@ export default function Dashboard() {
         <div className="flex flex-col h-full gap-4">
           {clusters.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl shadow-sm border p-10">
-              {!isClustering && (
-                <PhotoUploader onUpload={handleUpload} isUploading={loading} progress={uploadProgress} />
-              )}
               {photos.length > 0 && (
-                <div className="w-full max-w-3xl mx-auto space-y-6 mt-6">
+                <div className="w-full max-w-3xl mx-auto space-y-6 mt-6 mb-6">
                   <PhotoGrid photos={photos} />
                   {isClustering ? (
                     // <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Clustering...</>
@@ -882,6 +879,9 @@ export default function Dashboard() {
                     </Button>
                   )}
                 </div>
+              )}
+              {!isClustering && (
+                <PhotoUploader onUpload={handleUpload} isUploading={loading} progress={uploadProgress} />
               )}
             </div>
           ) : (
