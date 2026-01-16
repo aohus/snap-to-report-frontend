@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { AuthService } from '@/lib/auth';
 import { Job } from '@/types';
-import { Plus, Loader2, LayoutGrid, Calendar, X, LogOut, FileDown, Pencil, Building2, Hammer, Clock } from 'lucide-react';
+import { Plus, Loader2, LayoutGrid, Calendar, LogOut, FileDown, Pencil, Building2, Hammer, MoreVertical, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
@@ -34,6 +34,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 
 export default function JobList() {
@@ -235,89 +242,74 @@ export default function JobList() {
                 <div
                   key={job.id}
                   onClick={() => navigate(`/jobs/${job.id}`)}
-                  className="group bg-white rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-400 transition-all cursor-pointer overflow-hidden"
+                  className="group bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer flex items-center justify-between"
                 >
-                  <div className="p-5 flex flex-col md:flex-row gap-4 justify-between">
-                    {/* Left: Info */}
-                    <div className="flex-1 space-y-3">
-                      <div className="flex items-center gap-3">
-                        <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {job.title}
-                        </h3>
-                        <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${
-                          job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
-                          job.status === 'FAILED' ? 'bg-red-100 text-red-700' :
-                          'bg-blue-50 text-blue-600'
-                        }`}>
-                          {job.status}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-y-2 gap-x-6 text-sm text-gray-600">
-                        <div className="flex items-center gap-2">
-                          <Hammer className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-500">공종:</span>
-                          <span className="font-medium text-gray-900">{job.construction_type || '-'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Building2 className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-500">시행처:</span>
-                          <span className="font-medium text-gray-900">{job.company_name || '-'}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-500">작업일:</span>
-                          <span className="font-medium text-gray-900">
-                            {job.work_date ? format(new Date(job.work_date), 'yyyy.MM.dd') : '-'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="w-4 h-4 text-gray-400" />
-                          <span className="text-gray-500">등록일:</span>
-                          <span className="font-medium text-gray-900">
-                            {job.created_at ? format(new Date(job.created_at), 'yy.MM.dd') : '-'}
-                          </span>
-                        </div>
-                      </div>
+                  {/* Left: Info */}
+                  <div className="flex-1 space-y-2">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                        {job.title}
+                      </h3>
                     </div>
 
-                    {/* Right: Actions */}
-                    <div className="flex items-center justify-end gap-2 pt-4 md:pt-0 border-t md:border-t-0 border-gray-100">
-                      {job.export_status === 'EXPORTED' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 hover:text-indigo-800 transition-colors"
+                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                       <div className="flex items-center gap-1">
+                          <Building2 className="w-3.5 h-3.5" />
+                          <span>{job.company_name || '시행처 미입력'}</span>
+                       </div>
+                       <span className="text-gray-300">|</span>
+                       <div className="flex items-center gap-1">
+                          <Hammer className="w-3.5 h-3.5" />
+                          <span>{job.construction_type || '공종명 미입력'}</span>
+                       </div>
+                       <span className="text-gray-300">|</span>
+                       <div className="flex items-center gap-1">
+                          <Calendar className="w-3.5 h-3.5" />
+                          <span>{job.work_date ? format(new Date(job.work_date), 'yyyy.MM.dd') : '작업일 미입력'}</span>
+                       </div>
+                    </div>
+                  </div>
+
+                  {/* Right: Status & Menu */}
+                  <div className="flex items-center gap-4">
+                     <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
+                        job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                        job.status === 'FAILED' ? 'bg-red-100 text-red-700' :
+                        'bg-blue-50 text-blue-600'
+                      }`}>
+                        {job.status === 'COMPLETED' ? '완료됨' : job.status === 'FAILED' ? '실패' : '진행중'}
+                      </span>
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-600">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={(e) => handleEditClick(e, job)}>
+                          <Pencil className="w-4 h-4 mr-2" /> 수정
+                        </DropdownMenuItem>
+                        {job.export_status === 'EXPORTED' && (
+                          <DropdownMenuItem onClick={(e) => {
+                             e.stopPropagation();
+                             handleDownload(job.id);
+                          }}>
+                            <FileDown className="w-4 h-4 mr-2" /> PDF 다운로드
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          className="text-red-600 focus:text-red-600"
                           onClick={(e) => {
-                            e.stopPropagation();
-                            handleDownload(job.id);
+                             e.stopPropagation();
+                             setDeleteJobId(job.id);
                           }}
                         >
-                          <FileDown className="w-4 h-4 mr-2" />
-                          다운로드
-                        </Button>
-                      )}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
-                        onClick={(e) => handleEditClick(e, job)}
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </Button>
-
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setDeleteJobId(job.id);
-                        }}
-                      >
-                        <X className="w-5 h-5" />
-                      </Button>
-                    </div>
+                          <Trash2 className="w-4 h-4 mr-2" /> 삭제
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
