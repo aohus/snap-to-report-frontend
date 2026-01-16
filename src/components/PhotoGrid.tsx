@@ -11,8 +11,8 @@ export function PhotoGrid({ photos }: PhotoGridProps) {
     <Card>
       <CardContent className="p-4">
         <h4 className="font-medium mb-4">{photos.length} photos uploaded</h4>
-        <ScrollArea className="h-40">
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(100px,1fr))] gap-2">
+        <ScrollArea className="h-[400px]">
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2">
             {photos.map((photo) => (
               <div key={photo.id} className="aspect-square bg-gray-100 rounded-md overflow-hidden">
             <img
