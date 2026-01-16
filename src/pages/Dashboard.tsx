@@ -1070,11 +1070,6 @@ export default function Dashboard() {
                                       </PopoverClose>
                                     </div>
                                 </div>
-                                {labelSettings.some(l => l.isAutoDate) && (
-                                    <p className="text-xs text-blue-600">
-                                        * 일자 항목을 비워두면 사진의 촬영 날짜가 자동으로 표시됩니다.
-                                    </p>
-                                )}
                             </div>
                         </PopoverContent>
                         </Popover>
@@ -1166,11 +1161,6 @@ export default function Dashboard() {
               PDF 다운로드
             </Button>
           </div>
-          <DialogFooter className="sm:justify-start">
-            <Button type="button" variant="secondary" onClick={() => setDownloadDialogOpen(false)}>
-              닫기
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
