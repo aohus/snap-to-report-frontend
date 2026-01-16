@@ -4,7 +4,7 @@ import { Cluster } from '@/types';
 import { PlaceRow } from './PlaceRow';
 import { PlaceColumn } from './PlaceColumn';
 import { PhotoCard } from './PhotoCard';
-import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, LayoutList, Rows, Eye, EyeOff, Columns } from 'lucide-react';
+import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, LayoutList, Rows, Eye, EyeOff, Columns, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -28,6 +28,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
   const [isVerticalMode, setIsVerticalMode] = useState(false); // false = Horizontal Mode (Reserve Top), true = Vertical Mode (Reserve Left)
   const [collapsedClusterIds, setCollapsedClusterIds] = useState<Set<string>>(new Set());
   const [hideCompleted, setHideCompleted] = useState(false);
+  const [isReserveCollapsed, setIsReserveCollapsed] = useState(false);
   
   const selectedPhotoIds = selectedPhotos.map(p => p.id);
 
@@ -93,27 +94,53 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
           className={`
             flex-shrink-0 flex flex-col bg-gray-200 rounded-xl md:rounded-2xl border-2 border-gray-300 overflow-hidden 
             w-full transition-all duration-300 ease-in-out
-            ${(reserveCluster?.photos.length || 0) === 0 ? 'md:w-[360px]' : 'md:w-[460px]'}
-            h-auto md:h-full max-h-[220px] md:max-h-none
+            ${isReserveCollapsed 
+              ? 'md:w-[60px] max-h-[50px] md:max-h-none' 
+              : ((reserveCluster?.photos.length || 0) === 0 ? 'md:w-[360px]' : 'md:w-[460px]') + ' h-auto md:h-full max-h-[220px] md:max-h-none'
+            }
           `}
         >
           <div className="p-2 md:p-3 bg-gray-300 border-b border-gray-400 flex items-center justify-center md:justify-start gap-2 sticky top-0 z-10 h-[50px]">
-            <Archive className="w-4 h-4 md:w-5 md:h-5 text-gray-700 flex-shrink-0" />
-            <div className={`
-              flex items-center gap-2 overflow-hidden transition-all duration-300
-              ${(reserveCluster?.photos.length || 0) === 0 ? 'w-0 opacity-0 md:hidden' : 'w-auto opacity-100'}
-            `}>
-              <h3 className="text-base md:text-lg font-bold text-gray-800 whitespace-nowrap">임시 보관</h3>
-              <span className="ml-auto bg-gray-600 text-white px-2 py-0.5 rounded-full text-xs md:text-sm">
-                {reserveCluster?.photos.length || 0}
-              </span>
-            </div>
+             {/* Mobile Toggle Button (Left) */}
+             <Button 
+               variant="ghost" 
+               size="icon" 
+               className="h-6 w-6 md:hidden absolute right-2"
+               onClick={() => setIsReserveCollapsed(!isReserveCollapsed)}
+             >
+                {isReserveCollapsed ? <ChevronsDown className="w-4 h-4" /> : <ChevronsUp className="w-4 h-4" />}
+             </Button>
+
+            {!isReserveCollapsed && <Archive className="w-4 h-4 md:w-5 md:h-5 text-gray-700 flex-shrink-0" />}
+            
+            {!isReserveCollapsed && (
+              <div className={`
+                flex items-center gap-2 overflow-hidden transition-all duration-300
+                ${(reserveCluster?.photos.length || 0) === 0 ? 'w-0 opacity-0 md:hidden' : 'w-auto opacity-100'}
+              `}>
+                <h3 className="text-base md:text-lg font-bold text-gray-800 whitespace-nowrap">임시 보관</h3>
+                <span className="ml-auto bg-gray-600 text-white px-2 py-0.5 rounded-full text-xs md:text-sm">
+                  {reserveCluster?.photos.length || 0}
+                </span>
+              </div>
+            )}
+            
             {/* Show count badge in collapsed mode */}
-             {(reserveCluster?.photos.length || 0) === 0 && (
-                <span className="hidden md:flex bg-gray-600 text-white w-5 h-5 items-center justify-center rounded-full text-xs">
-                  0
+             {((reserveCluster?.photos.length || 0) === 0 || isReserveCollapsed) && (
+                <span className={`hidden md:flex bg-gray-600 text-white w-5 h-5 items-center justify-center rounded-full text-xs ${isReserveCollapsed ? 'mx-auto' : ''}`}>
+                  {reserveCluster?.photos.length || 0}
                 </span>
              )}
+
+            {/* Desktop Toggle Button */}
+            <Button 
+               variant="ghost" 
+               size="icon" 
+               className="h-6 w-6 hidden md:flex ml-auto"
+               onClick={() => setIsReserveCollapsed(!isReserveCollapsed)}
+            >
+               {isReserveCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+            </Button>
           </div>
           
           <Droppable droppableId={reserveCluster?.id.toString() || 'reserve'} direction={isMobile ? "horizontal" : "vertical"}>
@@ -129,6 +156,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                   }
                   ${snapshot.isDraggingOver ? 'bg-blue-100/50' : ''}
                   ${(reserveCluster?.photos.length || 0) === 0 ? 'items-center' : ''}
+                  ${isReserveCollapsed ? 'hidden' : ''}
                 `}
               >
                 {reserveCluster?.photos.length === 0 && (
@@ -160,51 +188,67 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
 
         {/* Main Places Area */}
         <div className="flex-1 flex flex-col overflow-hidden order-2">
-          {/* Controls */}
-          <div className="flex-shrink-0 flex items-center justify-end gap-2 mb-4">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setIsVerticalMode(!isVerticalMode)}
-              className="text-xs md:text-sm h-8"
-              title={isVerticalMode ? "가로모드로 전환" : "세로모드로 전환"}
-            >
-              {isVerticalMode ? <Rows className="w-4 h-4 md:mr-1" /> : <Columns className="w-4 h-4 md:mr-1" />}
-              <span className="hidden md:inline">{isVerticalMode ? "가로모드" : "세로모드"}</span>
-            </Button>
+          {/* Controls Toolbar */}
+          <div className="flex-shrink-0 flex flex-wrap items-center justify-end gap-2 mb-4 p-2 bg-white rounded-xl border border-gray-200 shadow-sm sticky top-0 z-20 backdrop-blur-sm bg-white/90">
             
-            <div className="w-px h-4 bg-gray-300 mx-2"></div>
+            {/* Layout Mode Group */}
+            <div className="flex items-center gap-1 bg-gray-100/80 p-1 rounded-lg border border-gray-200">
+                <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsVerticalMode(false)}
+                className={`h-7 px-3 text-xs rounded-md transition-all ${!isVerticalMode ? 'bg-white shadow-sm text-blue-700 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'}`}
+                title="위아래로 스크롤 (가로형)"
+                >
+                    <LayoutList className="w-3.5 h-3.5 mr-1.5" />
+                    <span className="hidden xl:inline">가로형</span>
+                </Button>
+                <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setIsVerticalMode(true)}
+                className={`h-7 px-3 text-xs rounded-md transition-all ${isVerticalMode ? 'bg-white shadow-sm text-blue-700 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'}`}
+                title="좌우로 스크롤 (세로형)"
+                >
+                    <Columns className="w-3.5 h-3.5 mr-1.5" />
+                    <span className="hidden xl:inline">세로형</span>
+                </Button>
+            </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setHideCompleted(!hideCompleted)}
-              className="text-xs md:text-sm h-8"
-              title={hideCompleted ? "완료된 항목 보이기" : "완료된 항목 감추기"}
-            >
-              {hideCompleted ? <Eye className="w-4 h-4 md:mr-1" /> : <EyeOff className="w-4 h-4 md:mr-1" />}
-              <span className="hidden md:inline">{hideCompleted ? "완료 보이기" : "완료 감추기"}</span>
-            </Button>
+            <div className="w-px h-5 bg-gray-200 mx-1"></div>
 
+             {/* View Options */}
             <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleCollapseCompleted}
-              className="text-xs md:text-sm h-8"
-              title={areAllCompletedCollapsed ? "완료된 항목 펼치기" : "완료된 항목 접기"}
-            >
-              {areAllCompletedCollapsed ? <ChevronsDown className="w-4 h-4 md:mr-1" /> : <ChevronsUp className="w-4 h-4 md:mr-1" />}
-              <span className="hidden md:inline">{areAllCompletedCollapsed ? "완료 펼치기" : "완료 접기"}</span>
-            </Button>
-            <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={() => setIsCompact(!isCompact)}
-              className="text-xs md:text-sm h-8"
-              title={isCompact ? "크게 보기" : "작게 보기"}
+              className={`h-8 text-xs border transition-all ${isCompact ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white border-transparent hover:bg-gray-100 text-gray-600'}`}
             >
-              {isCompact ? <Rows className="w-4 h-4 md:mr-1" /> : <LayoutList className="w-4 h-4 md:mr-1" />}
-              <span className="hidden md:inline">{isCompact ? "기본 보기" : "작게 보기"}</span>
+              {isCompact ? <Maximize2 className="w-3.5 h-3.5 mr-1.5" /> : <Minimize2 className="w-3.5 h-3.5 mr-1.5" />}
+              <span className="hidden md:inline">{isCompact ? "크게 보기" : "작게 보기"}</span>
+            </Button>
+
+            <div className="w-px h-5 bg-gray-200 mx-1"></div>
+
+            {/* Filter Options */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setHideCompleted(!hideCompleted)}
+              className={`h-8 text-xs border transition-all ${hideCompleted ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-white border-transparent hover:bg-gray-100 text-gray-600'}`}
+            >
+              {hideCompleted ? <EyeOff className="w-3.5 h-3.5 mr-1.5" /> : <Eye className="w-3.5 h-3.5 mr-1.5" />}
+              <span className="hidden md:inline">완료 숨김</span>
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={toggleCollapseCompleted}
+              className={`h-8 text-xs border transition-all ${areAllCompletedCollapsed ? 'bg-gray-100 text-gray-900 border-gray-200' : 'bg-white border-transparent hover:bg-gray-100 text-gray-600'}`}
+            >
+              {areAllCompletedCollapsed ? <ChevronsDown className="w-3.5 h-3.5 mr-1.5" /> : <ChevronsUp className="w-3.5 h-3.5 mr-1.5" />}
+              <span className="hidden md:inline">{areAllCompletedCollapsed ? "완료 펼치기" : "완료 접기"}</span>
             </Button>
           </div>
 
