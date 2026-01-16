@@ -174,7 +174,7 @@ export default function JobList() {
           <div className="p-2 bg-blue-600 rounded-lg shadow-sm">
             <LayoutGrid className="w-5 h-5 text-white" />
           </div>
-          <h1 className="text-xl font-bold text-gray-900">Snap To Report</h1>
+          <h1 className="text-xl font-bold text-gray-900">Field Note</h1>
         </div>
         <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-500 hover:text-red-600">
           <LogOut className="w-4 h-4 mr-2" />
