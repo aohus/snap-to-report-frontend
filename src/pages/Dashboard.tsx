@@ -1003,30 +1003,12 @@ export default function Dashboard() {
 
                     {/* Bottom Company */}
                     <div className="mb-20 w-full text-center">
-                        {exportMetadata.cover_company_name ? (
-                            <input
-                                className="w-full text-center text-xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
-                                value={exportMetadata.cover_company_name}
-                                onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
-                            />
-                        ) : (
-                            <div 
-                                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-xl text-gray-400 cursor-text hover:border-blue-400 hover:text-blue-500 transition-colors"
-                                onClick={() => setExportMetadata({...exportMetadata, cover_company_name: ' '})} // trigger input
-                            >
-                                시행처 입력 (클릭)
-                            </div>
-                        )}
-                        {/* Fallback input if empty but focused */}
-                        {exportMetadata.cover_company_name === ' ' && (
-                             <input
-                                className="w-full text-center text-2xl font-bold border-b-2 border-blue-500 focus:outline-none bg-transparent absolute bottom-20 left-0 px-12"
-                                autoFocus
-                                value={exportMetadata.cover_company_name}
-                                onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
-                                onBlur={() => { if(exportMetadata.cover_company_name.trim() === '') setExportMetadata({...exportMetadata, cover_company_name: ''}) }}
-                            />
-                        )}
+                      <input
+                          className="w-full text-center text-xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
+                          value={exportMetadata.cover_company_name}
+                          onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
+                          placeholder='시행처 입력'
+                      />
                     </div>
                  </div>
               </div>
