@@ -10,9 +10,9 @@ self.onmessage = async (e) => {
   try {
     // 1. Extract EXIF
     let originalExifObj = null;
-    const isJPEG = isJPEGFile(file);
+    const isCompressible = isCompressibleFile(file);
     
-    if (isJPEG) {
+    if (isCompressible) {
       try {
         const binaryString = await arrayBufferToBinaryString(arrayBuffer);
         originalExifObj = piexif.load(binaryString);
@@ -45,7 +45,7 @@ self.onmessage = async (e) => {
     });
 
     // 4. Insert EXIF
-    if (originalExifObj && resizedBlob && isJPEG) {
+    if (originalExifObj && resizedBlob && isCompressible) {
         try {
             // Blob -> ArrayBuffer -> BinaryString
             const resizedArrayBuffer = await resizedBlob.arrayBuffer();
@@ -84,8 +84,10 @@ self.onmessage = async (e) => {
 // Helper Functions
 // -----------------------------------------------------------------
 
-function isJPEGFile(file: File): boolean {
-  return file.type === "image/jpeg" || file.name.toLowerCase().endsWith(".jpg") || file.name.toLowerCase().endsWith(".jpeg");
+function isCompressibleFile(file: File): boolean {
+  const compressibleTypes = ["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"];
+  return compressibleTypes.includes(file.type.toLowerCase()) || 
+         /\.(jpg|jpeg|png|webp|heic)$/i.test(file.name);
 }
 
 function calculateSize(srcW: number, srcH: number, maxW: number, maxH: number) {

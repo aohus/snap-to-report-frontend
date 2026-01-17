@@ -52,9 +52,9 @@ workers.forEach((worker) => {
 
 export async function compressImage(
   file: File,
-  maxWidth: number = 1920,
-  maxHeight: number = 1920,
-  quality: number = 0.8
+  maxWidth: number = 1024,
+  maxHeight: number = 1024,
+  quality: number = 0.6
 ): Promise<File> {
   return new Promise<File>(async (resolve, reject) => {
     const id = messageId++;
