@@ -304,9 +304,11 @@ export default function JobList() {
                      <span className={`px-2.5 py-1 rounded-full text-xs font-semibold whitespace-nowrap ${
                         job.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                         job.status === 'FAILED' ? 'bg-red-100 text-red-700' :
-                        'bg-blue-50 text-blue-600'
+                        job.status === 'CREATED' ? 'bg-gray-100 text-gray-700' :
+                        job.status === 'UPLOADING' ? 'bg-blue-100 text-blue-700' :
+                        'bg-orange-50 text-orange-600'
                       }`}>
-                        {job.status === 'COMPLETED' ? '완료됨' : job.status === 'FAILED' ? '실패' : '진행중'}
+                        {job.status === 'COMPLETED' ? '완료' : job.status === 'FAILED' ? '실패' : job.status === 'UPLOADING' ? '대기' : job.status === 'CREATED' ? '빈 작업' : '작업중'}
                       </span>
                     
                     <DropdownMenu>
