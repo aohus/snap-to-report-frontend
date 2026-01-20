@@ -65,3 +65,10 @@ export interface FileResponse {
   filename: string;
   media_type: string;
 }
+
+export interface JobStatusResponse {
+  job_id: string;
+  status: string;
+  message: string;
+  estimated_time?: number;
+}

@@ -1,4 +1,4 @@
-import { Job, Cluster, Member, ExportStatus, Photo, FileResponse } from '@/types';
+import { Job, Cluster, Member, ExportStatus, Photo, FileResponse, JobStatusResponse } from '@/types';
 import { AuthService } from './auth';
 import { compressImage, isJPEGFile } from './image'; // Import isJPEGFile
 import { uploadViaResumable, uploadViaPresigned, uploadViaServer } from '@/lib/uploadStrategies';
@@ -123,7 +123,7 @@ export const api = {
   },
 
   // Cluster/Place Management
-  startClustering: async (jobId: string): Promise<any> => {
+  startClustering: async (jobId: string): Promise<JobStatusResponse> => {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/clustering/start`, {
       method: 'POST',
       headers: authJsonHeaders(),

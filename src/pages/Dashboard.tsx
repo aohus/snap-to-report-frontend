@@ -15,7 +15,7 @@ import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 
 import { api } from '@/lib/api';
-import { Job, Cluster, Photo } from '@/types';
+import { Job, Cluster, Photo, JobStatusResponse } from '@/types';
 import { PhotoUploader } from '@/components/PhotoUploader';
 import { PhotoGrid } from '@/components/PhotoGrid';
 import { ClusterBoard } from '@/components/ClusterBoard';
@@ -61,6 +61,9 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isClustering, setIsClustering] = useState(false);
+  const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
+  const [remainingTime, setRemainingTime] = useState<number | null>(null);
+  const [showClusteringDialog, setShowClusteringDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
   const isSelectionLoaded = useRef(false);
   const [saving, setSaving] = useState(false);
@@ -150,6 +153,19 @@ export default function Dashboard() {
   }, [jobId]);
 
   useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (isClustering && remainingTime !== null && remainingTime > 0) {
+      interval = setInterval(() => {
+        setRemainingTime((prev) => {
+          if (prev === null || prev <= 0) return 0;
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [isClustering, remainingTime]);
+
+  useEffect(() => {
     let timeoutId: NodeJS.Timeout;
     let attempts = 0;
 
@@ -170,9 +186,13 @@ export default function Dashboard() {
               toast.success(`Analysis complete. Found ${sorted.length} places.`);
            }
            setIsClustering(false);
+           setEstimatedTime(null);
+           setShowClusteringDialog(false);
            return; 
         } else if (jobData.status === 'FAILED') {
            setIsClustering(false);
+           setEstimatedTime(null);
+           setShowClusteringDialog(false);
            toast.error("Clustering failed.");
            return;
         }
@@ -330,30 +350,23 @@ export default function Dashboard() {
   const handleStartClustering = async () => {
     if (!job) return;
     setIsClustering(true);
+    setEstimatedTime(null);
+    setRemainingTime(null);
+    setShowClusteringDialog(true);
     try {
       const result = await api.startClustering(job.id);
       console.log("startClustering response:", result);
 
-      // Check for immediate results (backward compatibility)
-      if (Array.isArray(result) || (result && Array.isArray(result.clusters))) {
-          const newClusters: Cluster[] = Array.isArray(result) ? result : result.clusters;
-          const sortedClusters = newClusters
-            .sort((a, b) => (a.order_index ?? 0) - (b.order_index ?? 0))
-            .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
-          
-          setClusters(sortedClusters);
-          if (sortedClusters.length > 0) {
-            toast.success(`Analysis complete. Found ${sortedClusters.length} places.`);
-          }
-          setIsClustering(false);
-      } else {
-         // Assume PENDING/PROCESSING - The useEffect will handle polling
-         toast.info("Clustering started in background...");
+      if (result.estimated_time) {
+          setEstimatedTime(result.estimated_time);
+          setRemainingTime(result.estimated_time);
       }
+      // toast.info("Clustering started in background..."); // Redundant with dialog
     } catch (error) {
       console.error("Clustering failed", error);
       toast.error("Failed to cluster photos");
       setIsClustering(false);
+      setShowClusteringDialog(false);
     }
   };
 
@@ -881,16 +894,6 @@ export default function Dashboard() {
               {photos.length > 0 && (
                 <div className="w-full max-w-3xl mx-auto space-y-6 mt-6 mb-6">
                   <PhotoGrid photos={photos} />
-                  {isClustering ? (
-                    // <><Loader2 className="w-5 h-5 animate-spin mr-2" /> Clustering...</>
-                    <div className="mt-8 text-center">
-                      <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
-                      <p className="mt-4 text-xl font-medium text-gray-700">
-                        사진 분류 작업 중입니다...
-                      </p>
-                      <p className="text-sm text-gray-500">이 작업은 시간이 걸릴 수 있습니다.</p>
-                    </div>
-                    ) : (
                     <Button
                       className="w-full"
                       size="lg"
@@ -899,7 +902,6 @@ export default function Dashboard() {
                     >
                     사진 분류 시작하기
                     </Button>
-                  )}
                 </div>
               )}
               {!isClustering && (
@@ -1054,6 +1056,31 @@ export default function Dashboard() {
             <Button variant="outline" onClick={() => setEditJobDialogOpen(false)}>취소</Button>
             <Button type="submit" onClick={handleUpdateJobInfo}>저장</Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Clustering Progress Dialog */}
+      <Dialog open={showClusteringDialog} onOpenChange={setShowClusteringDialog}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">사진 분류 작업 중</DialogTitle>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-6">
+            <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
+            <p className="mt-4 text-xl font-medium text-gray-700">
+              사진 분류 작업이 진행 중입니다.
+            </p>
+            {remainingTime !== null && (
+                <p className="mt-2 text-lg text-blue-600 font-semibold">
+                   남은 시간: 약 {Math.ceil(remainingTime)}초
+                </p>
+            )}
+            <p className="mt-4 text-sm text-gray-500 text-center">
+              이 작업은 시간이 다소 소요될 수 있습니다. <br/>
+              페이지를 닫거나 다른 작업을 하셔도<br/>
+              백그라운드에서 계속 진행됩니다.
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
 

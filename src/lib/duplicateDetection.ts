@@ -11,7 +11,13 @@ export interface DuplicateGroup {
 const HASH_SIZE = 16; 
 
 async function createImageBitmap(file: File): Promise<ImageBitmap> {
-  return window.createImageBitmap(file);
+  // Respect EXIF orientation so rotated originals match upright resized versions
+  try {
+    return await window.createImageBitmap(file, { imageOrientation: 'from-image' });
+  } catch (e) {
+    // Fallback for browsers that don't support options or on error
+    return window.createImageBitmap(file);
+  }
 }
 
 // dHash (Difference Hash) implementation
@@ -37,6 +43,11 @@ async function computeImageHash(file: File): Promise<string> {
   }
   
   if (!ctx) throw new Error('Could not get canvas context');
+
+  // Use high-quality smoothing to reduce aliasing artifacts when downsizing large images.
+  // This helps make the hash of a 4K image match the hash of its 500px thumbnail.
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
 
   // Resize image to (HASH_SIZE + 1) x HASH_SIZE
   ctx.drawImage(bitmap, 0, 0, width, height);
@@ -107,9 +118,10 @@ export async function detectDuplicates(files: File[], onProgress?: (current: num
   }));
 
   const uf = new UnionFind(files.length);
-  // 256 bits total. 10 bits difference is ~3.9% difference.
-  // This is strict enough to avoid false positives but allows for very minor compression artifacts.
-  const THRESHOLD = 10; 
+  // 256 bits total.
+  // 10 was too strict (~3.9%). 
+  // 20 is ~7.8%, similar ratio to the original 8x8 logic, but dHash is structurally more robust against false positives.
+  const THRESHOLD = 20; 
 
   // O(N^2) comparison - acceptable for N=500 (125k checks) in JS
   for (let i = 0; i < fileData.length; i++) {
