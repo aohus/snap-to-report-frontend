@@ -8,6 +8,7 @@ import JobList from './pages/JobList';
 import Dashboard from './pages/Dashboard';
 import JobEditor from './pages/JobEditor';
 import NotFound from './pages/NotFound';
+import Profile from './pages/Profile';
 import { AuthService } from './lib/auth';
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           
           <Route element={<ProtectedRoute />}>
             <Route path="/" element={<JobList />} />
+            <Route path="/profile" element={<Profile />} />
             <Route path="/jobs/:jobId" element={<Dashboard />} />
             <Route path="/jobs/:jobId/edit" element={<JobEditor />} />
           </Route>

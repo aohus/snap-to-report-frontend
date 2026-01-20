@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { AuthService } from '@/lib/auth';
 import { Job } from '@/types';
-import { Plus, Loader2, LayoutGrid, Calendar, LogOut, FileDown, Pencil, Building2, Hammer, MoreVertical, Trash2, Clock } from 'lucide-react';
+import { Plus, Loader2, LayoutGrid, Calendar, LogOut, FileDown, Pencil, Building2, Hammer, MoreVertical, Trash2, Clock, User } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import {
@@ -213,10 +213,16 @@ export default function JobList() {
           </div>
           <h1 className="text-xl font-bold text-gray-900">Field Note</h1>
         </div>
-        <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-500 hover:text-red-600">
-          <LogOut className="w-4 h-4 mr-2" />
-          Sign Out
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="text-gray-600 hover:text-blue-600">
+             <User className="w-4 h-4 mr-2" />
+             내 정보
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-gray-500 hover:text-red-600">
+            <LogOut className="w-4 h-4 mr-2" />
+            로그아웃
+          </Button>
+        </div>
       </header>
 
       <main className="max-w-5xl mx-auto p-6 space-y-8">

@@ -7,8 +7,9 @@ export interface DuplicateGroup {
   keptFile: File;
 }
 
-// 16x16 uses 256 bits, which provides much better accuracy than 8x8 (64 bits)
-const HASH_SIZE = 16; 
+// pHash settings
+const SAMPLE_SIZE = 32; // Resize to 32x32
+const LOW_FREQ_SIZE = 8; // Take top-left 8x8
 
 async function createImageBitmap(file: File): Promise<ImageBitmap> {
   // Respect EXIF orientation so rotated originals match upright resized versions
@@ -20,14 +21,34 @@ async function createImageBitmap(file: File): Promise<ImageBitmap> {
   }
 }
 
-// dHash (Difference Hash) implementation
-// More robust than Average Hash for structural similarity
+// 1D DCT-II
+function dct1D(data: number[]): number[] {
+    const N = data.length;
+    const result = new Float64Array(N);
+    const PI_N = Math.PI / N;
+    
+    for (let u = 0; u < N; u++) {
+        let sum = 0;
+        for (let x = 0; x < N; x++) {
+            sum += data[x] * Math.cos((x + 0.5) * u * PI_N);
+        }
+        // Orthogonal scaling
+        // C(0) = sqrt(1/N), C(u) = sqrt(2/N)
+        // We can skip scaling for hash comparisons if uniform, 
+        // but for correctness relative to "mean" of AC coeffs, let's keep it close to standard.
+        // Actually, for pHash, we just need relative magnitude.
+        // Let's do raw summation, it works for comparisons.
+        result[u] = sum; 
+    }
+    return Array.from(result);
+}
+
+// Compute pHash (Perceptual Hash) using DCT
 async function computeImageHash(file: File): Promise<string> {
   const bitmap = await createImageBitmap(file);
   
-  // dHash requires (W+1) x H to compare adjacent pixels
-  const width = HASH_SIZE + 1;
-  const height = HASH_SIZE;
+  const width = SAMPLE_SIZE;
+  const height = SAMPLE_SIZE;
 
   let canvas: OffscreenCanvas | HTMLCanvasElement;
   let ctx: OffscreenCanvasRenderingContext2D | CanvasRenderingContext2D | null;
@@ -44,32 +65,76 @@ async function computeImageHash(file: File): Promise<string> {
   
   if (!ctx) throw new Error('Could not get canvas context');
 
-  // Use high-quality smoothing to reduce aliasing artifacts when downsizing large images.
-  // This helps make the hash of a 4K image match the hash of its 500px thumbnail.
   ctx.imageSmoothingEnabled = true;
   ctx.imageSmoothingQuality = 'high';
 
-  // Resize image to (HASH_SIZE + 1) x HASH_SIZE
+  // 1. Resize to 32x32
   ctx.drawImage(bitmap, 0, 0, width, height);
   const imageData = ctx.getImageData(0, 0, width, height);
   const data = imageData.data;
 
-  let hash = '';
-  
-  // Calculate hash based on gradient between adjacent pixels
+  // 2. Convert to Grayscale
+  const grayscaleMatrix: number[][] = []; // 32 rows of 32 cols
   for (let y = 0; y < height; y++) {
-    for (let x = 0; x < HASH_SIZE; x++) {
-      const idx = (y * width + x) * 4;
-      const rightIdx = (y * width + (x + 1)) * 4;
-
-      // Basic luminance formula
-      const grayLeft = data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114;
-      const grayRight = data[rightIdx] * 0.299 + data[rightIdx + 1] * 0.587 + data[rightIdx + 2] * 0.114;
-
-      hash += grayLeft > grayRight ? '1' : '0';
+    const row: number[] = [];
+    for (let x = 0; x < width; x++) {
+       const idx = (y * width + x) * 4;
+       // ITU-R 601-2 luma transform:
+       // L = R * 299/1000 + G * 587/1000 + B * 114/1000
+       const gray = data[idx] * 0.299 + data[idx + 1] * 0.587 + data[idx + 2] * 0.114;
+       row.push(gray);
     }
+    grayscaleMatrix.push(row);
+  }
+
+  // 3. Compute DCT
+  // Separable DCT: Apply 1D DCT to rows, then to columns of the result.
+  
+  // Row DCT
+  const dctRows: number[][] = grayscaleMatrix.map(row => dct1D(row));
+
+  // Col DCT (Transpose -> DCT rows -> Transpose back)
+  // Actually, we only need the first 8 columns of the result for the next step.
+  // But let's keep it simple and compute full 32x32 DCT.
+  const dctMatrix: number[][] = Array(height).fill(0).map(() => Array(width).fill(0));
+
+  for (let x = 0; x < width; x++) {
+      const col = dctRows.map(row => row[x]);
+      const dctCol = dct1D(col);
+      for (let y = 0; y < height; y++) {
+          dctMatrix[y][x] = dctCol[y];
+      }
+  }
+
+  // 4. Reduce to 8x8 (Low Frequencies)
+  // 5. Compute Mean (excluding DC component at 0,0)
+  let sum = 0;
+  const pixels: number[] = [];
+  
+  for (let y = 0; y < LOW_FREQ_SIZE; y++) {
+      for (let x = 0; x < LOW_FREQ_SIZE; x++) {
+          if (x === 0 && y === 0) continue; // Skip DC
+          const val = dctMatrix[y][x];
+          pixels.push(val);
+          sum += val;
+      }
   }
   
+  const mean = sum / pixels.length;
+
+  // 6. Generate Hash
+  let hash = '';
+  for (let y = 0; y < LOW_FREQ_SIZE; y++) {
+      for (let x = 0; x < LOW_FREQ_SIZE; x++) {
+          // Note: We include DC in the hash string position (first bit), 
+          // usually compared against mean of AC? 
+          // Standard implementation often just compares all 64 against average.
+          // Let's compare all 8x8 against the AC mean (excluding DC from mean calc is common).
+          const val = dctMatrix[y][x];
+          hash += val > mean ? '1' : '0';
+      }
+  }
+
   return hash;
 }
 
@@ -118,10 +183,12 @@ export async function detectDuplicates(files: File[], onProgress?: (current: num
   }));
 
   const uf = new UnionFind(files.length);
-  // 256 bits total.
-  // 10 was too strict (~3.9%). 
-  // 20 is ~7.8%, similar ratio to the original 8x8 logic, but dHash is structurally more robust against false positives.
-  const THRESHOLD = 20; 
+  
+  // pHash (64 bits). 
+  // Distance <= 5 is extremely similar (often compression artifacts).
+  // Distance <= 10 is usually the same image but maybe resized/stretched slightly.
+  // 10 is a safe upper bound for "same image".
+  const THRESHOLD = 10; 
 
   // O(N^2) comparison - acceptable for N=500 (125k checks) in JS
   for (let i = 0; i < fileData.length; i++) {

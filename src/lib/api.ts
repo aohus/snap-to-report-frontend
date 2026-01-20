@@ -1,4 +1,4 @@
-import { Job, Cluster, Member, ExportStatus, Photo, FileResponse, JobStatusResponse } from '@/types';
+import { Job, Cluster, Member, ExportStatus, Photo, FileResponse, JobStatusResponse, Plan, Subscription } from '@/types';
 import { AuthService } from './auth';
 import { compressImage, isJPEGFile } from './image'; // Import isJPEGFile
 import { uploadViaResumable, uploadViaPresigned, uploadViaServer } from '@/lib/uploadStrategies';
@@ -515,5 +515,39 @@ export const api = {
       headers: authJsonHeaders(),
     });
     return handleResponse<FileResponse>(response);
+  },
+
+  // Subscription
+  getPlans: async (): Promise<Plan[]> => {
+    const response = await fetch(`${API_BASE_URL}/subscriptions/plans`, {
+      headers: authJsonHeaders(),
+    });
+    return handleResponse<Plan[]>(response);
+  },
+
+  getMySubscription: async (): Promise<Subscription | null> => {
+    const response = await fetch(`${API_BASE_URL}/subscriptions/me`, {
+      headers: authJsonHeaders(),
+    });
+    // Handle 404 for no subscription gracefully if possible, 
+    // but handleResponse throws error. We will catch it in component.
+    return handleResponse<Subscription>(response);
+  },
+
+  subscribe: async (planId: string, paymentMethodId: string): Promise<Subscription> => {
+    const response = await fetch(`${API_BASE_URL}/subscriptions/subscribe`, {
+      method: 'POST',
+      headers: authJsonHeaders(),
+      body: JSON.stringify({ plan_id: planId, payment_method_id: paymentMethodId }),
+    });
+    return handleResponse<Subscription>(response);
+  },
+
+  cancelSubscription: async (): Promise<Subscription> => {
+    const response = await fetch(`${API_BASE_URL}/subscriptions/cancel`, {
+      method: 'POST',
+      headers: authJsonHeaders(),
+    });
+    return handleResponse<Subscription>(response);
   }
 };

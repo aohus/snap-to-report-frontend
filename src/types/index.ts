@@ -67,8 +67,45 @@ export interface FileResponse {
 }
 
 export interface JobStatusResponse {
+
   job_id: string;
+
   status: string;
+
   message: string;
+
   estimated_time?: number;
+
+}
+
+
+
+export interface Plan {
+
+  id: string;
+
+  name: string;
+
+  price: number;
+
+  currency: string;
+
+  limits?: Record<string, any>;
+
+}
+
+
+
+export interface Subscription {
+
+  id: string;
+
+  plan_id: string;
+
+  status: string;
+
+  current_period_end: string;
+
+  auto_renew: boolean;
+
 }
