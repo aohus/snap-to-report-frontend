@@ -272,20 +272,34 @@ export default function JobList() {
                 <div
                   key={job.id}
                   onClick={() => navigate(`/jobs/${job.id}`)}
-                  className="group bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer flex items-center justify-between"
+                  className="group bg-white p-5 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between"
                 >
                   {/* Left: Info */}
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition-colors mb-1 md:mb-0">
                         {job.title}
-                      </h3>
+                    </h3>
+                    {/* Job details for mobile */}
+                    <div className="md:hidden flex flex-col space-y-0.5 text-sm text-gray-500 mt-1">
+                        <div className="flex items-center gap-1">
+                            <Building2 className="w-3.5 h-3.5" />
+                            <span>{job.company_name || '시행처 미입력'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Hammer className="w-3.5 h-3.5" />
+                            <span>{job.construction_type || '공종명 미입력'}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            <span>{job.work_date ? format(new Date(job.work_date), 'yyyy.MM.dd') : '작업일 미입력'}</span>
+                        </div>
                     </div>
                   </div>
 
                   {/* Right: Status & Menu */}
-                  <div className="flex items-center gap-4">
-                    <div className="flex flex-wrap items-center gap-2 text-sm text-gray-500">
+                  <div className="flex items-center gap-2 mt-3 md:mt-0">
+                    {/* Job details for desktop */}
+                    <div className="hidden md:flex flex-wrap items-center gap-2 text-sm text-gray-500">
                        <div className="flex items-center gap-1">
                           <Building2 className="w-3.5 h-3.5" />
                           <span>{job.company_name || '시행처 미입력'}</span>

@@ -1064,6 +1064,9 @@ export default function Dashboard() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle className="text-center">사진 분류 작업 중</DialogTitle>
+            <DialogDescription className="sr-only">
+              현재 사진 분류 작업이 진행 중입니다. 잠시만 기다려 주세요.
+            </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center py-6">
             <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
