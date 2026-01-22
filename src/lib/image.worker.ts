@@ -1,4 +1,7 @@
 import piexif from "piexifjs";
+import Pica from "pica";
+
+const pica = new Pica();
 
 self.onmessage = async (e) => {
   // Transferable ArrayBuffer를 받습니다.
@@ -22,24 +25,28 @@ self.onmessage = async (e) => {
       }
     }
 
-    // 2. Create Bitmap & Resize (Off-main-thread) using native drawImage
+    // 2. Create Bitmap & Resize (Off-main-thread)
     const bitmap = await createImageBitmap(file);
 
     const { width, height } = calculateSize(bitmap.width, bitmap.height, maxWidth, maxHeight);
-    const offscreen = new OffscreenCanvas(width, height);
     
-    const ctx = offscreen.getContext("2d");
-    if (ctx) {
-      ctx.imageSmoothingEnabled = true;
-      ctx.imageSmoothingQuality = "high"; // Use high quality for native resizing
-      ctx.drawImage(bitmap, 0, 0, width, height);
-    } else {
-        // If we can't get a context, we can't resize at all.
-        throw new Error("Failed to get 2D rendering context for OffscreenCanvas.");
-    }
+    // Create source and destination canvases for Pica
+    const from = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const fromCtx = from.getContext("2d");
+    if (!fromCtx) throw new Error("Failed to get 2D rendering context for source canvas.");
+    fromCtx.drawImage(bitmap, 0, 0);
+
+    const to = new OffscreenCanvas(width, height);
+    
+    // Use Pica for high quality resize
+    await pica.resize(from, to, {
+      unsharpAmount: 80,
+      unsharpRadius: 0.6,
+      unsharpThreshold: 2
+    });
 
     // 3. Export to Blob
-    const resizedBlob = await offscreen.convertToBlob({
+    const resizedBlob = await to.convertToBlob({
       type: "image/jpeg",
       quality: quality
     });
@@ -47,24 +54,18 @@ self.onmessage = async (e) => {
     // 4. Insert EXIF
     if (originalExifObj && resizedBlob && isCompressible) {
         try {
-            // Blob -> ArrayBuffer -> BinaryString
             const resizedArrayBuffer = await resizedBlob.arrayBuffer();
             const resizedBinaryString = await arrayBufferToBinaryString(resizedArrayBuffer);
             
-            // Dump EXIF obj to string
             const exifStr = piexif.dump(originalExifObj);
-            
-            // Insert EXIF into resized image string
             const finalBinaryString = piexif.insert(exifStr, resizedBinaryString);
             
-            // BinaryString -> ArrayBuffer -> Blob
             const finalArrayBuffer = binaryStringToArrayBuffer(finalBinaryString);
             const finalBlob = new Blob([finalArrayBuffer], { type: "image/jpeg" });
             
             self.postMessage({ id, blob: finalBlob });
         } catch (e) {
             console.error("Failed to insert EXIF, falling back to compressed blob.", e);
-            // Fallback: EXIF 삽입 실패 시 압축된 Blob만 반환
             self.postMessage({ id, blob: resizedBlob, warning: "EXIF insert failed." });
         }
     } else {
@@ -72,10 +73,7 @@ self.onmessage = async (e) => {
     }
 
   } catch (error) {
-    // createImageBitmap 실패, Pica resize 실패 등 처리
     const errorMessage = error instanceof Error ? error.message : "Unknown compression error";
-    
-    // 이 에러는 주로 Fingerprinting Protection이나 이미지 로드 실패 시 발생
     self.postMessage({ id, error: errorMessage, warning: "Compression failed, using original file." });
   }
 };

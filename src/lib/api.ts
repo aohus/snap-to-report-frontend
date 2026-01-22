@@ -2,6 +2,7 @@ import { Job, Cluster, Member, ExportStatus, Photo, FileResponse, JobStatusRespo
 import { AuthService } from './auth';
 import { compressImage, isJPEGFile } from './image'; // Import isJPEGFile
 import { uploadViaResumable, uploadViaPresigned, uploadViaServer } from '@/lib/uploadStrategies';
+import { useUploadStore } from './uploadStore';
 import pLimit from 'p-limit';
 
 const API_BASE_URL = '/api';
@@ -210,39 +211,30 @@ export const api = {
     return handleResponse(response);
   },
 
-  uploadPhotos: async (jobId: string, files: File[], onProgressTotal?: (percent: number) => void): Promise<void> => {
-    // -------------------------------------------------------------------------
-    // Performance Strategy for 500 photos / 30s
-    // 1. Pipeline: Compression -> Upload
-    // 2. High Concurrency: ~30 uploads (network bound), ~8 compressions (CPU bound)
-    // 3. Batching: Fetch URLs in bulk, Notify completion in chunks
-    // -------------------------------------------------------------------------
-    
+  uploadPhotos: async (jobId: string, files: File[]): Promise<void> => {
+    const store = useUploadStore.getState();
+    store.addFiles(files);
+    store.setUploading(true);
+
     const UPLOAD_CONCURRENCY = 30; 
     const COMPRESSION_CONCURRENCY = 8;
     const URL_BATCH_SIZE = 50; 
     const NOTIFY_BATCH_SIZE = 20;
 
-    const totalFiles = files.length;
-    const fileProgressMap = new Map<string, number>();
-
-    const updateGlobalProgress = () => {
-      if (!onProgressTotal) return;
-      let totalPercent = 0;
-      fileProgressMap.forEach((p) => (totalPercent += p));
-      onProgressTotal(Math.round(totalPercent / totalFiles));
-    };
-
-    // Prepare items with indices to preserve order and unique tracking
-    const items = files.map((file, index) => ({
-      file,
-      index,
-      compressedFile: file,
+    const items = store.queue.filter(item => item.status === 'pending').map(item => ({
+      id: item.id,
+      file: item.file,
+      compressedFile: item.file,
       urlInfo: null as any
     }));
 
+    if (items.length === 0) {
+      store.setUploading(false);
+      return;
+    }
+
     // 1. Fetch URLs (Batched)
-    const urlLimit = pLimit(5); // Limit concurrent metadata requests
+    const urlLimit = pLimit(5);
     const chunks = [];
     for (let i = 0; i < items.length; i += URL_BATCH_SIZE) {
       chunks.push(items.slice(i, i + URL_BATCH_SIZE));
@@ -254,10 +246,7 @@ export const api = {
           filename: item.file.name, 
           content_type: item.file.type 
         }));
-        
-        // Assume all are presigned strategy for now, or fallback later
         const response = await api.getUploadUrls(jobId, fileInfos);
-        
         if (response && response.urls && response.urls.length === chunk.length) {
             chunk.forEach((item, i) => {
                 item.urlInfo = response.urls[i];
@@ -271,7 +260,7 @@ export const api = {
     // 2. Pipeline Execution
     const uploadLimit = pLimit(UPLOAD_CONCURRENCY);
     const compressionLimit = pLimit(COMPRESSION_CONCURRENCY);
-    const notifyLimit = pLimit(1); // Serializer for notifications
+    const notifyLimit = pLimit(1);
     
     let pendingNotifications: { filename: string; storage_path: string }[] = [];
 
@@ -289,14 +278,15 @@ export const api = {
     };
 
     await Promise.all(items.map(async (item) => {
-        // Skip if URL fetch failed (or handle fallback here? strict for now)
-        if (!item.urlInfo) return;
-
-        fileProgressMap.set(String(item.index), 0);
+        if (!item.urlInfo) {
+          store.updateItem(item.id, { status: 'failed', error: 'Failed to get upload URL' });
+          return;
+        }
 
         try {
             // A. Compress
             if (isJPEGFile(item.file)) {
+                store.updateItem(item.id, { status: 'compressing' });
                 await compressionLimit(async () => {
                     try {
                         item.compressedFile = await compressImage(item.file);
@@ -307,20 +297,21 @@ export const api = {
             }
 
             // B. Upload
+            store.updateItem(item.id, { status: 'uploading' });
             await uploadLimit(async () => {
                 const { upload_url, filename, storage_path } = item.urlInfo;
                 
                 const onProgress = (p: number) => {
-                    fileProgressMap.set(String(item.index), p);
-                    updateGlobalProgress();
+                    store.updateItem(item.id, { progress: p });
                 };
 
                 if (upload_url) {
                     await uploadViaPresigned(item.compressedFile, upload_url, onProgress);
                 } else {
-                    // Fallback
-                     await uploadViaServer(jobId, item.compressedFile, filename, onProgress);
+                    await uploadViaServer(jobId, item.compressedFile, filename, onProgress);
                 }
+
+                store.updateItem(item.id, { status: 'completed', progress: 100 });
 
                 // C. Queue Notification
                 await notifyLimit(async () => {
@@ -328,16 +319,17 @@ export const api = {
                 });
                 
                 if (pendingNotifications.length >= NOTIFY_BATCH_SIZE) {
-                    flushNotifications(); // Fire and forget
+                    flushNotifications();
                 }
             });
         } catch (e) {
             console.error(`Upload failed for ${item.file.name}`, e);
+            store.updateItem(item.id, { status: 'failed', error: String(e) });
         }
     }));
 
-    // Final flush
     await flushNotifications();
+    store.setUploading(false);
   },
 
   // uploadPhotos: async (jobId: string, files: File[], onProgressTotal?: (percent: number) => void): Promise<Photo[]> => {
