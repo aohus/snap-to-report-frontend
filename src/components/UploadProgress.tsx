@@ -7,19 +7,17 @@ import { useParams } from 'react-router-dom';
 
 export const UploadProgress: React.FC = () => {
   const { jobId } = useParams<{ jobId: string }>();
-  const { queue, totalProgress, isUploading, retryFailed } = useUploadStore();
+  const { items, itemIds, totalProgress, isUploading, retryFailed } = useUploadStore();
 
-  if (queue.length === 0) return null;
+  if (itemIds.length === 0) return null;
 
-  const completedCount = queue.filter((item) => item.status === 'completed').length;
-  const failedCount = queue.filter((item) => item.status === 'failed').length;
-  const totalCount = queue.length;
+  const totalCount = itemIds.length;
+  const completedCount = itemIds.filter(id => items[id].status === 'completed').length;
+  const failedCount = itemIds.filter(id => items[id].status === 'failed').length;
 
   const handleRetry = async (id: string) => {
     if (!jobId) return;
     retryFailed(id);
-    // Note: In a real app, you might want a specialized retry function in api.ts
-    // For now, we trigger the main upload logic which picks up 'pending' items
     await api.uploadPhotos(jobId, []); 
   };
 
@@ -54,40 +52,43 @@ export const UploadProgress: React.FC = () => {
       <Progress value={totalProgress} className="h-4 mb-4 bg-gray-100" />
 
       <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
-        {queue.map((item) => (
-          <div key={item.id} className={cn(
-            "flex items-center justify-between p-2 rounded-lg border text-sm transition-colors",
-            item.status === 'failed' ? "bg-red-50 border-red-100" : "bg-white border-gray-50"
-          )}>
-            <div className="flex flex-col min-w-0 flex-1">
-              <span className="truncate font-medium text-gray-700">{item.fileName}</span>
-              {item.status === 'failed' && (
-                <span className="text-[10px] text-red-500 truncate">{item.error || '연결 오류'}</span>
-              )}
+        {itemIds.map((id) => {
+          const item = items[id];
+          return (
+            <div key={id} className={cn(
+              "flex items-center justify-between p-2 rounded-lg border text-sm transition-colors",
+              item.status === 'failed' ? "bg-red-50 border-red-100" : "bg-white border-gray-50"
+            )}>
+              <div className="flex flex-col min-w-0 flex-1">
+                <span className="truncate font-medium text-gray-700">{item.fileName}</span>
+                {item.status === 'failed' && (
+                  <span className="text-[10px] text-red-500 truncate">{item.error || '연결 오류'}</span>
+                )}
+              </div>
+              
+              <div className="flex items-center gap-2 shrink-0 ml-3">
+                {item.status === 'compressing' && (
+                  <span className="text-[11px] text-blue-500 font-bold animate-pulse">압축 중</span>
+                )}
+                {item.status === 'uploading' && (
+                  <span className="text-[11px] text-blue-500 font-black">{item.progress}%</span>
+                )}
+                {item.status === 'completed' && (
+                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                )}
+                {item.status === 'failed' && (
+                  <button 
+                    onClick={() => handleRetry(id)}
+                    className="p-1.5 bg-white border border-red-200 rounded-full text-red-500 hover:bg-red-50 transition-colors"
+                    title="다시 시도"
+                  >
+                    <RotateCcw className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
-            
-            <div className="flex items-center gap-2 shrink-0 ml-3">
-              {item.status === 'compressing' && (
-                <span className="text-[11px] text-blue-500 font-bold animate-pulse">압축 중</span>
-              )}
-              {item.status === 'uploading' && (
-                <span className="text-[11px] text-blue-500 font-black">{item.progress}%</span>
-              )}
-              {item.status === 'completed' && (
-                <CheckCircle2 className="w-5 h-5 text-green-500" />
-              )}
-              {item.status === 'failed' && (
-                <button 
-                  onClick={() => handleRetry(item.id)}
-                  className="p-1.5 bg-white border border-red-200 rounded-full text-red-500 hover:bg-red-50 transition-colors"
-                  title="다시 시도"
-                >
-                  <RotateCcw className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {!isUploading && (

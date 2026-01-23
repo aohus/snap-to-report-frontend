@@ -1,4 +1,5 @@
 import DuplicateWorker from './duplicateDetection.worker?worker';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface DuplicateGroup {
   id: string;
@@ -15,7 +16,7 @@ export async function detectDuplicates(
 
   return new Promise((resolve, reject) => {
     const worker = new DuplicateWorker();
-    const id = crypto.randomUUID();
+    const id = uuidv4();
 
     worker.onmessage = (e) => {
       const { type, results, current, total, error } = e.data;

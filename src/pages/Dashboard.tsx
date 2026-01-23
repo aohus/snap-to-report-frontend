@@ -327,13 +327,29 @@ export default function Dashboard() {
   const handleUpload = async (files: File[]) => {
     if (!job) return;
     try {
-      // 큐에 추가하고 업로드 프로세스 시작
+      // 1. 시작 알림
+      toast.info("사진 업로드를 시작합니다...");
+      
+      // 2. 업로드 프로세스 실행 및 완료 대기
       await api.uploadPhotos(job.id, Array.from(files));
       
-      toast.success("사진 업로드를 시작했습니다.");
+      // 3. 업로드 완료 후 서버에서 최신 데이터(사진 목록, 클러스터 등) 다시 불러오기
+      const jobData = await api.getJobDetails(job.id);
+      setJob(jobData);
+      
+      if (jobData.clusters) {
+        const sorted = jobData.clusters
+           .sort((a, b) => a.order_index - b.order_index)
+           .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
+        setClusters(sorted);
+      }
+      if (jobData.photos) setPhotos(jobData.photos);
+      
+      // 4. 최종 완료 알림
+      toast.success("사진 전송을 모두 마쳤습니다.");
     } catch (error) {
       console.error("Upload failed", error);
-      toast.error("업로드 시작 실패");
+      toast.error("업로드 중 오류가 발생했습니다.");
     }
   };
 
@@ -1051,27 +1067,36 @@ export default function Dashboard() {
 
       {/* Clustering Progress Dialog */}
       <Dialog open={showClusteringDialog} onOpenChange={setShowClusteringDialog}>
-        <DialogContent className="max-w-sm">
-          <DialogHeader>
-            <DialogTitle className="text-center">사진 분류 작업 중</DialogTitle>
-            <DialogDescription className="sr-only">
-              현재 사진 분류 작업이 진행 중입니다. 잠시만 기다려 주세요.
+        <DialogContent className="max-w-md rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-8 bg-white border-b shrink-0">
+            <DialogTitle className="text-3xl font-black text-center text-slate-900">사진 분류 작업 중</DialogTitle>
+            <DialogDescription className="text-center text-lg font-bold text-slate-500 mt-2">
+              인공지능이 현장별로 사진을 정리하고 있어요.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-6">
-            <Loader2 className="w-12 h-12 animate-spin text-blue-600" />
-            <p className="mt-4 text-xl font-medium text-gray-700">
-              사진 분류 작업이 진행 중입니다.
+          <div className="flex flex-col items-center justify-center py-12 px-8 bg-slate-50/50">
+            <div className="relative mb-8">
+              <Loader2 className="w-24 h-24 animate-spin text-blue-600" />
+              <CheckCircle className="w-8 h-8 text-blue-200 absolute inset-0 m-auto" />
+            </div>
+            
+            <p className="text-2xl font-black text-gray-800 text-center">
+              지금 열심히 정리하고 있어요!
             </p>
-            {remainingTime !== null && (
-                <p className="mt-2 text-lg text-blue-600 font-semibold">
-                   남은 시간: 약 {Math.ceil(remainingTime)}초
-                </p>
+            
+            {remainingTime !== null && remainingTime > 0 ? (
+                <div className="mt-6 bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-xl shadow-xl shadow-blue-100 animate-in zoom-in-50">
+                   약 {Math.ceil(remainingTime)}초 남음
+                </div>
+            ) : (
+                <div className="mt-6 bg-slate-200 text-slate-500 px-8 py-3 rounded-2xl font-black text-xl animate-pulse">
+                   시간 계산 중...
+                </div>
             )}
-            <p className="mt-4 text-sm text-gray-500 text-center">
-              이 작업은 시간이 다소 소요될 수 있습니다. <br/>
-              페이지를 닫거나 다른 작업을 하셔도<br/>
-              백그라운드에서 계속 진행됩니다.
+            
+            <p className="mt-10 text-base text-gray-500 text-center font-bold leading-relaxed">
+              페이지를 닫거나 다른 작업을 하셔도 괜찮습니다. <br/>
+              정리가 끝나면 자동으로 사진들이 나타나요!
             </p>
           </div>
         </DialogContent>

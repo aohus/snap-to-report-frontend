@@ -212,7 +212,7 @@ export const api = {
   },
 
   uploadPhotos: async (jobId: string, files: File[]): Promise<void> => {
-    const UPLOAD_CONCURRENCY = 30; 
+    const UPLOAD_CONCURRENCY = 15; // 안정적인 네트워크 처리를 위해 조정
     const COMPRESSION_CONCURRENCY = 8;
     const URL_BATCH_SIZE = 50; 
     const NOTIFY_BATCH_SIZE = 20;
@@ -223,16 +223,17 @@ export const api = {
     }
     store.setUploading(true);
 
-    // addFiles 이후 최신 큐 상태를 다시 가져옵니다.
-    const currentQueue = useUploadStore.getState().queue;
-    const items = currentQueue.filter(item => item.status === 'pending').map(item => ({
-      id: item.id,
-      file: item.file,
-      compressedFile: item.file,
-      urlInfo: null as any
-    }));
+    const { items: currentItems, itemIds } = useUploadStore.getState();
+    const itemsToProcess = itemIds
+      .filter(id => currentItems[id].status === 'pending')
+      .map(id => ({
+        id,
+        file: currentItems[id].file,
+        compressedFile: currentItems[id].file,
+        urlInfo: null as any
+      }));
 
-    if (items.length === 0) {
+    if (itemsToProcess.length === 0) {
       store.setUploading(false);
       return;
     }
@@ -240,8 +241,8 @@ export const api = {
     // 1. Fetch URLs (Batched)
     const urlLimit = pLimit(5);
     const chunks = [];
-    for (let i = 0; i < items.length; i += URL_BATCH_SIZE) {
-      chunks.push(items.slice(i, i + URL_BATCH_SIZE));
+    for (let i = 0; i < itemsToProcess.length; i += URL_BATCH_SIZE) {
+      chunks.push(itemsToProcess.slice(i, i + URL_BATCH_SIZE));
     }
 
     await Promise.all(chunks.map(chunk => urlLimit(async () => {
@@ -250,7 +251,9 @@ export const api = {
           filename: item.file.name, 
           content_type: item.file.type 
         }));
+        
         const response = await api.getUploadUrls(jobId, fileInfos);
+        
         if (response && response.urls && response.urls.length === chunk.length) {
             chunk.forEach((item, i) => {
                 item.urlInfo = response.urls[i];
@@ -281,34 +284,41 @@ export const api = {
         });
     };
 
-    await Promise.all(items.map(async (item) => {
+    await Promise.all(itemsToProcess.map(async (item) => {
         if (!item.urlInfo) {
           store.updateItem(item.id, { status: 'failed', error: 'Failed to get upload URL' });
           return;
         }
 
-        try {
-            // A. Compress
-            if (isJPEGFile(item.file)) {
-                store.updateItem(item.id, { status: 'compressing' });
-                await compressionLimit(async () => {
-                    try {
-                        item.compressedFile = await compressImage(item.file);
-                    } catch (e) {
-                        console.warn(`Compression failed for ${item.file.name}, using original.`);
-                    }
-                });
-            }
+        // A. Compress (Parallel)
+        if (isJPEGFile(item.file)) {
+            store.updateItem(item.id, { status: 'compressing' });
+            await compressionLimit(async () => {
+                try {
+                    item.compressedFile = await compressImage(item.file);
+                } catch (e) {
+                    console.warn(`Compression failed for ${item.file.name}, using original.`);
+                }
+            });
+        }
 
-            // B. Upload
+        // B. Upload (Parallel)
+        return uploadLimit(async () => {
             store.updateItem(item.id, { status: 'uploading' });
-            await uploadLimit(async () => {
-                const { upload_url, filename, storage_path } = item.urlInfo;
-                
-                const onProgress = (p: number) => {
+            const { upload_url, filename, storage_path } = item.urlInfo;
+            
+            // Throttled Progress Update
+            let lastUpdate = 0;
+            const onProgress = (p: number) => {
+                const now = Date.now();
+                // 200ms 마다 또는 100%일 때만 업데이트하여 렌더링 부하 방지
+                if (now - lastUpdate > 200 || p === 100) {
                     store.updateItem(item.id, { progress: p });
-                };
+                    lastUpdate = now;
+                }
+            };
 
+            try {
                 if (upload_url) {
                     await uploadViaPresigned(item.compressedFile, upload_url, onProgress);
                 } else {
@@ -317,7 +327,6 @@ export const api = {
 
                 store.updateItem(item.id, { status: 'completed', progress: 100 });
 
-                // C. Queue Notification
                 await notifyLimit(async () => {
                     pendingNotifications.push({ filename, storage_path });
                 });
@@ -325,11 +334,11 @@ export const api = {
                 if (pendingNotifications.length >= NOTIFY_BATCH_SIZE) {
                     flushNotifications();
                 }
-            });
-        } catch (e) {
-            console.error(`Upload failed for ${item.file.name}`, e);
-            store.updateItem(item.id, { status: 'failed', error: String(e) });
-        }
+            } catch (e) {
+                console.error(`Upload failed for ${item.file.name}`, e);
+                store.updateItem(item.id, { status: 'failed', error: String(e) });
+            }
+        });
     }));
 
     await flushNotifications();

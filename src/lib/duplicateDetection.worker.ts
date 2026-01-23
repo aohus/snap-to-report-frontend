@@ -44,7 +44,8 @@ async function performDetection(files: any[], onProgress: (c: number, t: number)
 
   // Union-Find grouping
   const uf = new UnionFind(total);
-  const THRESHOLD = 10;
+  // THRESHOLD 2: 거의 픽셀 단위로 일치하는 수준 (Hamming distance <= 2)
+  const THRESHOLD = 2; 
 
   for (let i = 0; i < fileData.length; i++) {
     for (let j = i + 1; j < fileData.length; j++) {
