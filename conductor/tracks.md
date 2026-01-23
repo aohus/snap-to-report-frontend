@@ -11,3 +11,5 @@ This file tracks all major tracks for the project. Each track has its own detail
 ---
 
 ## Active Tracks
+- [ ] **Track: 중복 사진 제거 성능 고도화**
+  Link: [./tracks/duplicate_detection_optimization_20260122/](./tracks/duplicate_detection_optimization_20260122/)
