@@ -212,16 +212,20 @@ export const api = {
   },
 
   uploadPhotos: async (jobId: string, files: File[]): Promise<void> => {
-    const store = useUploadStore.getState();
-    store.addFiles(files);
-    store.setUploading(true);
-
     const UPLOAD_CONCURRENCY = 30; 
     const COMPRESSION_CONCURRENCY = 8;
     const URL_BATCH_SIZE = 50; 
     const NOTIFY_BATCH_SIZE = 20;
 
-    const items = store.queue.filter(item => item.status === 'pending').map(item => ({
+    const store = useUploadStore.getState();
+    if (files.length > 0) {
+      store.addFiles(files);
+    }
+    store.setUploading(true);
+
+    // addFiles 이후 최신 큐 상태를 다시 가져옵니다.
+    const currentQueue = useUploadStore.getState().queue;
+    const items = currentQueue.filter(item => item.status === 'pending').map(item => ({
       id: item.id,
       file: item.file,
       compressedFile: item.file,

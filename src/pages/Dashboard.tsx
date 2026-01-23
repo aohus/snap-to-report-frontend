@@ -327,12 +327,8 @@ export default function Dashboard() {
   const handleUpload = async (files: File[]) => {
     if (!job) return;
     try {
-      await api.uploadPhotos(job.id, files);
-      
-      // 업로드 완료 후 데이터 새로고침 (백그라운드에서 진행되므로 필요 시 주기적 폴링이나 알림 시스템 고려)
-      const jobData = await api.getJobDetails(job.id);
-      setJob(jobData);
-      if (jobData.photos) setPhotos(jobData.photos);
+      // 큐에 추가하고 업로드 프로세스 시작
+      await api.uploadPhotos(job.id, Array.from(files));
       
       toast.success("사진 업로드를 시작했습니다.");
     } catch (error) {

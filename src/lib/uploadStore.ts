@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface UploadItem {
   id: string;
@@ -28,7 +29,7 @@ export const useUploadStore = create<UploadState>((set, get) => ({
 
   addFiles: (files) => {
     const newItems: UploadItem[] = files.map((file) => ({
-      id: crypto.randomUUID(),
+      id: uuidv4(),
       file,
       fileName: file.name,
       progress: 0,

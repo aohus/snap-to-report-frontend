@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface Folder {
   id: string;
@@ -26,7 +27,7 @@ export const useFolderStore = create<FolderState>((set) => ({
   selectFolder: (id) => set({ selectedFolderId: id }),
 
   addFolder: (name) => set((state) => ({
-    folders: [...state.folders, { id: crypto.randomUUID(), name, jobIds: [] }]
+    folders: [...state.folders, { id: uuidv4(), name, jobIds: [] }]
   })),
 
   updateFolder: (id, name) => set((state) => ({
