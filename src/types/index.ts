@@ -1,6 +1,7 @@
 export interface Job {
   id: string;
   title: string;
+  site_id?: string | null; // Added site_id
   construction_type?: string;
   company_name?: string;
   work_date?: string;
@@ -9,6 +10,15 @@ export interface Job {
   export_status?: 'PROCESSING' | 'EXPORTED' | 'FAILED' | 'PENDING' ;
   created_at: string;
   updated_at?: string;
+}
+
+export interface Site {
+  id: string;
+  name: string;
+  description?: string;
+  jobs: Job[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface Photo {

@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { api } from '@/lib/api';
 import { AuthService } from '@/lib/auth';
-import { Job } from '@/types';
+import { Job, Site } from '@/types';
 import { 
   Plus, Loader2, LayoutGrid, Calendar, LogOut, FileDown, 
   Pencil, Building2, Hammer, MoreVertical, Trash2, 
@@ -13,7 +13,6 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { useFolderStore } from '@/lib/folderStore';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -52,15 +51,16 @@ import {
 export default function JobList() {
   const navigate = useNavigate();
   const [jobs, setJobs] = useState<Job[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [sortField, setSortField] = useState<'title' | 'created_at' | 'work_date'>('created_at');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Folder Store 연동
-  const { folders, selectedFolderId, selectFolder, addFolder, moveJobToFolder, deleteFolder, updateFolder } = useFolderStore();
-  const [newFolderName, setNewFolderName] = useState('');
-  const [isAddingFolder, setIsAddingFolder] = useState(false);
+  // Site Management State
+  const [selectedSiteId, setSelectedSiteId] = useState<string | 'unclassified' | null>(null);
+  const [newSiteName, setNewSiteName] = useState('');
+  const [isAddingSite, setIsAddingSite] = useState(false);
 
   // Create Job State
   const [createJobDialogOpen, setCreateJobDialogOpen] = useState(false);
@@ -83,15 +83,19 @@ export default function JobList() {
   const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
 
   useEffect(() => {
-    loadJobs();
+    loadData();
   }, []);
 
-  const loadJobs = async () => {
+  const loadData = async () => {
     try {
-      const data = await api.getJobs();
-      setJobs(data);
+      const [jobsData, sitesData] = await Promise.all([
+        api.getJobs(),
+        api.getSites()
+      ]);
+      setJobs(jobsData);
+      setSites(sitesData);
     } catch (error) {
-      toast.error('Failed to load jobs');
+      toast.error('Failed to load data');
     } finally {
       setLoading(false);
     }
@@ -119,7 +123,7 @@ export default function JobList() {
       });
       toast.success('Job updated successfully');
       setEditingJob(null);
-      loadJobs();
+      loadData();
     } catch (error) {
       toast.error('Failed to update job');
     }
@@ -139,10 +143,14 @@ export default function JobList() {
     setCreating(true);
     try {
         const titleToUse = createForm.title.trim() || `작업 ${jobs.length + 1}`;
+        // Automatically assign to selected site if it's a specific site (not null or unclassified)
+        const siteIdToUse = (selectedSiteId && selectedSiteId !== 'unclassified') ? selectedSiteId : undefined;
+
         const newJob = await api.createJob(
             titleToUse, 
             createForm.construction_type, 
-            createForm.company_name
+            createForm.company_name,
+            siteIdToUse
         );
         if (createForm.work_date) {
             await api.updateJob(newJob.id, { work_date: createForm.work_date });
@@ -164,7 +172,7 @@ export default function JobList() {
     } catch (error) {
       toast.error('Failed to delete job');
     } finally {
-      loadJobs();
+      loadData();
     }
   };
 
@@ -187,16 +195,82 @@ export default function JobList() {
     }
   };
 
-  const handleAddFolder = () => {
-    if (newFolderName.trim()) {
-      addFolder(newFolderName.trim());
-      setNewFolderName('');
-      setIsAddingFolder(false);
-      toast.success('새 폴더가 생성되었습니다.');
+  const handleAddSite = async () => {
+    if (newSiteName.trim()) {
+      try {
+        await api.createSite(newSiteName.trim());
+        setNewSiteName('');
+        setIsAddingSite(false);
+        toast.success('새 현장이 생성되었습니다.');
+        loadData();
+      } catch (e) {
+        toast.error('현장 생성 실패');
+      }
     }
   };
 
-  const sortedJobs = [...jobs].sort((a, b) => {
+  const handleUpdateSite = async (siteId: string, currentName: string) => {
+    const newName = prompt('현장 이름을 수정하세요', currentName);
+    if (newName && newName !== currentName) {
+      try {
+        await api.updateSite(siteId, { name: newName });
+        toast.success('현장 이름이 수정되었습니다.');
+        loadData();
+      } catch (e) {
+        toast.error('현장 수정 실패');
+      }
+    }
+  };
+
+  const handleDeleteSite = async (siteId: string) => {
+    if (confirm('현장을 삭제하시겠습니까? (작업은 삭제되지 않고 미분류로 이동됩니다)')) {
+      try {
+        await api.deleteSite(siteId);
+        if (selectedSiteId === siteId) setSelectedSiteId(null);
+        toast.success('현장이 삭제되었습니다.');
+        loadData();
+      } catch (e) {
+        toast.error('현장 삭제 실패');
+      }
+    }
+  };
+
+  const handleMoveJob = async (jobId: string, targetSiteId: string | null) => {
+    try {
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) return;
+
+      // Same location check
+      if (job.site_id === targetSiteId || (job.site_id === null && targetSiteId === null)) return;
+
+      if (targetSiteId) {
+        // Move to a specific site
+        await api.addJobsToSite(targetSiteId, [jobId]);
+      } else {
+        // Remove from current site (move to unclassified)
+        if (job.site_id) {
+            await api.removeJobFromSite(job.site_id, jobId);
+        }
+      }
+      toast.success('작업이 이동되었습니다.');
+      loadData();
+    } catch (e) {
+      toast.error('작업 이동 실패');
+    }
+  };
+
+  const getTargetJobs = () => {
+    if (selectedSiteId === null) {
+      return jobs;
+    }
+    if (selectedSiteId === 'unclassified') {
+      return jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id));
+    }
+    const site = sites.find(s => s.id === selectedSiteId);
+    return site?.jobs || [];
+  };
+
+  const filteredJobs = getTargetJobs().sort((a, b) => {
     let compareResult: number;
     if (sortField === 'title') {
       compareResult = a.title.localeCompare(b.title);
@@ -210,12 +284,6 @@ export default function JobList() {
       compareResult = 0;
     }
     return sortOrder === 'asc' ? compareResult : -compareResult;
-  });
-
-  const filteredJobs = sortedJobs.filter(job => {
-    if (selectedFolderId === null) return true;
-    const folder = folders.find(f => f.id === selectedFolderId);
-    return folder ? folder.jobIds.includes(job.id) : true;
   });
 
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-blue-600" /></div>;
@@ -248,35 +316,54 @@ export default function JobList() {
               <FolderIcon className="w-5 h-5 text-blue-600" />
               현장별 폴더
             </h2>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => setIsAddingFolder(true)}>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-blue-600" onClick={() => setIsAddingSite(true)}>
               <FolderPlus className="w-5 h-5" />
             </Button>
           </div>
 
           <div className="space-y-2">
             <Button
-              variant={selectedFolderId === null ? "default" : "ghost"}
+              variant={selectedSiteId === null ? "default" : "ghost"}
               className={cn(
                 "w-full justify-start text-lg font-bold h-12 rounded-xl",
-                selectedFolderId === null ? "bg-blue-600 shadow-md text-white" : "text-gray-600"
+                selectedSiteId === null ? "bg-blue-600 shadow-md text-white" : "text-gray-600"
               )}
-              onClick={() => selectFolder(null)}
+              onClick={() => setSelectedSiteId(null)}
             >
               전체 보기
             </Button>
 
-            {folders.map((folder) => (
-              <div key={folder.id} className="group relative">
+            <Button
+              variant={selectedSiteId === 'unclassified' ? "default" : "ghost"}
+              className={cn(
+                "w-full justify-start text-lg font-bold h-12 rounded-xl",
+                selectedSiteId === 'unclassified' ? "bg-blue-600 shadow-md text-white" : "text-gray-600"
+              )}
+              onClick={() => setSelectedSiteId('unclassified')}
+            >
+              <span className="truncate">미분류 작업</span>
+              <span className="ml-auto text-xs opacity-60 font-medium">
+                {jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id)).length}
+              </span>
+            </Button>
+
+            <div className="my-2 border-t border-gray-100"></div>
+
+            {sites.map((site) => (
+              <div key={site.id} className="group relative">
                 <Button
-                  variant={selectedFolderId === folder.id ? "default" : "ghost"}
+                  variant={selectedSiteId === site.id ? "default" : "ghost"}
                   className={cn(
                     "w-full justify-start text-lg font-bold h-12 rounded-xl pr-10",
-                    selectedFolderId === folder.id ? "bg-blue-600 shadow-md text-white" : "text-gray-600"
+                    selectedSiteId === site.id ? "bg-blue-600 shadow-md text-white" : "text-gray-600"
                   )}
-                  onClick={() => selectFolder(folder.id)}
+                  onClick={() => setSelectedSiteId(site.id)}
                 >
-                  <span className="truncate">{folder.name}</span>
-                  <span className="ml-auto text-xs opacity-60 font-medium">{folder.jobIds.length}</span>
+                  <span className="truncate">{site.name}</span>
+                  {/* We can show count from sites data if reliable, or filter jobs */}
+                  <span className="ml-auto text-xs opacity-60 font-medium">
+                    {site.jobs ? site.jobs.length : jobs.filter(j => j.site_id === site.id).length}
+                  </span>
                 </Button>
                 
                 <DropdownMenu>
@@ -286,31 +373,26 @@ export default function JobList() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    <DropdownMenuItem onClick={() => {
-                        const newName = prompt('폴더 이름을 수정하세요', folder.name);
-                        if(newName) updateFolder(folder.id, newName);
-                    }}>이름 수정</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600" onClick={() => {
-                        if(confirm('폴더를 삭제하시겠습니까? (작업은 삭제되지 않습니다)')) deleteFolder(folder.id);
-                    }}>삭제</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => handleUpdateSite(site.id, site.name)}>이름 수정</DropdownMenuItem>
+                    <DropdownMenuItem className="text-red-600" onClick={() => handleDeleteSite(site.id)}>삭제</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
             ))}
 
-            {isAddingFolder && (
+            {isAddingSite && (
               <div className="pt-2 space-y-2">
                 <Input
                   autoFocus
                   placeholder="현장명 입력"
                   className="h-10"
-                  value={newFolderName}
-                  onChange={(e) => setNewFolderName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddFolder()}
+                  value={newSiteName}
+                  onChange={(e) => setNewSiteName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSite()}
                 />
                 <div className="flex gap-2">
-                  <Button className="flex-1 h-9 bg-blue-600 text-white" onClick={handleAddFolder}>추가</Button>
-                  <Button variant="outline" className="flex-1 h-9" onClick={() => setIsAddingFolder(false)}>취소</Button>
+                  <Button className="flex-1 h-9 bg-blue-600 text-white" onClick={handleAddSite}>추가</Button>
+                  <Button variant="outline" className="flex-1 h-9" onClick={() => setIsAddingSite(false)}>취소</Button>
                 </div>
               </div>
             )}
@@ -335,7 +417,7 @@ export default function JobList() {
           <section>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-black text-gray-900 flex items-center gap-3">
-                {selectedFolderId ? folders.find(f => f.id === selectedFolderId)?.name : "전체 목록"}
+                {selectedSiteId === null ? "전체 목록" : selectedSiteId === 'unclassified' ? "미분류 작업" : sites.find(s => s.id === selectedSiteId)?.name}
                 <span className="text-sm font-medium text-blue-600 bg-blue-50 px-2 py-0.5 rounded-full">
                   {filteredJobs.length}건
                 </span>
@@ -425,16 +507,16 @@ export default function JobList() {
                           <DropdownMenuSeparator />
                           <DropdownMenu>
                             <DropdownMenuTrigger className="flex w-full items-center px-2 py-1.5 text-sm outline-none hover:bg-slate-100">
-                              <MoveRight className="w-4 h-4 mr-2" /> 폴더로 이동
+                              <MoveRight className="w-4 h-4 mr-2" /> 현장으로 이동
                               <ChevronRight className="ml-auto w-4 h-4" />
                             </DropdownMenuTrigger>
                             <DropdownMenuContent side="left" className="w-48">
-                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); moveJobToFolder(job.id, null); }}>
-                                (폴더 없음)
+                              <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleMoveJob(job.id, null); }}>
+                                (미분류)
                               </DropdownMenuItem>
-                              {folders.map(f => (
-                                <DropdownMenuItem key={f.id} onClick={(e) => { e.stopPropagation(); moveJobToFolder(job.id, f.id); }}>
-                                  {f.name}
+                              {sites.map(s => (
+                                <DropdownMenuItem key={s.id} onClick={(e) => { e.stopPropagation(); handleMoveJob(job.id, s.id); }}>
+                                  {s.name}
                                 </DropdownMenuItem>
                               ))}
                             </DropdownMenuContent>

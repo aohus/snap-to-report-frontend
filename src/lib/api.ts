@@ -1,4 +1,4 @@
-import { Job, Cluster, Member, ExportStatus, Photo, FileResponse, JobStatusResponse, Plan, Subscription } from '@/types';
+import { Job, Cluster, Member, ExportStatus, Photo, FileResponse, JobStatusResponse, Plan, Subscription, Site } from '@/types';
 import { AuthService } from './auth';
 import { compressImage, isJPEGFile } from './image'; // Import isJPEGFile
 import { uploadViaResumable, uploadViaPresigned, uploadViaServer } from '@/lib/uploadStrategies';
@@ -64,6 +64,57 @@ async function handleResponse<T>(response: Response): Promise<T> {
 }
 
 export const api = {
+  // Site Management
+  getSites: async (): Promise<Site[]> => {
+    const response = await fetch(`${API_BASE_URL}/sites`, {
+      headers: authJsonHeaders(),
+    });
+    return handleResponse<Site[]>(response);
+  },
+
+  createSite: async (name: string, description?: string): Promise<Site> => {
+    const response = await fetch(`${API_BASE_URL}/sites`, {
+      method: 'POST',
+      headers: authJsonHeaders(),
+      body: JSON.stringify({ name, description }),
+    });
+    return handleResponse<Site>(response);
+  },
+
+  updateSite: async (siteId: string, data: { name?: string; description?: string }): Promise<Site> => {
+    const response = await fetch(`${API_BASE_URL}/sites/${siteId}`, {
+      method: 'PATCH',
+      headers: authJsonHeaders(),
+      body: JSON.stringify(data),
+    });
+    return handleResponse<Site>(response);
+  },
+
+  deleteSite: async (siteId: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/sites/${siteId}`, {
+      method: 'DELETE',
+      headers: authJsonHeaders(),
+    });
+    return handleResponse<void>(response);
+  },
+
+  addJobsToSite: async (siteId: string, jobIds: string[]): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/sites/${siteId}/jobs`, {
+      method: 'POST',
+      headers: authJsonHeaders(),
+      body: JSON.stringify({ job_ids: jobIds }),
+    });
+    return handleResponse<void>(response);
+  },
+
+  removeJobFromSite: async (siteId: string, jobId: string): Promise<void> => {
+    const response = await fetch(`${API_BASE_URL}/sites/${siteId}/jobs/${jobId}`, {
+      method: 'DELETE',
+      headers: authJsonHeaders(),
+    });
+    return handleResponse<void>(response);
+  },
+
   // Job Management
   getJobs: async (): Promise<Job[]> => {
     const response = await fetch(`${API_BASE_URL}/jobs`, {
@@ -72,10 +123,11 @@ export const api = {
     return handleResponse<Job[]>(response);
   },
 
-  createJob: async (title: string, construction_type?: string, company_name?: string): Promise<Job> => {
-    const body: { title: string; construction_type?: string; company_name?: string; } = { title };
+  createJob: async (title: string, construction_type?: string, company_name?: string, site_id?: string): Promise<Job> => {
+    const body: { title: string; construction_type?: string; company_name?: string; site_id?: string } = { title };
     if (construction_type) body.construction_type = construction_type;
     if (company_name) body.company_name = company_name;
+    if (site_id) body.site_id = site_id;
 
     const response = await fetch(`${API_BASE_URL}/jobs`, {
       method: 'POST',
