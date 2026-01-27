@@ -1,8 +1,0 @@
-{
-  "track_id": "duplicate_detection_optimization_20260122",
-  "type": "feature",
-  "status": "new",
-  "created_at": "2026-01-23T02:42:14Z",
-  "updated_at": "2026-01-23T02:42:14Z",
-  "description": "중복 사진 제거 성능 고도화"
-}
