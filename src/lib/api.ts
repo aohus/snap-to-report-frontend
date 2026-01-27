@@ -264,9 +264,10 @@ export const api = {
   },
 
   uploadPhotos: async (jobId: string, files: File[]): Promise<void> => {
-    const UPLOAD_CONCURRENCY = 15; // 안정적인 네트워크 처리를 위해 조정
-    const COMPRESSION_CONCURRENCY = 8;
-    const URL_BATCH_SIZE = 50; 
+    // Performance Tuning
+    const UPLOAD_CONCURRENCY = 6;    // Browser connection limit per domain is usually 6.
+    const COMPRESSION_CONCURRENCY = 4; // Balanced for typical 4-8 core CPUs.
+    const URL_BATCH_SIZE = 50;       // Batch size for getting URLs (metadata).
     const NOTIFY_BATCH_SIZE = 20;
 
     const store = useUploadStore.getState();
@@ -282,7 +283,7 @@ export const api = {
         id,
         file: currentItems[id].file,
         compressedFile: currentItems[id].file,
-        urlInfo: null as any
+        originalName: currentItems[id].file.name, // Key for mapping
       }));
 
     if (itemsToProcess.length === 0) {
@@ -290,37 +291,49 @@ export const api = {
       return;
     }
 
-    // 1. Fetch URLs (Batched)
-    const urlLimit = pLimit(5);
-    const chunks = [];
+    // --- Phase 1: Prefetch All Upload URLs (Parallel) ---
+    // We fetch all URLs upfront so uploads are never blocked by API calls.
+    const urlMap = new Map<string, { upload_url: string | null; filename: string; storage_path: string }>();
+    const urlBatches = [];
+
+    // Create batches for API requests
     for (let i = 0; i < itemsToProcess.length; i += URL_BATCH_SIZE) {
-      chunks.push(itemsToProcess.slice(i, i + URL_BATCH_SIZE));
+      urlBatches.push(itemsToProcess.slice(i, i + URL_BATCH_SIZE));
     }
 
-    await Promise.all(chunks.map(chunk => urlLimit(async () => {
-      try {
-        const fileInfos = chunk.map(item => ({ 
-          filename: item.file.name, 
-          content_type: item.file.type 
-        }));
-        
-        const response = await api.getUploadUrls(jobId, fileInfos);
-        
-        if (response && response.urls && response.urls.length === chunk.length) {
-            chunk.forEach((item, i) => {
-                item.urlInfo = response.urls[i];
-            });
-        }
-      } catch (e) {
-        console.error("Failed to fetch upload URLs for batch", e);
-      }
-    })));
+    // Limit concurrent API calls to avoid flooding (metadata requests are small but numerous)
+    const urlFetchLimit = pLimit(5); 
 
-    // 2. Pipeline Execution
+    try {
+        await Promise.all(urlBatches.map(batch => urlFetchLimit(async () => {
+            const fileInfos = batch.map(item => ({ 
+                filename: item.file.name, 
+                content_type: item.file.type 
+            }));
+            
+            const response = await api.getUploadUrls(jobId, fileInfos);
+            if (response && response.urls) {
+                response.urls.forEach(info => {
+                    // Map by original filename to match back to items
+                    // Note: If duplicate filenames exist in different batches, this simple map works 
+                    // provided the batching order implies uniqueness or we use a more robust ID system.
+                    // For now, assuming filename uniqueness or consistent ordering.
+                    urlMap.set(info.filename, info);
+                });
+            }
+        })));
+    } catch (e) {
+        console.error("Failed to fetch upload URLs", e);
+        itemsToProcess.forEach(item => store.updateItem(item.id, { status: 'failed', error: 'Failed to initialize upload' }));
+        store.setUploading(false);
+        return;
+    }
+
+    // --- Phase 2: Pipeline Execution (Compress -> Upload) ---
     const uploadLimit = pLimit(UPLOAD_CONCURRENCY);
     const compressionLimit = pLimit(COMPRESSION_CONCURRENCY);
     const notifyLimit = pLimit(1);
-    
+
     let pendingNotifications: { filename: string; storage_path: string }[] = [];
 
     const flushNotifications = async () => {
@@ -336,13 +349,14 @@ export const api = {
         });
     };
 
-    await Promise.all(itemsToProcess.map(async (item) => {
-        if (!item.urlInfo) {
-          store.updateItem(item.id, { status: 'failed', error: 'Failed to get upload URL' });
-          return;
+    const processItem = async (item: typeof itemsToProcess[0]) => {
+        const urlInfo = urlMap.get(item.originalName);
+        if (!urlInfo) {
+             store.updateItem(item.id, { status: 'failed', error: 'Missing upload URL' });
+             return;
         }
 
-        // A. Compress (Parallel)
+        // A. Compress
         if (isJPEGFile(item.file)) {
             store.updateItem(item.id, { status: 'compressing' });
             await compressionLimit(async () => {
@@ -354,45 +368,48 @@ export const api = {
             });
         }
 
-        // B. Upload (Parallel)
-        return uploadLimit(async () => {
-            store.updateItem(item.id, { status: 'uploading' });
-            const { upload_url, filename, storage_path } = item.urlInfo;
-            
-            // Throttled Progress Update
-            let lastUpdate = 0;
-            const onProgress = (p: number) => {
-                const now = Date.now();
-                // 200ms 마다 또는 100%일 때만 업데이트하여 렌더링 부하 방지
-                if (now - lastUpdate > 200 || p === 100) {
-                    store.updateItem(item.id, { progress: p });
-                    lastUpdate = now;
-                }
-            };
-
-            try {
-                if (upload_url) {
-                    await uploadViaPresigned(item.compressedFile, upload_url, onProgress);
-                } else {
-                    await uploadViaServer(jobId, item.compressedFile, filename, onProgress);
-                }
-
-                store.updateItem(item.id, { status: 'completed', progress: 100 });
-
-                await notifyLimit(async () => {
-                    pendingNotifications.push({ filename, storage_path });
-                });
-                
-                if (pendingNotifications.length >= NOTIFY_BATCH_SIZE) {
-                    flushNotifications();
-                }
-            } catch (e) {
-                console.error(`Upload failed for ${item.file.name}`, e);
-                store.updateItem(item.id, { status: 'failed', error: String(e) });
+        // B. Upload
+        store.updateItem(item.id, { status: 'uploading' });
+        const { upload_url, filename, storage_path } = urlInfo;
+        
+        let lastUpdate = 0;
+        const onProgress = (p: number) => {
+            const now = Date.now();
+            if (now - lastUpdate > 200 || p === 100) {
+                store.updateItem(item.id, { progress: p });
+                lastUpdate = now;
             }
-        });
-    }));
+        };
 
+        try {
+            if (upload_url) {
+                await uploadViaPresigned(item.compressedFile, upload_url, onProgress);
+            } else {
+                await uploadViaServer(jobId, item.compressedFile, filename, onProgress);
+            }
+
+            store.updateItem(item.id, { status: 'completed', progress: 100 });
+
+            // Queue for notification
+            await notifyLimit(async () => {
+                pendingNotifications.push({ filename, storage_path });
+                if (pendingNotifications.length >= NOTIFY_BATCH_SIZE) {
+                    // Don't await flush here to avoid blocking the upload thread excessively
+                    // Just trigger it. The notifyLimit ensures serial execution.
+                    flushNotifications(); 
+                }
+            });
+
+        } catch (e) {
+            console.error(`Upload failed for ${item.file.name}`, e);
+            store.updateItem(item.id, { status: 'failed', error: String(e) });
+        }
+    };
+
+    // Execute all items through the limiter
+    await Promise.all(itemsToProcess.map(item => uploadLimit(() => processItem(item))));
+
+    // Final flush
     await flushNotifications();
     store.setUploading(false);
   },
