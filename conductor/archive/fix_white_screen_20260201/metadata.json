@@ -1,0 +1,8 @@
+{
+  "track_id": "fix_white_screen_20260201",
+  "type": "bug",
+  "status": "new",
+  "created_at": "2026-02-01T00:00:00Z",
+  "updated_at": "2026-02-01T00:00:00Z",
+  "description": "job 생성 직후, photo upload 완료된 직후, details 안불러져서 흰 화면만 나오는 버그 수정"
+}
