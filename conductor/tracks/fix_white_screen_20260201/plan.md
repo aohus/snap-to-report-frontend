@@ -10,11 +10,11 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 1: 조사 및 재현 테스트 작성' (Protocol in workflow.md) [checkpoint: 1520e08]
 
 ## Phase 2: 데이터 동기화 및 로딩 로직 수정 (Implementation)
-- [ ] Task: Job 생성 성공 시 `queryClient.invalidateQueries` 호출 보장 및 데이터 동기화 최적화
-- [ ] Task: 사진 업로드 완료 콜백에서 Job 상세 정보를 즉시 갱신하도록 수정
-- [ ] Task: `JobEditor` 컴포넌트에 로딩 상태(Skeleton 또는 Spinner) 및 데이터 부재 시 예외 처리 추가
-- [ ] Task: (Green Phase) 작성한 테스트가 통과하도록 코드 수정 및 리팩토링
-- [ ] Task: Conductor - User Manual Verification 'Phase 2: 데이터 동기화 및 로딩 로직 수정' (Protocol in workflow.md)
+- [x] Task: Job 생성 성공 시 `queryClient.invalidateQueries` 호출 보장 및 데이터 동기화 최적화
+- [x] Task: 사진 업로드 완료 콜백에서 Job 상세 정보를 즉시 갱신하도록 수정
+- [x] Task: `JobEditor` 컴포넌트에 로딩 상태(Skeleton 또는 Spinner) 및 데이터 부재 시 예외 처리 추가
+- [x] Task: (Green Phase) 작성한 테스트가 통과하도록 코드 수정 및 리팩토링
+- [x] Task: Conductor - User Manual Verification 'Phase 2: 데이터 동기화 및 로딩 로직 수정' (Protocol in workflow.md) [checkpoint: edff40c]
 
 ## Phase 3: 최종 검증 및 문서화 (Verification & Documentation)
 - [ ] Task: 전체 테스트 모음(Test Suite) 실행 및 커버리지 확인
