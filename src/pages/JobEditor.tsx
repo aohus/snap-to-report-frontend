@@ -15,7 +15,7 @@ import { api } from '@/lib/api';
 import { Job, Cluster } from '@/types';
 import { 
     Loader2, ArrowLeft, Save, FileDown, Plus, X, 
-    Calendar as CalendarIcon, MapPin, CheckSquare, Square, Trash2 
+    Calendar as CalendarIcon, MapPin, CheckSquare, Square, Trash2, RefreshCw 
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
@@ -34,6 +34,7 @@ export default function JobEditor() {
   const [job, setJob] = useState<Job | null>(null);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Selection & Batch State
@@ -63,8 +64,10 @@ export default function JobEditor() {
 
   const loadJobData = async () => {
     setLoading(true);
+    setError(null);
     try {
       const data = await api.getJobDetails(jobId!);
+      if (!data) throw new Error("데이터를 불러올 수 없습니다.");
       setJob(data);
       if (data.clusters) {
         const sorted = data.clusters
@@ -92,6 +95,7 @@ export default function JobEditor() {
       }
     } catch (error) {
       console.error("Failed to load job data", error);
+      setError("데이터를 불러오지 못했습니다.");
       toast.error("데이터를 불러오지 못했습니다.");
     } finally {
       setLoading(false);
@@ -365,6 +369,22 @@ export default function JobEditor() {
   };
 
   if (loading) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-12 h-12 animate-spin text-blue-600" /></div>;
+  
+  if (error) {
+    return (
+        <div className="h-screen flex flex-col items-center justify-center gap-6 bg-gray-50">
+            <div className="text-center space-y-2">
+                <p className="text-xl font-bold text-gray-800">{error}</p>
+                <p className="text-gray-500">네트워크 상태를 확인하거나 잠시 후 다시 시도해주세요.</p>
+            </div>
+            <Button size="lg" onClick={() => window.location.reload()} className="bg-blue-600 hover:bg-blue-700">
+                <RefreshCw className="w-5 h-5 mr-2" />
+                다시 시도
+            </Button>
+        </div>
+    );
+  }
+
   const previewCluster = clusters.find(c => c.name !== 'reserve') || clusters[0];
   const previewPhotos = previewCluster?.photos || [];
 

@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   
   // Label Editing State
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
@@ -122,7 +123,9 @@ export default function Dashboard() {
 
     const fetchJobData = async () => {
       try {
+        setError(null);
         const data = await api.getJobDetails(jobId);
+        if (!data) throw new Error("데이터를 불러올 수 없습니다.");
         setJob(data);
         
         // Init edit form
@@ -146,6 +149,7 @@ export default function Dashboard() {
         if (data.photos) setPhotos(data.photos);
       } catch (error) {
         console.error("Failed to load job data", error);
+        setError("데이터를 불러오지 못했습니다.");
         toast.error("Failed to load job data");
       }
     };
@@ -335,15 +339,18 @@ export default function Dashboard() {
       
       // 3. 업로드 완료 후 서버에서 최신 데이터(사진 목록, 클러스터 등) 다시 불러오기
       const jobData = await api.getJobDetails(job.id);
-      setJob(jobData);
       
-      if (jobData.clusters) {
-        const sorted = jobData.clusters
-           .sort((a, b) => a.order_index - b.order_index)
-           .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
-        setClusters(sorted);
+      if (jobData) {
+        setJob(jobData);
+        
+        if (jobData.clusters) {
+          const sorted = jobData.clusters
+            .sort((a, b) => a.order_index - b.order_index)
+            .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
+          setClusters(sorted);
+        }
+        if (jobData.photos) setPhotos(jobData.photos);
       }
-      if (jobData.photos) setPhotos(jobData.photos);
       
       // 4. 최종 완료 알림
       toast.success("사진 전송을 모두 마쳤습니다.");
@@ -791,10 +798,24 @@ export default function Dashboard() {
 
   // Prepare preview data
   const previewCluster = clusters.find(c => c.name !== 'reserve') || clusters[0];
-  const previewPhotos = previewCluster?.photos || [];
-
-  if (!job) return <div className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin" /></div>;
-
+    const previewPhotos = previewCluster?.photos || [];
+  
+    if (error) {
+      return (
+          <div className="h-screen flex flex-col items-center justify-center gap-6 bg-gray-50">
+              <div className="text-center space-y-2">
+                  <p className="text-xl font-bold text-gray-800">{error}</p>
+                  <p className="text-gray-500">네트워크 상태를 확인하거나 잠시 후 다시 시도해주세요.</p>
+              </div>
+              <Button size="lg" onClick={() => window.location.reload()} className="bg-blue-600 hover:bg-blue-700">
+                  <RefreshCw className="w-5 h-5 mr-2" />
+                  다시 시도
+              </Button>
+          </div>
+      );
+    }
+  
+    if (!job) return <div data-testid="loader" className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
   return (
     <div className="h-screen bg-gray-100 flex flex-col font-sans overflow-hidden">
       {/* Header */}

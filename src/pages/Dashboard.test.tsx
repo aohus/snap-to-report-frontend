@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import Dashboard from './Dashboard';
 import { api } from '@/lib/api';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -34,14 +34,14 @@ vi.mock('sonner', () => ({
   }
 }));
 
-describe('Dashboard Component - White Screen Reproduction', () => {
+describe('Dashboard Component - Error Handling (Fixed)', () => {
   const jobId = 'job-123';
 
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('Scenario 1: Infinite Loading when getJobDetails fails (Job Creation)', async () => {
+  it('Scenario 1: Shows Error UI when getJobDetails fails (Job Creation)', async () => {
     // Simulate API failure (e.g. 500 error or network error)
     (api.getJobDetails as any).mockRejectedValue(new Error('Network Error'));
 
@@ -53,24 +53,23 @@ describe('Dashboard Component - White Screen Reproduction', () => {
       </MemoryRouter>
     );
 
-    // Initial state: Loader should be present
+    // Initial state: Loader
     expect(screen.getByTestId('loader')).toBeInTheDocument();
 
-    // Wait for the async effect to finish (and fail)
+    // Wait for the async effect to finish
     await waitFor(() => {
       expect(api.getJobDetails).toHaveBeenCalledWith(jobId);
     });
 
-    // AFTER failure, checks if the Loader is STILL there (Infinite Spinner = White Screen)
-    // Since job is null, and error is caught but not handled to change state,
-    // the component keeps rendering the Loader.
-    expect(screen.getByTestId('loader')).toBeInTheDocument();
-    
-    // Verify toast was shown (optional, confirming catch block execution)
-    // expect(require('sonner').toast.error).toHaveBeenCalledWith('Failed to load job data');
+    // NOW: Loader should disappear, Error UI should appear
+    await waitFor(() => {
+        expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
+        expect(screen.getByText('데이터를 불러오지 못했습니다.')).toBeInTheDocument();
+        expect(screen.getByText('다시 시도')).toBeInTheDocument();
+    });
   });
 
-  it('Scenario 2: Infinite Loading when getJobDetails returns undefined (Upload Complete)', async () => {
+  it('Scenario 2: Shows Error UI when getJobDetails returns undefined (Upload Complete)', async () => {
       // Simulate API returning undefined (e.g. 204 No Content handled in api.ts)
       (api.getJobDetails as any).mockResolvedValue(undefined);
   
@@ -90,8 +89,11 @@ describe('Dashboard Component - White Screen Reproduction', () => {
         expect(api.getJobDetails).toHaveBeenCalledWith(jobId);
       });
   
-      // Since job is set to undefined, and the check is `if (!job) return <Loader />`,
-      // it should still show the loader.
-      expect(screen.getByTestId('loader')).toBeInTheDocument();
+      // NOW: Loader should disappear, Error UI should appear (because !data throws error in fetchJobData)
+      await waitFor(() => {
+        expect(screen.queryByTestId('loader')).not.toBeInTheDocument();
+        expect(screen.getByText('데이터를 불러오지 못했습니다.')).toBeInTheDocument();
+        expect(screen.getByText('다시 시도')).toBeInTheDocument();
+      });
     });
 });
