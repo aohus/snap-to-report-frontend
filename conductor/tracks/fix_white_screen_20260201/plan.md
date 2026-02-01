@@ -17,7 +17,7 @@
 - [x] Task: Conductor - User Manual Verification 'Phase 2: 데이터 동기화 및 로딩 로직 수정' (Protocol in workflow.md) [checkpoint: edff40c]
 
 ## Phase 3: 최종 검증 및 문서화 (Verification & Documentation)
-- [ ] Task: 전체 테스트 모음(Test Suite) 실행 및 커버리지 확인
-- [ ] Task: Job 생성부터 업로드 완료, 분류 시작까지의 전체 흐름 수동 검증
-- [ ] Task: `conductor/docs/` 내에 구현 리포트 작성
-- [ ] Task: Conductor - User Manual Verification 'Phase 3: 최종 검증 및 문서화' (Protocol in workflow.md)
+- [x] Task: 전체 테스트 모음(Test Suite) 실행 및 커버리지 확인
+- [x] Task: Job 생성부터 업로드 완료, 분류 시작까지의 전체 흐름 수동 검증
+- [x] Task: `conductor/docs/` 내에 구현 리포트 작성
+- [x] Task: Conductor - User Manual Verification 'Phase 3: 최종 검증 및 문서화' (Protocol in workflow.md) [checkpoint: 9ea3b50]
