@@ -156,10 +156,17 @@ export default function JobList() {
             await api.updateJob(newJob.id, { work_date: createForm.work_date });
         }
         toast.success('Job created successfully');
-        navigate(`/jobs/${newJob.id}`);
+
+        // Fix: Close dialog and reset state BEFORE navigation to prevent 'InsertBefore' error on Edge
+        setCreateJobDialogOpen(false);
+        setCreating(false);
+
+        // Allow DOM to settle (dialog close animation) before navigating
+        setTimeout(() => {
+            navigate(`/jobs/${newJob.id}`);
+        }, 100);
     } catch (error) {
         toast.error('Failed to create job');
-    } finally {
         setCreating(false);
         setCreateJobDialogOpen(false);
     }
