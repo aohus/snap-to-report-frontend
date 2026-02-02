@@ -15,5 +15,5 @@
 - [x] Task: Conductor - User Manual Verification 'Implementation' (Protocol in workflow.md)
 
 ## Phase 3: Documentation
-- [ ] Task: 버그 원인 및 해결 방법 문서화 (`conductor/docs/fix_insert_before_error_20260202/report.md`)
-- [ ] Task: Conductor - User Manual Verification 'Documentation' (Protocol in workflow.md)
+- [x] Task: 버그 원인 및 해결 방법 문서화 (`conductor/docs/fix_insert_before_error_20260202/report.md`)
+- [x] Task: Conductor - User Manual Verification 'Documentation' (Protocol in workflow.md)
