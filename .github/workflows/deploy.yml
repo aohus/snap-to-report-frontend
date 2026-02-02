@@ -1,4 +1,4 @@
-name: Deploy to GCE
+name: Frontend Independent Deploy to GCE
 
 on:
   push:
@@ -24,7 +24,29 @@ jobs:
       - name: Configure Docker
         run: gcloud auth configure-docker asia-northeast3-docker.pkg.dev
 
-      - name: Build and Push Web
+      - name: Build and Push Frontend
         run: |
           docker build -t $GAR_REPO/s2r-web:latest .
           docker push $GAR_REPO/s2r-web:latest
+
+      # 3. 배포 실행 (SSH) - 백엔드 중단 없이 프론트엔드(web)만 업데이트
+      - name: Deploy to GCE
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.GCP_VM_HOST }}
+          username: ${{ secrets.GCP_VM_USERNAME }}
+          key: ${{ secrets.GCP_VM_SSH_KEY }}
+          script: |
+            # --- 1. Docker 인증 ---
+            echo '${{ secrets.GCS_SA_KEY_JSON }}' > /tmp/gcr-key.json
+            cat /tmp/gcr-key.json | docker login -u _json_key --password-stdin https://asia-northeast3-docker.pkg.dev
+            rm /tmp/gcr-key.json
+
+            cd snap-to-report
+
+            # --- 2. 프론트엔드 서비스(web)만 업데이트 ---
+            echo "Frontend Deployment started..."
+            docker compose -f docker-compose.prod.yml pull web
+            docker compose -f docker-compose.prod.yml up -d web
+            docker image prune -f
+            echo "Frontend Deployment finished successfully!"
