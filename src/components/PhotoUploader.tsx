@@ -26,8 +26,15 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
   const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
   const [showDuplicateDialog, setShowDuplicateDialog] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const isMounted = useRef(true);
   
   const { isUploading, items, itemIds, totalProgress } = useUploadStore();
+
+  useEffect(() => {
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   const processFiles = useCallback((files: File[]) => {
     const imageFiles = files.filter(file => file.type.startsWith('image/'));
@@ -111,8 +118,10 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
       setSelectedFiles([]);
       await onUpload(filesToUpload);
     } finally {
-      setIsCheckingDuplicates(false);
-      setDuplicateProgress(0);
+      if (isMounted.current) {
+        setIsCheckingDuplicates(false);
+        setDuplicateProgress(0);
+      }
     }
   };
 

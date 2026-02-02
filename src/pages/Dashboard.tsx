@@ -338,22 +338,24 @@ export default function Dashboard() {
       await api.uploadPhotos(job.id, Array.from(files));
       
       // 3. 업로드 완료 후 서버에서 최신 데이터(사진 목록, 클러스터 등) 다시 불러오기
-      const jobData = await api.getJobDetails(job.id);
-      
-      if (jobData) {
-        setJob(jobData);
-        
-        if (jobData.clusters) {
-          const sorted = jobData.clusters
-            .sort((a, b) => a.order_index - b.order_index)
-            .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
-          setClusters(sorted);
-        }
-        if (jobData.photos) setPhotos(jobData.photos);
-      }
-      
-      // 4. 최종 완료 알림
-      toast.success("사진 전송을 모두 마쳤습니다.");
+      // Fix: Use setTimeout to allow PhotoUploader to finish its cleanup before unmounting
+      setTimeout(async () => {
+          const jobData = await api.getJobDetails(job.id);
+          
+          if (jobData) {
+            setJob(jobData);
+            
+            if (jobData.clusters) {
+              const sorted = jobData.clusters
+                .sort((a, b) => a.order_index - b.order_index)
+                .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
+              setClusters(sorted);
+            }
+            if (jobData.photos) setPhotos(jobData.photos);
+          }
+          // 4. 최종 완료 알림
+          toast.success("사진 전송을 모두 마쳤습니다.");
+      }, 0);
     } catch (error) {
       console.error("Upload failed", error);
       toast.error("업로드 중 오류가 발생했습니다.");
