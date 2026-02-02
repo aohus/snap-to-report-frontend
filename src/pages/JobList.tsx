@@ -348,7 +348,7 @@ export default function JobList() {
               )}
               onClick={() => setSelectedSiteId('unclassified')}
             >
-              <span className="truncate">미분류 작업</span>
+              <span className="truncate"><span>미분류 작업</span></span>
               <span className="ml-auto text-xs opacity-60 font-medium">
                 {jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id)).length}
               </span>
@@ -366,7 +366,7 @@ export default function JobList() {
                   )}
                   onClick={() => setSelectedSiteId(site.id)}
                 >
-                  <span className="truncate">{site.name}</span>
+                  <span className="truncate"><span>{site.name}</span></span>
                   {/* We can show count from sites data if reliable, or filter jobs */}
                   <span className="ml-auto text-xs opacity-60 font-medium">
                     {site.jobs ? site.jobs.length : jobs.filter(j => j.site_id === site.id).length}
@@ -467,20 +467,20 @@ export default function JobList() {
                   >
                     <div className="flex-1">
                       <h3 className="text-xl font-black text-gray-900 group-hover:text-blue-600 transition-colors">
-                          {job.title}
+                          <span>{job.title}</span>
                       </h3>
                       <div className="flex flex-wrap items-center gap-3 text-sm text-gray-500 mt-2">
                          <div className="flex items-center gap-1">
                             <Building2 className="w-4 h-4" />
-                            <span>{job.company_name || '시행처 미입력'}</span>
+                            <span><span>{job.company_name || '시행처 미입력'}</span></span>
                          </div>
                          <div className="flex items-center gap-1">
                             <Hammer className="w-4 h-4" />
-                            <span>{job.construction_type || '공종명 미입력'}</span>
+                            <span><span>{job.construction_type || '공종명 미입력'}</span></span>
                          </div>
                          <div className="flex items-center gap-1">
                             <Calendar className="w-4 h-4" />
-                            <span>{job.work_date ? format(new Date(job.work_date), 'yyyy.MM.dd') : '작업일 미입력'}</span>
+                            <span><span>{job.work_date ? format(new Date(job.work_date), 'yyyy.MM.dd') : '작업일 미입력'}</span></span>
                          </div>
                       </div>
                     </div>
