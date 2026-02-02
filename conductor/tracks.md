@@ -16,3 +16,7 @@ This file tracks all major tracks for the project. Each track has its own detail
   Link: [./tracks/duplicate_detection_optimization_20260122/](./tracks/duplicate_detection_optimization_20260122/)
 
 ---
+
+- [x] **Track: JobList에서 CreateJob 직후 발생하는 InsertBefore NotFoundError 수정 (특정 브라우저 발생)**
+Link: [./tracks/fix_insert_before_error_20260202/](./tracks/fix_insert_before_error_20260202/)
+Report: [./docs/fix_insert_before_error_20260202/report.md](./docs/fix_insert_before_error_20260202/report.md)
