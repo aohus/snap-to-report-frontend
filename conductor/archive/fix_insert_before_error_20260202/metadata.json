@@ -1,0 +1,8 @@
+{
+  "track_id": "fix_insert_before_error_20260202",
+  "type": "bug",
+  "status": "new",
+  "created_at": "2026-02-02T00:00:00Z",
+  "updated_at": "2026-02-02T00:00:00Z",
+  "description": "JobList에서 CreateJob 직후 발생하는 InsertBefore NotFoundError 수정 (특정 브라우저 발생)"
+}
