@@ -40,16 +40,19 @@ export const PhotoCard = React.memo(function PhotoCard({
           {...provided.dragHandleProps}
           onClick={onSelect}
           className={`
-            relative group flex flex-col bg-white rounded-xl shadow-sm overflow-hidden cursor-grab active:cursor-grabbing
-            transition-all duration-200 ease-in-out
+            relative group flex flex-col bg-white rounded-3xl shadow-md overflow-hidden cursor-grab active:cursor-grabbing
+            transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
             ${isCompact 
-              ? 'w-[200px] h-[150px] md:w-[240px] md:h-[180px] rounded-md' 
+              ? 'w-[200px] h-[150px] md:w-[240px] md:h-[180px] rounded-2xl' 
               : 'w-[280px] h-[160px] sm:w-[340px] sm:h-[200px] md:w-[420px] md:h-[240px]'
             }
-            ${snapshot.isDragging ? 'shadow-2xl ring-4 ring-blue-500 z-50 scale-105 rotate-2' : 'border border-gray-200 hover:border-blue-400 hover:shadow-md'}
-            ${!isReserve && index < 3 && !isSelected ? 'ring-2 ring-green-500 border-green-500' : ''}
-            ${isSelected ? 'ring-4 ring-blue-500 border-blue-500' : ''}
-            ${!snapshot.isDragging && isDraggingSomewhere && isSelected ? 'opacity-30 scale-95 grayscale' : ''}
+            ${snapshot.isDragging 
+              ? 'shadow-2xl ring-4 ring-primary/40 z-50 scale-105 rotate-2' 
+              : 'border border-slate-200/60 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1'
+            }
+            ${!isReserve && index < 3 && !isSelected ? 'ring-2 ring-emerald-500/50 border-emerald-500/50' : ''}
+            ${isSelected ? 'ring-4 ring-primary border-primary bg-primary/5 shadow-xl shadow-primary/20' : ''}
+            ${!snapshot.isDragging && isDraggingSomewhere && isSelected ? 'opacity-40 scale-[0.98] grayscale-[0.5]' : ''}
           `}
           style={{
             ...provided.draggableProps.style,
@@ -57,31 +60,31 @@ export const PhotoCard = React.memo(function PhotoCard({
         >
           {/* Multi-drag Badge */}
           {snapshot.isDragging && isSelected && (
-              <div className="absolute -top-3 -right-3 z-50 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-black shadow-xl ring-4 ring-white">
+              <div className="absolute -top-3 -right-3 z-50 bg-primary text-white w-10 h-10 rounded-full flex items-center justify-center font-black shadow-2xl ring-4 ring-white animate-in zoom-in duration-300">
                   +
               </div>
           )}
           {/* Selection Badge */}
           {!isReserve && index < 3 && (
-            <div className={`absolute top-2 left-2 z-10 bg-green-600 text-white rounded-md font-bold shadow-md ${isCompact ? 'px-1 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs md:text-base'}`}>
+            <div className={`absolute top-3 left-3 z-10 bg-emerald-600/90 backdrop-blur-md text-white rounded-xl font-black shadow-lg ${isCompact ? 'px-2 py-0.5 text-[10px]' : 'px-3 py-1 text-xs md:text-sm'}`}>
               #{index + 1}
             </div>
           )}
 
-          <div className="absolute top-1 right-1 flex gap-1 z-10">
+          <div className="absolute top-2 right-2 flex gap-1.5 z-10">
              {/* Preview Button */}
              {onPreview && (
                 <Button 
                     variant="secondary" 
                     size="icon" 
-                    className={`opacity-0 group-hover:opacity-100 transition-opacity shadow-sm bg-white/80 backdrop-blur-sm hover:bg-white ${isCompact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7'}`}
+                    className={`opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl bg-white/90 backdrop-blur-md hover:bg-white hover:scale-110 active:scale-90 ${isCompact ? 'h-7 w-7' : 'h-8 w-8 md:h-10 md:w-10'}`}
                     onClick={(e) => {
                         e.stopPropagation();
                         onPreview();
                     }}
                     title="크게 보기"
                 >
-                    <Maximize2 className={isCompact ? "w-2.5 h-2.5" : "w-3 h-3 md:w-4 md:h-4"} />
+                    <Maximize2 className={isCompact ? "w-3.5 h-3.5 text-slate-700" : "w-4 h-4 md:w-5 md:h-5 text-slate-700"} />
                 </Button>
              )}
 
@@ -89,13 +92,13 @@ export const PhotoCard = React.memo(function PhotoCard({
                 <Button 
                     variant="secondary" 
                     size="icon" 
-                    className={`opacity-0 group-hover:opacity-100 transition-opacity shadow-sm ${isCompact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7'}`}
+                    className={`opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl bg-white/90 backdrop-blur-md hover:bg-white hover:scale-110 active:scale-90 ${isCompact ? 'h-7 w-7' : 'h-8 w-8 md:h-10 md:w-10'}`}
                     onClick={(e) => {
                         e.stopPropagation();
                         onEditLabels(photo.id.toString());
                     }}
                 >
-                    <Tags className={isCompact ? "w-2.5 h-2.5" : "w-3 h-3 md:w-4 md:h-4"} />
+                    <Tags className={isCompact ? "w-3.5 h-3.5 text-slate-700" : "w-4 h-4 md:w-5 md:h-5 text-slate-700"} />
                 </Button>
              )}
 
@@ -104,21 +107,26 @@ export const PhotoCard = React.memo(function PhotoCard({
                 <Button 
                 variant="destructive" 
                 size="icon" 
-                className={`opacity-0 group-hover:opacity-100 transition-opacity shadow-sm ${isCompact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7'}`}
+                className={`opacity-0 group-hover:opacity-100 transition-all duration-300 shadow-xl hover:scale-110 active:scale-90 ${isCompact ? 'h-7 w-7' : 'h-8 w-8 md:h-10 md:w-10'}`}
                 onClick={(e) => {
                     e.stopPropagation();
                     onDelete(photo.id);
                 }}
                 >
-                <X className={isCompact ? "w-2.5 h-2.5" : "w-3 h-3 md:w-4 md:h-4"} />
+                <X className={isCompact ? "w-3.5 h-3.5" : "w-4 h-4 md:w-5 md:h-5"} />
                 </Button>
             )}
           </div>
 
           {/* Labels Overlay */}
           {photo.labels && Object.keys(photo.labels).length > 0 && (
-             <div className="absolute bottom-2 left-2 right-2 bg-black/60 text-white text-[10px] p-1 rounded backdrop-blur-sm truncate z-10 pointer-events-none">
-                {Object.entries(photo.labels).map(([k, v]) => `${k}:${v}`).join(', ')}
+             <div className="absolute bottom-3 left-3 right-3 bg-slate-900/80 text-white text-[11px] font-bold px-3 py-2 rounded-2xl backdrop-blur-md truncate z-10 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-300 border border-white/10 shadow-xl">
+                {Object.entries(photo.labels).map(([k, v]) => (
+                    <span key={k} className="mr-2 last:mr-0">
+                        <span className="opacity-50 font-medium mr-1 uppercase text-[9px]">{k}</span>
+                        <span>{v}</span>
+                    </span>
+                ))}
              </div>
           )}
 

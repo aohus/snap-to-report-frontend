@@ -169,22 +169,22 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
         {/* Reserve Area Sidebar (Sticky) */}
         <div 
           className={`
-            flex-shrink-0 flex flex-col bg-slate-50 rounded-2xl border border-slate-200 shadow-sm overflow-hidden 
-            w-full md:sticky md:top-0 md:h-[calc(100vh-120px)] transition-all duration-300 ease-in-out
+            flex-shrink-0 flex flex-col bg-white/40 backdrop-blur-xl rounded-3xl border border-slate-200/60 shadow-xl overflow-hidden 
+            w-full md:sticky md:top-6 md:h-[calc(100vh-120px)] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
             ${isReserveCollapsed 
-              ? 'md:w-[60px] max-h-[50px] md:max-h-none' 
-              : ((reserveCluster?.photos.length || 0) === 0 ? 'md:w-[300px]' : 'md:w-[400px]') + ' h-auto md:h-full max-h-[300px] md:max-h-none'
+              ? 'md:w-[80px] max-h-[60px] md:max-h-none' 
+              : ((reserveCluster?.photos.length || 0) === 0 ? 'md:w-[320px]' : 'md:w-[440px]') + ' h-auto md:h-full max-h-[400px] md:max-h-none'
             }
           `}
         >
-          <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between gap-2 z-10 h-[50px]">
-             <div className="flex items-center gap-2 overflow-hidden">
-                {!isReserveCollapsed && <Archive className="w-4 h-4 text-slate-500 flex-shrink-0" />}
+          <div className="p-4 bg-slate-50/50 border-b border-slate-200/50 flex items-center justify-between gap-2 z-10 h-[64px]">
+             <div className="flex items-center gap-3 overflow-hidden ml-1">
+                {!isReserveCollapsed && <Archive className="w-5 h-5 text-slate-400 flex-shrink-0" />}
                 {!isReserveCollapsed && (
-                  <h3 className="text-sm font-black text-slate-700 whitespace-nowrap">임시 보관</h3>
+                  <h3 className="text-base font-black text-slate-800 tracking-tight whitespace-nowrap">임시 보관</h3>
                 )}
                 <span className={cn(
-                    "bg-slate-700 text-white px-2 py-0.5 rounded-md text-[10px] font-black",
+                    "bg-slate-900 text-white px-2.5 py-1 rounded-full text-[11px] font-black shadow-lg shadow-slate-200",
                     isReserveCollapsed ? "mx-auto" : ""
                 )}>
                   {reserveCluster?.photos.length || 0}
@@ -195,13 +195,13 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
             <Button 
                variant="ghost" 
                size="icon" 
-               className="h-8 w-8 text-slate-400 hover:text-slate-600"
+               className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-200/50 rounded-full transition-all"
                onClick={() => setIsReserveCollapsed(!isReserveCollapsed)}
             >
                {isMobile ? (
-                   isReserveCollapsed ? <ChevronsDown className="w-4 h-4" /> : <ChevronsUp className="w-4 h-4" />
+                   isReserveCollapsed ? <ChevronsDown className="w-5 h-5" /> : <ChevronsUp className="w-5 h-5" />
                ) : (
-                   isReserveCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />
+                   isReserveCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />
                )}
             </Button>
           </div>
@@ -267,9 +267,9 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
         {/* Main Grid Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Controls Toolbar */}
-          <div className="flex-shrink-0 flex items-center justify-between gap-4 mb-6 p-3 bg-white rounded-2xl border border-slate-200 shadow-sm sticky top-0 z-20 backdrop-blur-md bg-white/80">
-            <h2 className="text-xl font-black text-slate-900 tracking-tight ml-2">
-                분류된 장소 <span className="text-primary ml-1">{displayedClusters.length}</span>
+          <div className="flex-shrink-0 flex items-center justify-between gap-4 mb-8 p-4 bg-white/60 rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/50 sticky top-6 z-20 backdrop-blur-xl">
+            <h2 className="text-2xl font-black text-slate-900 tracking-tight ml-2">
+                분류된 장소 <span className="text-primary/40 ml-1 font-medium">{displayedClusters.length}</span>
             </h2>
 
             <div className="flex items-center gap-2">
@@ -278,23 +278,23 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                 size="sm"
                 onClick={() => setIsCompact(!isCompact)}
                 className={cn(
-                    "h-9 px-3 rounded-xl border border-transparent font-bold transition-all",
-                    isCompact ? "bg-primary/10 text-primary border-primary/20" : "text-slate-500 hover:bg-slate-100"
+                    "h-10 px-4 rounded-2xl border border-transparent font-black transition-all",
+                    isCompact ? "bg-primary text-white shadow-lg shadow-primary/30" : "text-slate-500 hover:bg-slate-100"
                 )}
                 >
                 {isCompact ? <Maximize2 className="w-4 h-4 mr-2" /> : <Minimize2 className="w-4 h-4 mr-2" />}
                 {isCompact ? "크게 보기" : "작게 보기"}
                 </Button>
 
-                <div className="w-px h-4 bg-slate-200 mx-1"></div>
+                <div className="w-px h-5 bg-slate-200 mx-2"></div>
 
                 <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setHideCompleted(!hideCompleted)}
                 className={cn(
-                    "h-9 px-3 rounded-xl border border-transparent font-bold transition-all",
-                    hideCompleted ? "bg-orange-50 text-orange-600 border-orange-100" : "text-slate-500 hover:bg-slate-100"
+                    "h-10 px-4 rounded-2xl border border-transparent font-black transition-all",
+                    hideCompleted ? "bg-orange-500 text-white shadow-lg shadow-orange-200" : "text-slate-500 hover:bg-slate-100"
                 )}
                 >
                 {hideCompleted ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
@@ -305,7 +305,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                 variant="ghost"
                 size="sm"
                 onClick={toggleCollapseCompleted}
-                className="h-9 px-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50"
+                className="h-10 px-4 rounded-2xl border border-slate-200 bg-white shadow-sm font-black text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95"
                 >
                 {areAllCompletedCollapsed ? <ChevronsDown className="w-4 h-4 mr-2" /> : <ChevronsUp className="w-4 h-4 mr-2" />}
                 완료 {areAllCompletedCollapsed ? "펼치기" : "접기"}
