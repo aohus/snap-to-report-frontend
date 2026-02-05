@@ -673,21 +673,21 @@ function DashboardContent() {
                     </div>
                     <div className="flex justify-center">
                         <span className="bg-slate-900 text-white px-6 py-2 rounded-full font-black text-sm tracking-widest shadow-xl border border-white/10 animate-in zoom-in-50">
-                           APPROX. {Math.ceil(remainingTime)}S LEFT
+                           예상 남은 시간: 약 {Math.ceil(remainingTime)}초
                         </span>
                     </div>
                 </div>
             ) : (
                 <div className="flex flex-col items-center gap-4">
                     <div className="h-12 px-8 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center font-black text-sm animate-pulse tracking-widest uppercase">
-                       Calculating...
+                       사진 분석 중...
                     </div>
                 </div>
             )}
             
             <p className="mt-12 text-xs text-slate-400 text-center font-black uppercase tracking-[0.2em] leading-relaxed opacity-60">
-              You can close this window. <br/>
-              Results will appear automatically.
+              이 창을 닫으셔도 좋습니다. <br/>
+              분류 결과는 자동으로 반영됩니다.
             </p>
           </div>
         </DialogContent>
