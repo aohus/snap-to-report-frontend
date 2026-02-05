@@ -91,40 +91,40 @@
   }
 
   html {
-    font-size: 16px; /* Revert to 16px but use more precise rem values */
+    font-size: 16px;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
 
   body {
     @apply bg-background text-foreground selection:bg-primary/10 selection:text-primary;
-    font-family: 'Inter', 'Pretendard', system-ui, sans-serif;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-    line-height: 1.6;
+    font-family: 'Inter Variable', 'Inter', 'Pretendard Variable', 'Pretendard', system-ui, sans-serif;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11", "ss01";
+    line-height: 1.5;
   }
 
   h1, h2, h3, h4, h5, h6 {
-    @apply font-bold tracking-tight text-slate-900;
-    line-height: 1.25;
+    @apply font-semibold tracking-tight text-foreground;
+    line-height: 1.2;
   }
 
-  h1 { @apply text-3xl md:text-4xl mb-6; }
-  h2 { @apply text-2xl md:text-3xl mb-4; }
-  h3 { @apply text-xl md:text-2xl mb-3; }
+  h1 { @apply text-2xl md:text-3xl mb-4; }
+  h2 { @apply text-xl md:text-2xl mb-3; }
+  h3 { @apply text-lg md:text-xl mb-2; }
   
   p {
-    @apply leading-relaxed text-slate-600 mb-4;
+    @apply leading-normal text-muted-foreground mb-3;
   }
 
   /* Custom Scrollbar for a cleaner look */
   .custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-    height: 6px;
+    width: 4px;
+    height: 4px;
   }
   .custom-scrollbar::-webkit-scrollbar-track {
     @apply bg-transparent;
   }
   .custom-scrollbar::-webkit-scrollbar-thumb {
-    @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+    @apply bg-slate-200/50 rounded-full hover:bg-slate-300 transition-colors;
   }
 }
