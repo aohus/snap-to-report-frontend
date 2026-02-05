@@ -1,4 +1,6 @@
 import { Job, Cluster, Member, ExportStatus, Photo, FileResponse, JobStatusResponse, Plan, Subscription, Site } from '@/types';
+import { JobDetailsSchema } from '@/types/schema';
+import { z } from 'zod';
 import { AuthService } from './auth';
 import { compressImage, isJPEGFile } from './image'; // Import isJPEGFile
 import { uploadViaResumable, uploadViaPresigned, uploadViaServer } from '@/lib/uploadStrategies';
@@ -30,7 +32,7 @@ function authHeadersWithoutContentType(): HeadersInit {
   return h;
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
+async function handleResponse<T>(response: Response, schema?: z.ZodType<T>): Promise<T> {
   // Check for auto-refreshed token in headers
   const authHeader = response.headers.get('Authorization');
   if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -60,7 +62,22 @@ async function handleResponse<T>(response: Response): Promise<T> {
   }
 
   // 그 외에는 JSON 반환
-  return response.json();
+  const data = await response.json();
+
+  if (schema) {
+    try {
+        return schema.parse(data);
+    } catch (e) {
+        console.error("Validation Error", e);
+        // We might want to throw or just log.
+        // For now, throw to ensure we catch schema mismatches during dev.
+        // In prod, maybe we want to be lenient? 
+        // Spec says "Run time validation". So throwing is correct.
+        throw e;
+    }
+  }
+
+  return data;
 }
 
 export const api = {
@@ -157,7 +174,7 @@ export const api = {
     const response = await fetch(`${API_BASE_URL}/jobs/${jobId}/details`, {
       headers: authJsonHeaders(),
     });
-    return handleResponse<Job & { photos: Photo[], clusters: Cluster[] }>(response);
+    return handleResponse<Job & { photos: Photo[], clusters: Cluster[] }>(response, JobDetailsSchema);
   },
 
   deleteJob: async (jobId: string): Promise<Job> => {

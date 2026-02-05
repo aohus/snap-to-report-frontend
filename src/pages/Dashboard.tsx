@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from "uuid";
 import { Button } from '@/components/ui/button';
@@ -15,68 +15,50 @@ import { Label } from '@/components/ui/label';
 import { format } from 'date-fns';
 
 import { api } from '@/lib/api';
-import { Job, Cluster, Photo, JobStatusResponse } from '@/types';
-import { PhotoUploader } from '@/components/PhotoUploader';
-import { PhotoGrid } from '@/components/PhotoGrid';
-import { ClusterBoard } from '@/components/ClusterBoard';
-import { LogOut, FileDown, Loader2, LayoutGrid, ArrowLeft, CloudUpload, CheckCircle, Settings, Edit2, Plus, X, RefreshCw, FileText, Pencil } from 'lucide-react';
+import { Job, Cluster, Photo } from '@/types';
+import { Loader2, CheckCircle, Plus, X, FileDown, RefreshCw, Edit2, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover"
 
-// Helper to sort photos within a cluster by order_index (proxy for timestamp)
-const sortPhotosByOrderIndex = (photos: Photo[]): Photo[] => {
-  return [...photos].sort((a, b) => {
-    // 1. If both have order_index, compare them.
-    if (a.order_index !== undefined && b.order_index !== undefined) {
-      if (a.order_index !== b.order_index) {
-        return a.order_index - b.order_index;
-      }
-    }
+import { useJobActions } from '@/hooks/useJobActions';
+import { UnsortedGrid } from '@/components/dashboard/UnsortedGrid';
+import { ClusterSection } from '@/components/dashboard/ClusterSection';
+import { ActionToolbar } from '@/components/dashboard/ActionToolbar';
+import { FloatingActionBar } from '@/components/dashboard/FloatingActionBar';
+import { ActionDrawer } from '@/components/dashboard/ActionDrawer';
+import { GlobalErrorBoundary } from '@/components/GlobalErrorBoundary';
+import { DashboardSectionErrorBoundary } from '@/components/dashboard/DashboardSectionErrorBoundary';
+import { sortPhotosByOrderIndex } from '@/lib/utils';
 
-    // 2. If one has order_index and the other doesn't, the one with order_index comes first.
-    if (a.order_index !== undefined && b.order_index === undefined) return -1;
-    if (a.order_index === undefined && b.order_index !== undefined) return 1;
+export default function DashboardPage() {
+    return (
+        <GlobalErrorBoundary>
+            <DashboardContent />
+        </GlobalErrorBoundary>
+    );
+}
 
-    // 3. If neither has order_index, sort by timestamp (ascending).
-    // Treat missing timestamp as Infinity (place at the end).
-    const timeA = a.timestamp ? new Date(a.timestamp).getTime() : Infinity;
-    const timeB = b.timestamp ? new Date(b.timestamp).getTime() : Infinity;
-
-    if (timeA !== timeB) {
-      return timeA - timeB;
-    }
-
-    // 4. Fallback to id for stable sort
-    return a.id.localeCompare(b.id);
-  });
-};
-
-export default function Dashboard() {
+function DashboardContent() {
   const navigate = useNavigate();
   const { jobId } = useParams<{ jobId: string }>();
   const [job, setJob] = useState<Job | null>(null);
   const [clusters, setClusters] = useState<Cluster[]>([]);
   const [photos, setPhotos] = useState<Photo[]>([]);
   const [selectedPhotos, setSelectedPhotos] = useState<{ id: string; clusterId: string }[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [isClustering, setIsClustering] = useState(false);
   const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [showClusteringDialog, setShowClusteringDialog] = useState(false);
   const [exporting, setExporting] = useState(false);
-  const isSelectionLoaded = useRef(false);
-  const [saving, setSaving] = useState(false);
   const [exportDialogOpen, setExportDialogOpen] = useState(false);
   const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [actionDrawerOpen, setActionDrawerOpen] = useState(false);
   
   // Label Editing State
   const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
   const [editLabelData, setEditLabelData] = useState<Record<string, string>>({});
-  const [batchLabelKey, setBatchLabelKey] = useState('');
-  const [batchLabelValue, setBatchLabelValue] = useState('');
 
   // Job Info Editing State
   const [editJobDialogOpen, setEditJobDialogOpen] = useState(false);
@@ -97,6 +79,23 @@ export default function Dashboard() {
     { id: 'company', key: '시행처', value: '' },
   ]);
 
+  const { 
+    handleMovePhoto, 
+    handleCreateCluster, 
+    handleDeleteCluster, 
+    handleDeletePhoto,
+    handleRenameCluster,
+    handleMoveCluster,
+    handleAddPhotosToExistingCluster
+  } = useJobActions({
+    jobId: jobId!,
+    jobTitle: job?.title,
+    clusters,
+    setClusters,
+    selectedPhotos,
+    setSelectedPhotos
+  });
+
   const addLabelItem = () => {
     const newItem = {
       id: uuidv4(),
@@ -115,9 +114,6 @@ export default function Dashboard() {
     setLabelSettings(labelSettings.map(l => l.id === id ? { ...l, [field]: newValue } : l));
   };
   
-  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const isInitialLoad = useRef(true);
-
   useEffect(() => {
     if (!jobId) return;
 
@@ -259,7 +255,7 @@ export default function Dashboard() {
   };
 
   const handleSaveLabels = async () => {
-      if (!editingPhotoId) return;
+      if (!editingPhotoId || !jobId) return;
       
       const newLabels = { ...editLabelData };
       const targetPhoto = clusters
@@ -287,58 +283,12 @@ export default function Dashboard() {
       }
   };
 
-  const handleBatchAddLabel = async () => {
-      if (!batchLabelKey.trim() || selectedPhotos.length === 0) return;
-      
-      const key = batchLabelKey.trim();
-      const value = batchLabelValue.trim();
-      
-      // Optimistic Update
-      setClusters(prev => prev.map(c => ({
-          ...c,
-          photos: c.photos.map(p => {
-              if (selectedPhotos.some(sp => sp.id === p.id)) {
-                  return { ...p, labels: { ...p.labels, [key]: value } };
-              }
-              return p;
-          })
-      })));
-      
-      setBatchLabelKey('');
-      setBatchLabelValue('');
-      
-      // Batch API call (parallel requests for now)
-      try {
-          await Promise.all(selectedPhotos.map(sp => {
-              // We need to get current labels to merge? 
-              // The API updates the whole labels object or partial?
-              // My API implementation: `photo.labels = payload.labels`. It REPLACES.
-              // So I need to fetch current labels or use what I have in state.
-              const photo = clusters.flatMap(c => c.photos).find(p => p.id === sp.id);
-              const currentLabels = photo?.labels || {};
-              const newLabels = { ...currentLabels, [key]: value };
-              const updatedPhoto = { ...photo, labels: newLabels };
-
-              return api.updatePhoto(jobId, [updatedPhoto]);
-          }));
-          toast.success(`${selectedPhotos.length}개 사진에 라벨 일괄 추가 완료`);
-      } catch (e) {
-          console.error("Batch add label failed", e);
-          toast.error("일괄 추가 실패");
-      }
-  };
-
   const handleUpload = async (files: File[]) => {
     if (!job) return;
     try {
-      // 1. 시작 알림
       toast.info("사진 업로드를 시작합니다...");
-      
-      // 2. 업로드 프로세스 실행 및 완료 대기
       await api.uploadPhotos(job.id, Array.from(files));
       
-      // 3. 업로드 완료 후 서버에서 최신 데이터(사진 목록, 클러스터 등) 다시 불러오기
-      // Fix: Use setTimeout to allow PhotoUploader to finish its cleanup before unmounting
       setTimeout(async () => {
           const jobData = await api.getJobDetails(job.id);
           
@@ -353,7 +303,6 @@ export default function Dashboard() {
             }
             if (jobData.photos) setPhotos(jobData.photos);
           }
-          // 4. 최종 완료 알림
           toast.success("사진 전송을 모두 마쳤습니다.");
       }, 0);
     } catch (error) {
@@ -370,13 +319,10 @@ export default function Dashboard() {
     setShowClusteringDialog(true);
     try {
       const result = await api.startClustering(job.id);
-      console.log("startClustering response:", result);
-
       if (result.estimated_time) {
           setEstimatedTime(result.estimated_time);
           setRemainingTime(result.estimated_time);
       }
-      // toast.info("Clustering started in background..."); // Redundant with dialog
     } catch (error) {
       console.error("Clustering failed", error);
       toast.error("Failed to cluster photos");
@@ -395,315 +341,13 @@ export default function Dashboard() {
     });
   };
 
-  const handleDeleteCluster = async (clusterId: string) => {
-    // Optimistic update using functional state to ensure safety in async contexts
-    setClusters(prev => {
-        const clusterToDelete = prev.find(c => c.id === clusterId);
-        if (!clusterToDelete) return prev;
-        
-        // Remove cluster
-        let newClusters = prev.filter(c => c.id !== clusterId);
-        
-        // Re-index subsequent clusters
-        newClusters = newClusters.map(c => {
-            if (c.order_index > clusterToDelete.order_index) {
-                return { ...c, order_index: c.order_index - 1 };
-            }
-            return c;
-        });
-        
-        return newClusters;
-    });
-
-    setSaving(true);
-    try {
-        await api.deleteCluster(jobId, clusterId);
-    } catch (e) {
-        console.error("Failed to delete cluster", e);
-        toast.error("Failed to delete cluster");
-    } finally {
-        setSaving(false);
-    }
-  };
-
-  const handleMovePhoto = async (photoId: string, sourceClusterId: string, targetClusterId: string, newIndex: number) => {
-    if (!job) return;
-
-    let realTargetClusterId = targetClusterId;
-    let createdReserveCluster: Cluster | null = null;
-    const movedPhoto = clusters.find(c => c.id === sourceClusterId).photos.find(p => p.id === photoId);
-    movedPhoto.cluster_id = targetClusterId;
-
-    // 1. Handle "reserve" target special case
-    // If dropped on "reserve" zone but no reserve cluster exists in state with that ID
-    if (targetClusterId === 'reserve') {
-        const existingReserve = clusters.find(c => c.name === 'reserve');
-        if (existingReserve) {
-            realTargetClusterId = existingReserve.id;
-        } else {
-            // Create reserve cluster immediately
-            try {
-                createdReserveCluster = await api.createCluster(job.id, 'reserve', -1, []);
-                // Ensure photos is initialized
-                createdReserveCluster.photos = []; 
-                realTargetClusterId = createdReserveCluster.id;
-            } catch (e) {
-                console.error("Failed to create reserve cluster auto-magically", e);
-                toast.error("Failed to move to reserve (creation failed)");
-                return;
-            }
-        }
-    }
-
-    // 2. Update Local State
-    // We need to use functional update or get fresh state if we just added a cluster, 
-    // but since we might have added `createdReserveCluster`, let's construct the new list carefully.
-    
-    const currentClusters = createdReserveCluster 
-        ? [...clusters, createdReserveCluster] 
-        : [...clusters];
-
-    const newClusters = currentClusters.map(c => ({...c, photos: [...c.photos]}));
-    
-    const sourceCluster = newClusters.find(c => c.id === sourceClusterId);
-    const targetCluster = newClusters.find(c => c.id === realTargetClusterId);
-
-    if (!sourceCluster || !targetCluster) {
-        console.error("Source or Target cluster not found during move", { sourceClusterId, realTargetClusterId });
-        return;
-    }
-
-    const photoIndex = sourceCluster.photos.findIndex(p => p.id === photoId);
-    if (photoIndex === -1) return;
-    
-    const [photo] = sourceCluster.photos.splice(photoIndex, 1);
-    targetCluster.photos.splice(newIndex, 0, photo);
-
-    // If source cluster is 'reserve' and becomes empty, do we delete it?
-    // User said: "사진 길이가 0이 되어도 칸이 유지되는 것이 유일한 다른점" -> So we KEEP it.
-    // But other clusters? Typically we keep them unless explicitly deleted.
-
-    setClusters(newClusters);
-    
-    setSaving(true);
-    try {
-        await api.updatePhoto(jobId, [movedPhoto]);
-
-        // Check if source cluster became empty (and is not 'reserve')
-        if (sourceCluster && sourceCluster.photos.length === 0 && sourceCluster.name !== 'reserve') {
-             await handleDeleteCluster(sourceCluster.id);
-        }
-    } catch (e) {
-        console.error("Failed to move photo", e);
-        toast.error("Failed to save move");
-        // Revert? (Complex, maybe just reload)
-    } finally {
-        setSaving(false);
-    }
-  };
-
-  const handleDeletePhoto = async (photoId: string, clusterId: string) => {
-    // Optimistic UI update with functional state to prevent stale closures
-    setClusters(prev => prev.map(c => {
-        if (c.id === clusterId) {
-            return { ...c, photos: c.photos.filter(p => p.id.toString() !== photoId.toString()) };
-        }
-        return c;
-    }));
-    
-    setSaving(true);
-    try {
-        await api.deleteClusterMember(jobId, photoId);
-    } catch (e) {
-        console.error("Failed to delete photo", e);
-        toast.error("Failed to delete photo");
-        // Optional: Revert state if needed (requires fetching or undo logic)
-    } finally {
-        setSaving(false);
-    }
-  };
-
-  const handleRenameCluster = async (clusterId: string, newName: string) => {
-    setClusters(prev => prev.map(c => c.id === clusterId ? { ...c, name: newName } : c));
-    
-    // Add rename to pendingRenames queue and trigger sync
-    // pendingRenames.current.set(clusterId, newName);
-    // triggerAutoSave(); // No new cluster state, just trigger processing existing pending actions
-
-    setSaving(true);
-    try {
-        await api.updateCluster(jobId, clusterId, { name: newName });
-    } catch (e) {
-        console.error("Failed to rename cluster", e);
-        toast.error("Failed to rename cluster");
-    } finally {
-        setSaving(false);
-    }
-  };
-
-  const handleMoveCluster = async (clusterId: string, direction: 'up' | 'down') => {
-    const currentIndex = clusters.findIndex(c => c.id === clusterId);
-    if (currentIndex === -1) return;
-
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= clusters.length) return;
-
-    const newClusters = clusters.map(c => ({...c}));
-    const [movedCluster] = newClusters.splice(currentIndex, 1); // 기존 위치에서 제거
-    newClusters.splice(targetIndex, 0, movedCluster);           // 새 위치에 삽입
-
-    const prevCluster = newClusters[targetIndex - 1];
-    const nextCluster = newClusters[targetIndex + 1];
-
-    let newOrderIndex: number;
-
-    if (!prevCluster) {
-        // Case: 맨 위로 이동한 경우 (이전 아이템 없음)
-        // 다음 아이템 인덱스의 절반 혹은 적절한 차감값 사용
-        // 예: next가 100이면 50
-        newOrderIndex = nextCluster ? nextCluster.order_index / 2 : 1000; 
-    } else if (!nextCluster) {
-        // Case: 맨 아래로 이동한 경우 (다음 아이템 없음)
-        // 이전 아이템보다 큰 값 할당
-        newOrderIndex = prevCluster.order_index + 1024; 
-    } else {
-        // Case: 두 아이템 사이로 이동 (중간값 계산)
-        // (Prev + Next) / 2
-        newOrderIndex = (prevCluster.order_index + nextCluster.order_index) / 2;
-    }
-
-    // 4. 로컬 상태 업데이트
-    movedCluster.order_index = newOrderIndex;
-    setClusters(newClusters);
-    
-    // triggerAutoSave(newClusters);
-    if (!job) return;
-    setSaving(true);
-    
-    try {
-        // 5. 변경된 1개의 아이템에 대해서만 업데이트 요청
-        await api.updateCluster(jobId, movedCluster.id, { order_index: newOrderIndex });
-    } catch (e) {
-        console.error("Failed to move cluster", e);
-        toast.error("Failed to move cluster");
-        // 에러 발생 시 원래 상태로 되돌리는 로직이 필요하다면 여기에 추가 (setClusters(originalClusters))
-    } finally {
-        setSaving(false);
-    }
-  };
-
-  const handleCreateCluster = async (orderIndex: number, photosToMoveParam: { id: string; clusterId: string }[] = []) => {
-    if (!job) return;
-
-    const prevClusters = clusters; // Store current state for rollback
-    const prevSelectedPhotos = selectedPhotos; // Store current selection for rollback
-
-    const photoIds = photosToMoveParam.map(p => p.id);
-    const fullPhotosToMove: Photo[] = photosToMoveParam.map(p => {
-        // Find the full Photo object from the current clusters state
-        return clusters.flatMap(cl => cl.photos).find(photo => photo.id === p.id) || p as any; // Fallback to partial object if not found (shouldn't happen)
-    });
-
-    try {
-      // Optimistically update UI
-      // 1. Integrate shifting and photo removal into a single map
-      const optimisticClusters = clusters.map(c => {
-        let updatedCluster = { ...c };
-        
-        // Shift existing clusters (order_index 업데이트)
-        if (c.order_index >= orderIndex) {
-            updatedCluster.order_index += 1;
-        }
-        
-        // Remove moved photos from source clusters (photos 업데이트)
-        const photosToRemoveFromHere = photosToMoveParam.filter(p => p.clusterId === c.id).map(p => p.id);
-        if (photosToRemoveFromHere.length > 0) {
-            updatedCluster.photos = c.photos.filter(p => !photosToRemoveFromHere.includes(p.id.toString()));
-        }
-        return updatedCluster;
-      });
-
-      // 2. Create the new cluster via API
-      const newClusterResponse = await api.createCluster(job.id, `${job.title}`, orderIndex, photoIds);
-      // Ensure the API response has photos, even if empty, so sortPhotosByOrderIndex works
-      const newClusterWithPhotos = { ...newClusterResponse, photos: sortPhotosByOrderIndex(fullPhotosToMove) };
-
-      // 3. Add new cluster and re-sort
-      const finalClusters = [...optimisticClusters, newClusterWithPhotos].sort((a, b) => a.order_index - b.order_index);
-      
-      setClusters(finalClusters);
-      setSelectedPhotos([]); // Clear selection after successful move/creation
-      // triggerAutoSave(finalClusters); // Trigger sync for the new cluster
-
-      toast.success(`New place created with ${photoIds.length} photos.`);
-    } catch (error) {
-      console.error("Failed to create new place", error);
-      toast.error('Failed to create new place');
-      setClusters(prevClusters); // Rollback clusters state
-      setSelectedPhotos(prevSelectedPhotos); // Rollback selection state
-    }
-  };
-
-  const handleAddPhotosToExistingCluster = async (targetClusterId: string, photosToMoveParam: { id: string; clusterId: string }[]) => {
-    if (!job || photosToMoveParam.length === 0) return;
-
-    const prevClusters = clusters; // Store current state for rollback
-    const prevSelectedPhotos = selectedPhotos; // Store current selection for rollback
-
-    // const photoIds = photosToMoveParam.map(p => p.id);
-    const fullPhotosToMove: Photo[] = photosToMoveParam.map(p => {
-        return clusters.flatMap(cl => cl.photos).find(photo => photo.id === p.id) || p as any;
-    });
-    const updatedPhotos = fullPhotosToMove.map(p => ({ ...p, cluster_id: targetClusterId }));
-
-    try {
-      // Optimistically update UI
-      const optimisticClusters = clusters.map(c => {
-        let newPhotos = c.photos;
-
-        // Remove photos from source clusters
-        const photosToRemoveFromHere = photosToMoveParam.filter(p => p.clusterId === c.id).map(p => p.id);
-        if (photosToRemoveFromHere.length > 0) {
-            newPhotos = c.photos.filter(p => !photosToRemoveFromHere.includes(p.id.toString()));
-        }
-        
-        // Add photos to target cluster
-        if (c.id === targetClusterId) {
-            // Only add unique photos and sort
-            const existingPhotoIdsInTarget = new Set(newPhotos.map(p => p.id));
-            const uniqueMovedPhotos = fullPhotosToMove.filter(p => !existingPhotoIdsInTarget.has(p.id));
-            newPhotos = sortPhotosByOrderIndex([...newPhotos, ...uniqueMovedPhotos]);
-        }
-        return { ...c, photos: newPhotos };
-      });
-      
-      setClusters(optimisticClusters);
-      setSelectedPhotos([]); // Clear selection after successful move
-
-      // API call
-      await api.updatePhoto(job.id, updatedPhotos);
-      toast.success(`Added ${updatedPhotos.length} photos to place`);
-    } catch (e) {
-      console.error("Failed to add photos", e);
-      toast.error("Failed to add photos");
-      setClusters(prevClusters); // Rollback clusters state
-      setSelectedPhotos(prevSelectedPhotos); // Rollback selection state
-    }
-  };
-
   const handleExport = () => {
     if (!job) return;
-    
-    // Initialize preview with current job data or existing cluster data
-    // Use the first cluster's name as the default construction_type for the preview if available and not set
-    const firstClusterName = clusters.length > 0 && clusters[0].name !== 'reserve' ? clusters[0].name : '';
-    
     setExportMetadata({
       cover_title: job.title,
       cover_company_name: job.company_name || '',
     });
     
-    // Gather all unique label keys from all photos (to discover new custom labels)
     const allPhotoLabels = new Set<string>();
     clusters.forEach(cluster => {
       cluster.photos.forEach(photo => {
@@ -713,13 +357,9 @@ export default function Dashboard() {
       });
     });
 
-    // Update labelSettings with new keys found in photos, but DO NOT reset existing settings
     setLabelSettings(prev => {
         const newSettings = [...prev];
         const existingKeys = new Set(newSettings.map(s => s.key));
-
-        // Ensure defaults if they were never initialized (though useState does this)
-        // But if user deleted them, they stay deleted.
         
         allPhotoLabels.forEach(labelKey => {
             if (!existingKeys.has(labelKey)) {
@@ -732,8 +372,6 @@ export default function Dashboard() {
             }
         });
         
-        // Ensure company name is synced if the user hasn't overridden it, 
-        // BUT only if 'company' key still exists in the settings.
         return newSettings.map(l => {
             if (l.id === 'company' && !l.value) return { ...l, value: job.company_name || '' };
             return l;
@@ -749,14 +387,11 @@ export default function Dashboard() {
     setExporting(true);
     
     try {
-      // Best Practice: Send configuration (schema) only, let backend resolve data.
       const visible_keys: string[] = [];
       const overrides: Record<string, string> = {};
 
       labelSettings.forEach(l => {
           visible_keys.push(l.key);
-          // If a value is provided, it's a global override (static text).
-          // If empty, backend will look up DB or use AutoDate logic.
           if (l.value) {
               overrides[l.key] = l.value;
           }
@@ -794,15 +429,24 @@ export default function Dashboard() {
     }
   };
 
-  const incompletePlaces = clusters.filter(c => c.name !== 'reserve' && c.photos.length < 3).length;
-  const completePlaces = clusters.filter(c => c.name !== 'reserve' && c.photos.length === 3).length;
-  const excessPlaces = clusters.filter(c => c.name !== 'reserve' && c.photos.length > 3).length;
+  const handleBatchDelete = async () => {
+      const toDelete = [...selectedPhotos];
+      for (const p of toDelete) {
+          await handleDeletePhoto(p.id, p.clusterId);
+      }
+      setSelectedPhotos([]);
+      setActionDrawerOpen(false);
+  };
 
-  // Prepare preview data
+  const handleBatchMove = async (targetClusterId: string) => {
+      await handleAddPhotosToExistingCluster(targetClusterId, selectedPhotos);
+      setActionDrawerOpen(false);
+  };
+
   const previewCluster = clusters.find(c => c.name !== 'reserve') || clusters[0];
-    const previewPhotos = previewCluster?.photos || [];
+  const previewPhotos = previewCluster?.photos || [];
   
-    if (error) {
+  if (error) {
       return (
           <div className="h-screen flex flex-col items-center justify-center gap-6 bg-gray-50">
               <div className="text-center space-y-2">
@@ -817,137 +461,37 @@ export default function Dashboard() {
       );
     }
   
-    if (!job) return <div data-testid="loader" className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+  if (!job) return <div data-testid="loader" className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+
   return (
     <div className="h-screen bg-gray-100 flex flex-col font-sans overflow-hidden">
-      {/* Header */}
-      <header className="bg-white border-b shadow-sm px-4 py-3 md:px-6 md:py-4 flex items-center justify-between flex-shrink-0 z-30">
-        <div className="flex items-center gap-3 md:gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-            <ArrowLeft className="w-5 h-5 text-gray-600" />
-          </Button>
-          <div className="p-2 bg-blue-600 rounded-lg shadow-md hidden md:block">
-            <LayoutGrid className="w-6 h-6 text-white" />
-          </div>
-          <div 
-            className="group flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-1 rounded-md transition-colors"
-            onClick={() => setEditJobDialogOpen(true)}
-          >
-            <div>
-                <h1 className="text-lg md:text-2xl font-bold text-gray-900 tracking-tight truncate max-w-[150px] md:max-w-none flex items-center gap-2">
-                {job.title}
-                <Pencil className="w-4 h-4 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
-                </h1>
-            </div>
-          </div>
-        </div>
-        {clusters.length > 0 && (
-          <div className="flex items-center gap-2 md:gap-4 flex-1 justify-end">
-            
-            {/* Stats */}
-            <div className="hidden xl:flex items-center gap-3 mr-4 text-sm font-medium text-gray-600 bg-gray-50 px-3 py-1.5 rounded-lg border border-gray-200">
-                <div className="flex items-center gap-1.5 text-orange-600">
-                    <span className="w-2 h-2 rounded-full bg-orange-500"></span>
-                    미완성: {incompletePlaces}
-                </div>
-                <div className="w-px h-3 bg-gray-300"></div>
-                <div className="flex items-center gap-1.5 text-green-600">
-                    <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                    완성: {completePlaces}
-                </div>
-                {excessPlaces > 0 && (
-                    <>
-                        <div className="w-px h-3 bg-gray-300"></div>
-                        <div className="flex items-center gap-1.5 text-red-600">
-                            <span className="w-2 h-2 rounded-full bg-red-500"></span>
-                            초과: {excessPlaces}
-                        </div>
-                    </>
-                )}
-            </div>
+      <ActionToolbar
+        job={job}
+        clusters={clusters}
+        isClustering={isClustering}
+        exporting={exporting}
+        onEditJob={() => setEditJobDialogOpen(true)}
+        onStartClustering={handleStartClustering}
+        onEditLabels={() => navigate(`/jobs/${job.id}/edit`)}
+        onDownloadPDF={handleDownloadPDF}
+        onExport={handleExport}
+      />
 
-            {/* Re-cluster Button */}
-             <Button 
-              variant="outline" 
-              size="icon"
-              className="h-10 w-10 text-blue-600 border-blue-200 hover:bg-blue-50"
-              onClick={handleStartClustering}
-              disabled={isClustering}
-              title="사진 분류 다시하기"
-            >
-              <RefreshCw className={`w-5 h-5 ${isClustering ? 'animate-spin' : ''}`} />
-            </Button>
-
-            {/* Edit Labels Link */}
-            <Button 
-              variant="outline" 
-              className="h-10 hidden md:flex"
-              onClick={() => { navigate(`/jobs/${job.id}/edit`); }}
-              >
-              <Edit2 className="w-4 h-4 mr-2" />
-              라벨 수정
-            </Button>
-
-            {/* PDF Actions */}
-            <div className="flex items-center gap-2">
-                {/* If exported, allow download directly */}
-                {job.export_status === 'EXPORTED' && (
-                    <Button 
-                        className="h-10 bg-green-600 hover:bg-green-700 text-white"
-                        onClick={handleDownloadPDF}
-                    >
-                        <FileDown className="w-4 h-4 md:mr-2" />
-                        <span className="hidden md:inline">다운로드</span>
-                    </Button>
-                )}
-                
-                {/* Preview / Generate Button */}
-                <Button 
-                variant={job.export_status === 'EXPORTED' ? 'outline' : 'default'}
-                className={`h-10 px-4 ${job.export_status !== 'EXPORTED' ? 'bg-blue-600 hover:bg-blue-700' : ''}`}
-                onClick={handleExport} // Opens dialog
-                disabled={exporting || clusters.length === 0}
-                >
-                {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : (job.export_status === 'EXPORTED' ? <FileText className="w-4 h-4 md:mr-2" /> : <FileDown className="w-4 h-4 md:mr-2" />)}
-                <span className="hidden md:inline">{job.export_status === 'EXPORTED' ? '미리보기' : 'PDF 생성'}</span>
-                </Button>
-            </div>
-          </div>
-        )}
-      </header>
-
-      <main className="flex-1 p-2 md:p-6 max-w-[2000px] mx-auto w-full overflow-y-auto flex flex-col">
-        <div className="flex flex-col h-full gap-4">
-          {clusters.length === 0 ? (
-            <div className="flex-1 flex flex-col items-center justify-center bg-white rounded-2xl shadow-sm border p-10">
-              {photos.length > 0 && (
-                <div className="w-full max-w-3xl mx-auto space-y-6 mt-6 mb-6">
-                  <PhotoGrid photos={photos} />
-                    <Button
-                      className="w-full"
-                      size="lg"
-                      onClick={handleStartClustering}
-                      disabled={isClustering}
-                    >
-                    사진 분류 시작하기
-                    </Button>
-                </div>
-              )}
-              {!isClustering && (
-                <PhotoUploader onUpload={handleUpload} />
-              )}
-            </div>
-          ) : (
-            <>
-              {/* Main Board */}
-                <div
-                  className={`flex-1 overflow-hidden transition duration-200 ${
-                    isClustering ? "opacity-40 pointer-events-none" : ""
-                  }`}
-                  aria-disabled={isClustering}
-                >
-                  <ClusterBoard 
-                    clusters={clusters} 
+      <main className="flex-1 p-2 md:p-6 max-w-[2000px] mx-auto w-full overflow-y-auto flex flex-col relative">
+        <DashboardSectionErrorBoundary>
+            <div className="flex flex-col h-full gap-4">
+            {clusters.length === 0 ? (
+                <UnsortedGrid 
+                photos={photos} 
+                isClustering={isClustering} 
+                onStartClustering={handleStartClustering} 
+                onUpload={handleUpload} 
+                />
+            ) : (
+                <ClusterSection
+                    clusters={clusters}
+                    isClustering={isClustering}
+                    selectedPhotos={selectedPhotos}
                     onMovePhoto={handleMovePhoto}
                     onCreateCluster={handleCreateCluster}
                     onDeleteCluster={handleDeleteCluster}
@@ -955,16 +499,31 @@ export default function Dashboard() {
                     onAddPhotosToExistingCluster={handleAddPhotosToExistingCluster}
                     onRenameCluster={handleRenameCluster}
                     onDeletePhoto={handleDeletePhoto}
-                    selectedPhotos={selectedPhotos}
                     onSelectPhoto={handleSelectPhoto}
                     onEditLabels={handleEditLabels}
-                  />
-              </div>
-            </>
-          )}
-        </div>
+                />
+            )}
+            </div>
+        </DashboardSectionErrorBoundary>
+
+        <FloatingActionBar 
+            selectedCount={selectedPhotos.length}
+            onClearSelection={() => setSelectedPhotos([])}
+            onMoveClick={() => setActionDrawerOpen(true)}
+            onDeleteClick={handleBatchDelete}
+        />
       </main>
 
+      <ActionDrawer 
+        open={actionDrawerOpen}
+        onOpenChange={setActionDrawerOpen}
+        selectedCount={selectedPhotos.length}
+        clusters={clusters}
+        onMoveToCluster={handleBatchMove}
+        onDelete={handleBatchDelete}
+      />
+
+      {/* Label Edit Dialog */}
       <Dialog open={!!editingPhotoId} onOpenChange={(open) => !open && setEditingPhotoId(null)}>
         <DialogContent className="max-w-md">
           <DialogHeader>

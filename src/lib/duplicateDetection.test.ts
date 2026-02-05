@@ -1,7 +1,27 @@
 import { describe, it, expect, vi } from 'vitest';
 import { detectDuplicates } from './duplicateDetection';
 
-// Mock the computeImageHash function locally or just mock the dependencies
+vi.mock('./duplicateDetection.worker?worker', () => {
+  return {
+    default: class MockWorker {
+       onmessage: any;
+       postMessage(data: any) {
+           const { files } = data;
+           // Case 1: 3 files -> [0, 1] are dups
+           if (files.length === 3) {
+               setTimeout(() => this.onmessage({ data: { type: 'done', results: [[0, 1]] } }), 10);
+           } else {
+               // Case 2: distinct
+               setTimeout(() => this.onmessage({ data: { type: 'done', results: [] } }), 10);
+           }
+       }
+       terminate() {}
+    }
+  }
+});
+
+// Remove global.Worker mock if I added it previously (I did)
+// I will overwrite the whole file content to be clean.
 // Since detectDuplicates calls computeImageHash internally, we need to mock the module or the canvas API.
 // Easier to mock the module if I exported the hash function, but it's not exported.
 // I'll rely on the Name detection test which doesn't strictly depend on Hash if name matches (Pass 1).

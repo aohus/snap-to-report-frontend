@@ -23,8 +23,8 @@ export interface Site {
 
 export interface Photo {
   id: string;
-  job_id: string;
-  order_index: number;
+  job_id?: string | null;
+  order_index?: number | null;
   cluster_id?: string; // Optional, as it might be in Reserve (null) or a specific cluster
   original_filename: string;
   storage_path: string;

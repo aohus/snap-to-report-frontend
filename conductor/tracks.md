@@ -9,11 +9,19 @@ This file tracks all major tracks for the project. Each track has its own detail
 - [x] 작업 및 현장별 폴더 관리 시스템 구축 (Archived)
 - [x] job 생성 직후, photo upload 완료된 직후, details 안불러져서 흰 화면만 나오는 버그 수정 (Archived)
 - [x] JobList 및 Dashboard 업로드 후 InsertBefore/White Screen 버그 수정 (Archived)
+- [x] **Track: 아키텍처 리팩토링 및 UX 현대화** (Archived)
+  Link: [./archive/ux_architecture_modernization_20260205/](./archive/ux_architecture_modernization_20260205/)
+- [x] **Track: 중복 사진 제거 성능 고도화** (Archived)
+  Link: [./archive/duplicate_detection_optimization_20260122/](./archive/duplicate_detection_optimization_20260122/)
 
 ---
 
 ## Active Tracks
-- [x] **Track: 중복 사진 제거 성능 고도화**
-  Link: [./tracks/duplicate_detection_optimization_20260122/](./tracks/duplicate_detection_optimization_20260122/)
+
+- [~] **Track: 프론트엔드 독립 배포 파이프라인 구축 (백엔드 무중단)**
+Link: [./tracks/frontend_independent_deploy_20260202/](./tracks/frontend_independent_deploy_20260202/)
 
 ---
+
+- [~] **Track: UI 개선 및 대시보드 리뉴얼**
+*Link: [./tracks/ui_modernization_20260205/](./tracks/ui_modernization_20260205/)*

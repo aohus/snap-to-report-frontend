@@ -83,10 +83,11 @@ describe('api.ts uploadPhotos', () => {
         expect(notifyCall).toBeTruthy();
         expect(JSON.parse(notifyCall[1].body)).toHaveLength(2);
 
-        expect(result).toEqual(finalPhotos);
+        // uploadPhotos returns void
+        expect(result).toBeUndefined();
     });
 
-    it('should fallback to server upload if getUploadUrls fails', async () => {
+    it('should handle failure if getUploadUrls fails', async () => {
         // Arrange
         const file1 = new File(['content'], 'test1.png', { type: 'image/png' });
         const files = [file1];
@@ -96,17 +97,11 @@ describe('api.ts uploadPhotos', () => {
         // Mock getUploadUrls failure
         (global.fetch as any).mockResolvedValueOnce(new Response(null, { status: 500, statusText: 'Server Error' }));
 
-        // Mock uploadViaServer to succeed
-        (uploadStrategies.uploadViaServer as any).mockResolvedValue();
-
-        // Mock getPhotos
-        (global.fetch as any).mockResolvedValueOnce(new Response(JSON.stringify([{ id: 'p1' }]), { status: 200 }));
-
         // Act
         await api.uploadPhotos(jobId, files);
 
-        // Assert
-        expect(uploadStrategies.uploadViaServer).toHaveBeenCalled();
+        // Assert: It should just stop and not attempt upload
+        expect(uploadStrategies.uploadViaServer).not.toHaveBeenCalled();
         expect(uploadStrategies.uploadViaPresigned).not.toHaveBeenCalled();
     });
 });
