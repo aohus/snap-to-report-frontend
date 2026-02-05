@@ -253,5 +253,4 @@ export function JobTable({
       </div>
     </div>
   );
-  );
 }
