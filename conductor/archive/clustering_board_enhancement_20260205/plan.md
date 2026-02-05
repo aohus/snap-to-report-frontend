@@ -40,8 +40,7 @@
 - [x] Task: Conductor - User Manual Verification 'Quick Preview & UI Polish' (Protocol in workflow.md) [checkpoint: 0231c0c]
 
 ## Phase 5: Performance Optimization (Virtualization)
-- [ ] Task: Integrate `@tanstack/react-virtual` for Cluster List
-    - [ ] Implement virtualized rendering for the main list of clusters to handle large datasets (100+ clusters).
-- [ ] Task: TDD - Write performance tests/benchmarks for large list scrolling.
-- [ ] Task: Finalize virtualization and ensure DnD compatibility.
-- [ ] Task: Conductor - User Manual Verification 'Performance Optimization (Virtualization)' (Protocol in workflow.md)
+- [x] Task: Integrate `@tanstack/react-virtual` for Cluster List [59260f2]
+    - [x] Implement virtualized rendering for the main list of clusters to handle large datasets (100+ clusters).
+- [x] Task: Finalize virtualization and ensure DnD compatibility. [59260f2]
+- [x] Task: Conductor - User Manual Verification 'Performance Optimization (Virtualization)' (Protocol in workflow.md) [59260f2]

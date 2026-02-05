@@ -174,9 +174,6 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
     measureElement: (el) => el.getBoundingClientRect().height,
   });
 
-  // Helper to get all currently visible photos in order
-  const getVisiblePhotos = () => {
-
   return (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-col md:flex-row h-full gap-4 md:gap-6">

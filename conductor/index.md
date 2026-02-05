@@ -11,7 +11,7 @@ This project uses a modular AI system located in the `.ai/` directory.
 
 - [Product Definition](./product.md)
 - [Product Guidelines](./product-guidelines.md)
-- [Tech Stack](./tech-stack.md)
+- [Tech Stack](./tech-stack.md)ㄷ
 
 ## Workflow
 
