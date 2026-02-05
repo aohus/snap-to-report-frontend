@@ -10,7 +10,7 @@ interface PhotoCardProps {
   index: number;
   onDelete?: (id: number | string) => void;
   isReserve?: boolean;
-  onSelect?: () => void;
+  onSelect?: (e: React.MouseEvent) => void;
   isSelected?: boolean;
   isCompact?: boolean;
   onEditLabels?: (id: string) => void;

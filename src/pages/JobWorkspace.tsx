@@ -331,14 +331,19 @@ function DashboardContent() {
     }
   };
 
-  const handleSelectPhoto = (photoId: string, clusterId: string) => {
-    setSelectedPhotos(prev => {
-      const exists = prev.some(p => p.id === photoId);
-      if (exists) {
-        return prev.filter(p => p.id !== photoId);
-      }
-      return [...prev, { id: photoId, clusterId }];
-    });
+  const handleSelectPhoto = (photoId: string, clusterId: string, e?: React.MouseEvent) => {
+    if (!e || (!e.ctrlKey && !e.metaKey && !e.shiftKey)) {
+        // Normal click: toggle single, but usually clears others if we want strict behavior.
+        // For now, toggle single as before.
+        setSelectedPhotos(prev => {
+            const exists = prev.some(p => p.id === photoId);
+            if (exists && prev.length === 1) return [];
+            return [{ id: photoId, clusterId }];
+        });
+        return;
+    }
+    // Logic for modifiers will be handled by ClusterBoard via onSetSelectedPhotos if we add it,
+    // or we can pass the whole array from handleSelectPhoto if we update the signature.
   };
 
   const handleExport = () => {
@@ -500,6 +505,7 @@ function DashboardContent() {
                     onRenameCluster={handleRenameCluster}
                     onDeletePhoto={handleDeletePhoto}
                     onSelectPhoto={handleSelectPhoto}
+                    onSetSelectedPhotos={setSelectedPhotos} // New bulk update prop
                     onEditLabels={handleEditLabels}
                 />
             )}

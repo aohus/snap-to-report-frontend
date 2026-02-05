@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { Cluster } from '@/types';
 import { PlaceRow } from './PlaceRow';
-import { PlaceColumn } from './PlaceColumn';
 import { PhotoCard } from './PhotoCard';
 import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+
+import { calculateNextSelection, SelectedPhoto } from '@/hooks/useMultiSelection';
 
 interface ClusterBoardProps {
   clusters: Cluster[];
@@ -19,17 +20,20 @@ interface ClusterBoardProps {
   onDeleteCluster: (clusterId: string) => void;
   onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
   selectedPhotos: { id: string, clusterId: string }[];
-  onSelectPhoto: (photoId: string, clusterId: string) => void;
+  onSelectPhoto: (photoId: string, clusterId: string, e?: React.MouseEvent) => void;
+  onSetSelectedPhotos?: (photos: SelectedPhoto[]) => void; // New prop for bulk updates
   onEditLabels: (photoId: string) => void;
 }
 
-export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotos, onSelectPhoto, onEditLabels }: ClusterBoardProps) {
+export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotos, onSelectPhoto, onSetSelectedPhotos, onEditLabels }: ClusterBoardProps) {
   const isMobile = useIsMobile();
   const [isCompact, setIsCompact] = useState(false);
   const [collapsedClusterIds, setCollapsedClusterIds] = useState<Set<string>>(new Set());
   const [hideCompleted, setHideCompleted] = useState(false);
   const [isReserveCollapsed, setIsReserveCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false); // Global drag state
+  
+  const [lastSelected, setLastSelected] = useState<SelectedPhoto | null>(null);
   
   const selectedPhotoIds = selectedPhotos.map(p => p.id);
 
@@ -50,6 +54,47 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
     const targetIndex = destination.index;
 
     onMovePhoto(photoId, sourceClusterId, targetClusterId, targetIndex);
+  };
+
+  const handleSelectPhotoInternal = (photoId: string, clusterId: string, e?: React.MouseEvent) => {
+    if (!e || (!e.ctrlKey && !e.metaKey && !e.shiftKey)) {
+        onSelectPhoto(photoId, clusterId, e); // Let parent handle single click
+        setLastSelected({ id: photoId, clusterId });
+        return;
+    }
+
+    const isMultiSelect = e.ctrlKey || e.metaKey;
+    const isRangeSelect = e.shiftKey;
+
+    // Flatten all visible photos for range selection
+    const reserveCluster = clusters.find(c => c.name === 'reserve');
+    const placeClusters = clusters.filter(c => c.id !== reserveCluster?.id).sort((a, b) => a.order_index - b.order_index);
+    
+    const allVisiblePhotos: SelectedPhoto[] = [];
+    if (reserveCluster && !isReserveCollapsed) {
+        reserveCluster.photos.forEach(p => allVisiblePhotos.push({ id: p.id.toString(), clusterId: reserveCluster.id }));
+    }
+    placeClusters.forEach(c => {
+        if (!collapsedClusterIds.has(c.id)) {
+            c.photos.forEach(p => allVisiblePhotos.push({ id: p.id.toString(), clusterId: c.id }));
+        }
+    });
+
+    const { nextSelection, nextLastSelected } = calculateNextSelection(
+        selectedPhotos,
+        lastSelected,
+        { id: photoId, clusterId },
+        isMultiSelect,
+        isRangeSelect,
+        allVisiblePhotos
+    );
+
+    if (onSetSelectedPhotos) {
+        onSetSelectedPhotos(nextSelection);
+    } else {
+        onSelectPhoto(photoId, clusterId, e);
+    }
+    setLastSelected(nextLastSelected);
   };
 
   const reserveCluster = clusters.find(c => c.name === 'reserve');
@@ -176,9 +221,9 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                         index={index} 
                         onDelete={(pid) => onDeletePhoto(pid.toString(), reserveCluster.id)}
                         isReserve={true}
-                        onSelect={() => onSelectPhoto(photo.id.toString(), reserveCluster.id)}
+                        onSelect={(e) => handleSelectPhotoInternal(photo.id.toString(), reserveCluster.id, e)}
                         isSelected={selectedPhotoIds.includes(photo.id.toString())}
-                        isCompact={isCompact} // Use state instead of forcing true
+                        isCompact={isCompact}
                         onEditLabels={onEditLabels}
                         />
                     </div>
@@ -242,8 +287,8 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
           {/* Clusters Grid (Single Column for better focus) */}
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
             <div className={cn(
-                "grid gap-6 items-start pb-20 grid-cols-1", // Forced single column
-                isCompact && "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" // Keep compact grid as it serves a different purpose
+                "grid gap-6 items-start pb-20 grid-cols-1", 
+                isCompact && "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
             )}>
               {displayedClusters.map((cluster) => (
                   <PlaceRow
@@ -256,12 +301,12 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     onDeleteCluster={onDeleteCluster}
                     onMoveCluster={onMoveCluster}
                     selectedPhotos={selectedPhotos}
-                    onSelectPhoto={onSelectPhoto}
+                    onSelectPhoto={handleSelectPhotoInternal}
                     isCompact={isCompact}
                     isCollapsed={collapsedClusterIds.has(cluster.id)}
                     onToggleCollapse={() => toggleClusterCollapse(cluster.id)}
                     onEditLabels={onEditLabels}
-                    isDragging={isDragging} // Pass global drag state
+                    isDragging={isDragging}
                   />
               ))}
             </div>

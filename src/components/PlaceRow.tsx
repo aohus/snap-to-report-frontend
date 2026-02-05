@@ -22,7 +22,7 @@ interface PlaceRowProps {
   onDeleteCluster: (clusterId: string) => void;
   onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
   selectedPhotos: { id: string, clusterId: string }[];
-  onSelectPhoto: (photoId: string, clusterId: string) => void;
+  onSelectPhoto: (photoId: string, clusterId: string, e?: React.MouseEvent) => void;
   isCompact?: boolean;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -187,18 +187,19 @@ export function PlaceRow({
                       onMouseEnter={() => setIsOpen(true)}
                       onMouseLeave={() => setIsOpen(false)}
                     >
-                      <DropdownMenuItem
-                        onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
-                      >
-                        <BringToFront className="mr-2 h-4 w-4" />
-                        <span>선택 사진 여기 추가 ({selectedPhotoIds.length})</span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => onCreate(cluster.order_index + 1, selectedPhotos)}
-                      >
-                        <MoveDown className="mr-2 h-4 w-4" />
-                        <span>선택 사진 아래 추가 ({selectedPhotoIds.length})</span>
-                      </DropdownMenuItem>
+                                                          <DropdownMenuItem
+                                                            onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
+                                                          >
+                                                            <BringToFront className="mr-2 h-4 w-4" />
+                                                            <span>선택 사진 ({selectedPhotoIds.length}장) 여기 추가</span>
+                                                          </DropdownMenuItem>
+                                                          <DropdownMenuItem
+                                                            onClick={() => onCreate(cluster.order_index + 1, selectedPhotos)}
+                                                          >
+                                                            <MoveDown className="mr-2 h-4 w-4" />
+                                                            <span>선택 사진 ({selectedPhotoIds.length}장) 아래 추가</span>
+                                                          </DropdownMenuItem>
+                      
                       <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, [])}>
                         <Plus className="mr-2 h-4 w-4" />
                         <span>빈 장소 추가</span>
@@ -265,7 +266,7 @@ export function PlaceRow({
                     photo={photo}
                     index={index}
                     onDelete={onDeletePhoto ? () => onDeletePhoto(photo.id.toString()) : undefined}
-                    onSelect={() => onSelectPhoto(photo.id.toString(), cluster.id)}
+                    onSelect={(e) => onSelectPhoto(photo.id.toString(), cluster.id, e)}
                     isSelected={selectedPhotoIds.includes(photo.id.toString())}
                     isCompact={isCompact}
                     onEditLabels={onEditLabels}

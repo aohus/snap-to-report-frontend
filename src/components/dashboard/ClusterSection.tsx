@@ -1,18 +1,20 @@
 import { ClusterBoard } from '@/components/ClusterBoard';
 import { Cluster, Photo } from '@/types';
+import { SelectedPhoto } from '@/hooks/useMultiSelection';
 
 interface ClusterSectionProps {
   clusters: Cluster[];
   isClustering: boolean;
   selectedPhotos: { id: string; clusterId: string }[];
-  onMovePhoto: (photoId: string, sourceClusterId: string, targetClusterId: string, newIndex: number) => Promise<void>;
-  onCreateCluster: (orderIndex: number, photosToMoveParam?: { id: string; clusterId: string }[]) => Promise<void>;
-  onDeleteCluster: (clusterId: string) => Promise<void>;
-  onMoveCluster: (clusterId: string, direction: 'up' | 'down') => Promise<void>;
-  onAddPhotosToExistingCluster: (targetClusterId: string, photosToMoveParam: { id: string; clusterId: string }[]) => Promise<void>;
-  onRenameCluster: (clusterId: string, newName: string) => Promise<void>;
-  onDeletePhoto: (photoId: string, clusterId: string) => Promise<void>;
-  onSelectPhoto: (photoId: string, clusterId: string) => void;
+  onMovePhoto: (photoId: string, sourceClusterId: string, targetClusterId: string, newIndex: number) => void;
+  onCreateCluster: (orderIndex: number, photosToMoveParam?: { id: string; clusterId: string }[]) => void;
+  onDeleteCluster: (clusterId: string) => void;
+  onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
+  onAddPhotosToExistingCluster: (targetClusterId: string, photosToMoveParam: { id: string; clusterId: string }[]) => void;
+  onRenameCluster: (clusterId: string, newName: string) => void;
+  onDeletePhoto: (photoId: string, clusterId: string) => void;
+  onSelectPhoto: (photoId: string, clusterId: string, e?: React.MouseEvent) => void;
+  onSetSelectedPhotos?: (photos: SelectedPhoto[]) => void;
   onEditLabels: (photoId: string) => void;
 }
 
@@ -28,6 +30,7 @@ export function ClusterSection({
   onRenameCluster,
   onDeletePhoto,
   onSelectPhoto,
+  onSetSelectedPhotos,
   onEditLabels,
 }: ClusterSectionProps) {
   return (
@@ -48,6 +51,7 @@ export function ClusterSection({
         onDeletePhoto={onDeletePhoto}
         selectedPhotos={selectedPhotos}
         onSelectPhoto={onSelectPhoto}
+        onSetSelectedPhotos={onSetSelectedPhotos}
         onEditLabels={onEditLabels}
       />
     </div>
