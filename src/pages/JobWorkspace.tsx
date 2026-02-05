@@ -505,7 +505,6 @@ function DashboardContent() {
                     onDeletePhoto={handleDeletePhoto}
                     onSelectPhoto={handleSelectPhoto}
                     onSetSelectedPhotos={setSelectedPhotos} // New bulk update prop
-                    onPreviewPhoto={setPreviewPhoto}
                     onEditLabels={handleEditLabels}
                 />
             )}

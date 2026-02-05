@@ -335,7 +335,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     isCollapsed={collapsedClusterIds.has(cluster.id)}
                     onToggleCollapse={() => toggleClusterCollapse(cluster.id)}
                     onEditLabels={onEditLabels}
-                    onPreviewPhoto={onPreviewPhoto}
+                    onPreviewPhoto={(photo) => setPreviewPhoto(photo as any)}
                     isDragging={isDragging}
                   />
               ))}
