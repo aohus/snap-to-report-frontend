@@ -23,5 +23,5 @@ Link: [./tracks/frontend_independent_deploy_20260202/](./tracks/frontend_indepen
 
 ---
 
-- [~] **Track: UI 개선 및 대시보드 리뉴얼**
+- [x] **Track: UI 개선 및 대시보드 리뉴얼**
 *Link: [./tracks/ui_modernization_20260205/](./tracks/ui_modernization_20260205/)*
