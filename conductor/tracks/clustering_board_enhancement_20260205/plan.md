@@ -36,7 +36,7 @@
     - [x] Support image zoom and high-quality viewing.
     - [x] Implement keyboard navigation (ArrowLeft, ArrowRight, Esc).
 - [x] Task: TDD - Write tests for Lightbox triggering and navigation. [214b362]
-- [ ] Task: Final UI/UX Polish (Consistency with latest trends, spacing, shadows).
+- [x] Task: Final UI/UX Polish (Consistency with latest trends, spacing, shadows). [d1a1ec0]
 - [ ] Task: Conductor - User Manual Verification 'Quick Preview & UI Polish' (Protocol in workflow.md)
 
 ## Phase 5: Performance Optimization (Virtualization)
