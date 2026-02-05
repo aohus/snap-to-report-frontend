@@ -22,5 +22,8 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## Active Tracks
 
+- [x] **Track: UI/UX Modernization & Design System Standardization**
+  Link: [./docs/ui_modernization_20260205/report.md](./docs/ui_modernization_20260205/report.md)
+
 - [ ] **Track: 프론트엔드 독립 배포 파이프라인 구축 (백엔드 무중단)**
   Link: [./tracks/frontend_independent_deploy_20260202/](./tracks/frontend_independent_deploy_20260202/)
