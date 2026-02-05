@@ -218,13 +218,11 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
             </div>
           </div>
 
-          {/* Clusters Responsive Grid */}
+          {/* Clusters Grid (Single Column for better focus) */}
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
             <div className={cn(
-                "grid gap-6 items-start pb-20",
-                isCompact 
-                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-                    : "grid-cols-1 2xl:grid-cols-2" // Simplified to 1 col (mobile/laptop) -> 2 cols (wide screens)
+                "grid gap-6 items-start pb-20 grid-cols-1", // Forced single column
+                isCompact && "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" // Keep compact grid as it serves a different purpose
             )}>
               {displayedClusters.map((cluster) => (
                   <PlaceRow
