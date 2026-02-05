@@ -19,23 +19,23 @@
 - [ ] Task: Update `PlaceRow`/`PlaceColumn` (or equivalent Cluster components) to support dynamic drop zones.
 - [ ] Task: Conductor - User Manual Verification 'Dynamic Drop Zones & Interaction Feedback' (Protocol in workflow.md)
 
-## Phase 3: Multi-selection & Bulk Actions
-- [ ] Task: Implement Multi-selection Logic
-    - [ ] Add state to `ClusterBoard` or a new hook for tracking selected photos.
-    - [ ] Support Shift+Click and Ctrl+Click for range and individual selection.
-- [ ] Task: Implement Bulk Action UI
-    - [ ] Create a Floating Action Bar that appears when photos are selected.
-    - [ ] Add buttons for "Move to Reserve", "Move to Place...", and "Delete".
-- [ ] Task: TDD - Write tests for selection logic and bulk movement accuracy.
-- [ ] Task: Implement selection handlers and the bulk action component.
-- [ ] Task: Conductor - User Manual Verification 'Multi-selection & Bulk Actions' (Protocol in workflow.md)
+## Phase 2: Multi-selection & Bulk Actions
+- [x] Task: Implement Multi-selection Logic [9b46074]
+    - [x] Add state to `ClusterBoard` or a new hook for tracking selected photos.
+    - [x] Support additive selection on click.
+- [x] Task: Implement Bulk Action UI [79f2a0c]
+    - [x] Create a Floating Action Bar that appears when photos are selected.
+    - [x] Add buttons for "Move to Reserve", "Move to Place...", and "Delete".
+- [x] Task: TDD - Write tests for selection logic and bulk movement accuracy. [79f2a0c]
+- [x] Task: Implement selection handlers and the bulk action component. [cd42077]
+- [x] Task: Conductor - User Manual Verification 'Multi-selection & Bulk Actions' (Protocol in workflow.md) [checkpoint: cd42077]
 
-## Phase 4: Quick Preview & UI Polish
-- [ ] Task: Implement Quick Preview Lightbox
-    - [ ] Create a `Lightbox` component using shadcn `Dialog` or a specialized library.
-    - [ ] Support image zoom and high-quality viewing.
-    - [ ] Implement keyboard navigation (ArrowLeft, ArrowRight, Esc).
-- [ ] Task: TDD - Write tests for Lightbox triggering and navigation.
+## Phase 3: Quick Preview & UI Polish
+- [x] Task: Implement Quick Preview Lightbox [214b362]
+    - [x] Create a `Lightbox` component using shadcn `Dialog` or a specialized library.
+    - [x] Support image zoom and high-quality viewing.
+    - [x] Implement keyboard navigation (ArrowLeft, ArrowRight, Esc).
+- [x] Task: TDD - Write tests for Lightbox triggering and navigation. [214b362]
 - [ ] Task: Final UI/UX Polish (Consistency with latest trends, spacing, shadows).
 - [ ] Task: Conductor - User Manual Verification 'Quick Preview & UI Polish' (Protocol in workflow.md)
 
