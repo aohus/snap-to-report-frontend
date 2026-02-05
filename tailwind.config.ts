@@ -24,6 +24,16 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          50: "#f0f4f8",
+          100: "#d9e2ec",
+          200: "#bcccdc",
+          300: "#9fb3c8",
+          400: "#829ab1",
+          500: "#627d98",
+          600: "#486581",
+          700: "#334e68",
+          800: "#243b53",
+          900: "#102a43",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",
@@ -60,7 +70,10 @@ export default {
           ring: "hsl(var(--sidebar-ring))",
         },
         surface: {
-          DEFAULT: "hsl(var(--background))",
+          DEFAULT: "hsl(var(--surface-1))",
+          1: "hsl(var(--surface-1))",
+          2: "hsl(var(--surface-2))",
+          3: "hsl(var(--surface-3))",
           subtle: "hsl(var(--muted))",
           emphasis: "hsl(var(--secondary))",
         }
@@ -69,9 +82,18 @@ export default {
         sans: ["Inter", "Pretendard", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "monospace"],
       },
+      fontSize: {
+        'xs': ['0.75rem', { lineHeight: '1.5', letterSpacing: '-0.01em' }],
+        'sm': ['0.875rem', { lineHeight: '1.5', letterSpacing: '-0.01em' }],
+        'base': ['1rem', { lineHeight: '1.6', letterSpacing: '-0.011em' }],
+        'lg': ['1.125rem', { lineHeight: '1.6', letterSpacing: '-0.015em' }],
+        'xl': ['1.25rem', { lineHeight: '1.5', letterSpacing: '-0.02em' }],
+        '2xl': ['1.5rem', { lineHeight: '1.4', letterSpacing: '-0.025em' }],
+      },
       boxShadow: {
-        'professional': '0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1)',
-        'emphasis': '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)',
+        'professional': '0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05)',
+        'emphasis': '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)',
+        'elevated': '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08)',
       },
       borderRadius: {
         lg: "var(--radius)",
