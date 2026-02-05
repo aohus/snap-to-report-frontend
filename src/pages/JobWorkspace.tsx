@@ -86,7 +86,8 @@ function DashboardContent() {
     handleDeletePhoto,
     handleRenameCluster,
     handleMoveCluster,
-    handleAddPhotosToExistingCluster
+    handleAddPhotosToExistingCluster,
+    handleBatchDeletePhotos
   } = useJobActions({
     jobId: jobId!,
     jobTitle: job?.title,
@@ -435,12 +436,10 @@ function DashboardContent() {
   };
 
   const handleBatchDelete = async () => {
-      const toDelete = [...selectedPhotos];
-      for (const p of toDelete) {
-          await handleDeletePhoto(p.id, p.clusterId);
+      if (confirm(`선택한 ${selectedPhotos.length}장의 사진을 정말 삭제하시겠습니까?`)) {
+          await handleBatchDeletePhotos(selectedPhotos);
+          setActionDrawerOpen(false);
       }
-      setSelectedPhotos([]);
-      setActionDrawerOpen(false);
   };
 
   const handleBatchMove = async (targetClusterId: string) => {

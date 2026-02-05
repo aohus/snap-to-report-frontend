@@ -321,6 +321,34 @@ export function useJobActions({
     }
   }, [jobId, clusters, setClusters, selectedPhotos, setSelectedPhotos]);
 
+  const handleBatchDeletePhotos = useCallback(async (photosToDelete: { id: string; clusterId: string }[]) => {
+    if (photosToDelete.length === 0) return;
+
+    const prevClusters = clusters;
+    const prevSelectedPhotos = selectedPhotos;
+
+    try {
+      setClusters(prev => prev.map(c => {
+        const photosToRemoveFromHere = photosToDelete.filter(p => p.clusterId === c.id).map(p => p.id);
+        if (photosToRemoveFromHere.length > 0) {
+            return { ...c, photos: c.photos.filter(p => !photosToRemoveFromHere.includes(p.id.toString())) };
+        }
+        return c;
+      }));
+
+      setSelectedPhotos([]);
+
+      // API calls (sequential for safety, or parallel if backend handles it)
+      await Promise.all(photosToDelete.map(p => api.deleteClusterMember(jobId, p.id)));
+      toast.success(`Deleted ${photosToDelete.length} photos`);
+    } catch (e) {
+      console.error("Failed to delete photos", e);
+      toast.error("Failed to delete some photos");
+      setClusters(prevClusters);
+      setSelectedPhotos(prevSelectedPhotos);
+    }
+  }, [jobId, clusters, setClusters, selectedPhotos, setSelectedPhotos]);
+
   return {
     saving,
     handleDeleteCluster,
@@ -330,5 +358,6 @@ export function useJobActions({
     handleRenameCluster,
     handleMoveCluster,
     handleAddPhotosToExistingCluster,
+    handleBatchDeletePhotos,
   };
 }
