@@ -256,7 +256,7 @@ export default function Dashboard() {
     return site?.jobs || [];
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
+  if (loading) return <div data-testid="loader" className="h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col selection:bg-primary/10 selection:text-primary">

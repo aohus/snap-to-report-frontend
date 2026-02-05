@@ -126,11 +126,11 @@ export function JobTable({
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-professional overflow-hidden">
-        <Table>
+        <Table className="text-base">
           <TableHeader className="bg-slate-50/50">
             <TableRow className="hover:bg-transparent border-slate-100">
               <TableHead 
-                className="w-[40%] cursor-pointer hover:text-blue-600 transition-colors"
+                className="w-[40%] cursor-pointer hover:text-blue-600 transition-colors text-sm font-bold"
                 onClick={() => handleSort('title')}
               >
                 <div className="flex items-center gap-2">
@@ -138,9 +138,9 @@ export function JobTable({
                   <ArrowUpDown className="w-3 h-3" />
                 </div>
               </TableHead>
-              <TableHead className="hidden md:table-cell">공종 / 시행처</TableHead>
+              <TableHead className="hidden md:table-cell text-sm font-bold">공종 / 시행처</TableHead>
               <TableHead 
-                className="cursor-pointer hover:text-blue-600 transition-colors"
+                className="cursor-pointer hover:text-blue-600 transition-colors text-sm font-bold"
                 onClick={() => handleSort('work_date')}
               >
                 <div className="flex items-center gap-2">
@@ -148,8 +148,8 @@ export function JobTable({
                   <ArrowUpDown className="w-3 h-3" />
                 </div>
               </TableHead>
-              <TableHead>상태</TableHead>
-              <TableHead className="text-right">관리</TableHead>
+              <TableHead className="text-sm font-bold">상태</TableHead>
+              <TableHead className="text-right text-sm font-bold">관리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -170,38 +170,35 @@ export function JobTable({
                   className="group cursor-pointer hover:bg-blue-50/30 border-slate-100 transition-colors"
                   onClick={() => onNavigate(job.id)}
                 >
-                  <TableCell className="py-4">
+                  <TableCell className="py-3">
                     <div className="flex flex-col gap-1">
-                      <span className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                      <span className="text-lg font-black text-slate-900 group-hover:text-blue-600 transition-colors">
                         {job.title}
-                      </span>
-                      <span className="text-xs text-slate-400 font-medium">
-                        ID: {job.id.slice(0, 8)}...
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-4 hidden md:table-cell">
-                    <div className="flex flex-col gap-1 text-sm font-medium text-slate-600">
+                  <TableCell className="py-3 hidden md:table-cell">
+                    <div className="flex flex-col gap-1 text-base font-medium text-slate-600">
                       <div className="flex items-center gap-1.5">
-                        <Hammer className="w-3.5 h-3.5 text-slate-400" />
+                        <Hammer className="w-4 h-4 text-slate-400" />
                         <span>{job.construction_type || '-'}</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <Building2 className="w-3.5 h-3.5 text-slate-400" />
+                        <Building2 className="w-4 h-4 text-slate-400" />
                         <span>{job.company_name || '-'}</span>
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="py-4">
-                    <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                  <TableCell className="py-3">
+                    <div className="flex items-center gap-2 text-base font-bold text-slate-600">
                       <Calendar className="w-4 h-4 text-slate-400" />
                       {job.work_date ? format(new Date(job.work_date), 'yyyy.MM.dd') : '-'}
                     </div>
                   </TableCell>
-                  <TableCell className="py-4">
+                  <TableCell className="py-3">
                     {getStatusBadge(job.status)}
                   </TableCell>
-                  <TableCell className="py-4 text-right" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100">

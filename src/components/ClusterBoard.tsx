@@ -170,7 +170,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
     count: displayedClusters.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => isCompact ? 200 : 300, 
-    overscan: 5,
+    overscan: 10,
     measureElement: (el) => el.getBoundingClientRect().height,
   });
 

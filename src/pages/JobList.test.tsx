@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import '@testing-library/jest-dom';
-import { render, screen, waitFor, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import JobList from './JobList';
+import Dashboard from './Dashboard';
 import { api } from '@/lib/api';
 
 // Mock API
@@ -43,17 +43,18 @@ describe('JobList Component - Create Job Flow', () => {
   it('Navigates to the new job page after successful creation', async () => {
     render(
       <MemoryRouter>
-        <JobList />
+        <Dashboard />
       </MemoryRouter>
     );
 
-    // Wait for data load
+    // Wait for data load and click "새 작업 추가"
     await waitFor(() => {
-      expect(screen.getByText('새로운 작업 시작하기')).toBeInTheDocument();
+      expect(screen.getByText(/새 작업 추가/i)).toBeInTheDocument();
     });
 
-    // Open Create Dialog
-    fireEvent.click(screen.getByText('작업 사진 올리기'));
+    fireEvent.click(screen.getByText(/새 작업 추가/i));
+    
+    // Check if dialog is open
     expect(screen.getByText('새 작업 만들기')).toBeInTheDocument();
 
     // Fill form
@@ -64,17 +65,17 @@ describe('JobList Component - Create Job Flow', () => {
     const newJobId = 'job-new-123';
     (api.createJob as any).mockResolvedValue({ id: newJobId, title: 'New Test Job' });
 
-    // Click Create
-    fireEvent.click(screen.getByRole('button', { name: '생성' }));
+    // Click Create button (Updated to "작업 생성")
+    fireEvent.click(screen.getByText('작업 생성'));
 
     // Verify API call
     await waitFor(() => {
       expect(api.createJob).toHaveBeenCalled();
     });
 
-    // Verify Navigation
+    // Verify Navigation (Dashboard uses a small timeout for navigation)
     await waitFor(() => {
         expect(mockNavigate).toHaveBeenCalledWith(`/jobs/${newJobId}`);
-    });
+    }, { timeout: 2000 });
   });
 });
