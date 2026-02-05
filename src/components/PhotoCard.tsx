@@ -2,7 +2,7 @@ import React from 'react'; // React.memo 사용을 위해 import
 import { Draggable } from '@hello-pangea/dnd';
 import { Photo } from '@/types';
 // import { api } from '@/lib/api'; // 사용되지 않아 제거 가능
-import { X, Tags, Maximize2 } from 'lucide-react';
+import { X, Tags, Maximize2, CheckCircle2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface PhotoCardProps {
@@ -52,13 +52,25 @@ export const PhotoCard = React.memo(function PhotoCard({
               : 'border border-slate-200/60 hover:border-primary/40 hover:shadow-emphasis hover:-translate-y-0.5'
             }
             ${!isReserve && index < 3 && !isSelected ? 'ring-1 ring-emerald-500/50 border-emerald-500/50' : ''}
-            ${isSelected ? 'ring-2 ring-primary border-primary bg-primary/5 shadow-emphasis' : ''}
+            ${isSelected 
+              ? 'ring-[3px] ring-primary border-primary bg-primary/10 shadow-emphasis scale-[0.98]' 
+              : ''
+            }
             ${!snapshot.isDragging && isDraggingSomewhere && isSelected ? 'opacity-40 scale-[0.98] grayscale-[0.3]' : ''}
           `}
           style={{
             ...provided.draggableProps.style,
           }}
         >
+          {/* Selected Overlay & Icon */}
+          {isSelected && (
+            <div className="absolute inset-0 bg-primary/5 z-10 pointer-events-none transition-all duration-300">
+              <div className="absolute top-2 right-2 bg-primary text-white rounded-full p-0.5 shadow-lg animate-in zoom-in duration-200">
+                <CheckCircle2 className="w-5 h-5" />
+              </div>
+            </div>
+          )}
+
           {/* Multi-drag Badge */}
           {snapshot.isDragging && isSelected && (
               <div className="absolute -top-2 -right-2 z-50 bg-primary text-white w-8 h-8 rounded-full flex items-center justify-center font-bold shadow-elevated ring-2 ring-white animate-in zoom-in">
