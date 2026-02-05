@@ -1,7 +1,25 @@
-import { useState, useEffect, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { v4 as uuidv4 } from "uuid";
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { api } from '@/lib/api';
+import { AuthService } from '@/lib/auth';
+import { Job, Site } from '@/types';
+import { 
+  Plus, Loader2, LayoutGrid, LogOut, 
+  User, Folder as FolderIcon, FolderPlus, MoreHorizontal, 
+} from 'lucide-react';
+import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Dialog,
   DialogContent,
@@ -9,872 +27,493 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { format } from 'date-fns';
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
-import { api } from '@/lib/api';
-import { Job, Cluster, Photo } from '@/types';
-import { Loader2, CheckCircle, Plus, X, FileDown, RefreshCw, Edit2, Settings } from 'lucide-react';
-import { toast } from 'sonner';
-import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover"
+import { DashboardStats } from '@/components/dashboard/DashboardStats';
+import { JobTable } from '@/components/dashboard/JobTable';
 
-import { useJobActions } from '@/hooks/useJobActions';
-import { UnsortedGrid } from '@/components/dashboard/UnsortedGrid';
-import { ClusterSection } from '@/components/dashboard/ClusterSection';
-import { ActionToolbar } from '@/components/dashboard/ActionToolbar';
-import { FloatingActionBar } from '@/components/dashboard/FloatingActionBar';
-import { ActionDrawer } from '@/components/dashboard/ActionDrawer';
-import { GlobalErrorBoundary } from '@/components/GlobalErrorBoundary';
-import { DashboardSectionErrorBoundary } from '@/components/dashboard/DashboardSectionErrorBoundary';
-import { sortPhotosByOrderIndex } from '@/lib/utils';
-
-export default function DashboardPage() {
-    return (
-        <GlobalErrorBoundary>
-            <DashboardContent />
-        </GlobalErrorBoundary>
-    );
-}
-
-function DashboardContent() {
+export default function Dashboard() {
   const navigate = useNavigate();
-  const { jobId } = useParams<{ jobId: string }>();
-  const [job, setJob] = useState<Job | null>(null);
-  const [clusters, setClusters] = useState<Cluster[]>([]);
-  const [photos, setPhotos] = useState<Photo[]>([]);
-  const [selectedPhotos, setSelectedPhotos] = useState<{ id: string; clusterId: string }[]>([]);
-  const [isClustering, setIsClustering] = useState(false);
-  const [estimatedTime, setEstimatedTime] = useState<number | null>(null);
-  const [remainingTime, setRemainingTime] = useState<number | null>(null);
-  const [showClusteringDialog, setShowClusteringDialog] = useState(false);
-  const [exporting, setExporting] = useState(false);
-  const [exportDialogOpen, setExportDialogOpen] = useState(false);
-  const [downloadDialogOpen, setDownloadDialogOpen] = useState(false);
-  const [downloadUrl, setDownloadUrl] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [actionDrawerOpen, setActionDrawerOpen] = useState(false);
-  
-  // Label Editing State
-  const [editingPhotoId, setEditingPhotoId] = useState<string | null>(null);
-  const [editLabelData, setEditLabelData] = useState<Record<string, string>>({});
+  const [jobs, setJobs] = useState<Job[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [creating, setCreating] = useState(false);
 
-  // Job Info Editing State
-  const [editJobDialogOpen, setEditJobDialogOpen] = useState(false);
-  const [jobEditForm, setJobEditForm] = useState({
+  // Site Management State
+  const [selectedSiteId, setSelectedSiteId] = useState<string | 'unclassified' | null>(null);
+  const [newSiteName, setNewSiteName] = useState('');
+  const [isAddingSite, setIsAddingSite] = useState(false);
+
+  // Create Job State
+  const [createJobDialogOpen, setCreateJobDialogOpen] = useState(false);
+  const [createForm, setCreateForm] = useState({
     title: '',
-    company_name: '',
     work_date: '',
+    company_name: '',
     construction_type: ''
   });
 
-  // Export & Preview State
-  const [exportMetadata, setExportMetadata] = useState({
-    cover_title: '',
-    cover_company_name: '',
-  });
-  const [labelSettings, setLabelSettings] = useState<{ id: string; key: string; value: string; isAutoDate?: boolean }[]>([
-    { id: 'date', key: '일자', value: '', isAutoDate: true },
-    { id: 'company', key: '시행처', value: '' },
-  ]);
-
-  const { 
-    handleMovePhoto, 
-    handleCreateCluster, 
-    handleDeleteCluster, 
-    handleDeletePhoto,
-    handleRenameCluster,
-    handleMoveCluster,
-    handleAddPhotosToExistingCluster
-  } = useJobActions({
-    jobId: jobId!,
-    jobTitle: job?.title,
-    clusters,
-    setClusters,
-    selectedPhotos,
-    setSelectedPhotos
+  // Edit State
+  const [editingJob, setEditingJob] = useState<Job | null>(null);
+  const [editForm, setEditForm] = useState({
+    title: '',
+    work_date: '',
+    company_name: '',
+    construction_type: ''
   });
 
-  const addLabelItem = () => {
-    const newItem = {
-      id: uuidv4(),
-      key: "새 라벨",
-      value: "",
-    };
-
-    setLabelSettings(prev => [...prev, newItem]);
-  };
-
-  const removeLabelItem = (id: string) => {
-    setLabelSettings(labelSettings.filter(l => l.id !== id));
-  };
-
-  const updateLabelItem = (id: string, field: 'key' | 'value', newValue: string) => {
-    setLabelSettings(labelSettings.map(l => l.id === id ? { ...l, [field]: newValue } : l));
-  };
-  
-  useEffect(() => {
-    if (!jobId) return;
-
-    const fetchJobData = async () => {
-      try {
-        setError(null);
-        const data = await api.getJobDetails(jobId);
-        if (!data) throw new Error("데이터를 불러올 수 없습니다.");
-        setJob(data);
-        
-        // Init edit form
-        setJobEditForm({
-            title: data.title,
-            company_name: data.company_name || '',
-            work_date: data.work_date ? format(new Date(data.work_date), 'yyyy-MM-dd') : '',
-            construction_type: data.construction_type || ''
-        });
-
-        if (data.status === 'PENDING' || data.status === 'PROCESSING') {
-          setIsClustering(true);
-        }
-
-        if (data.clusters) {
-           const sorted = data.clusters
-              .sort((a, b) => a.order_index - b.order_index)
-              .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
-           setClusters(sorted);
-        }
-        if (data.photos) setPhotos(data.photos);
-      } catch (error) {
-        console.error("Failed to load job data", error);
-        setError("데이터를 불러오지 못했습니다.");
-        toast.error("Failed to load job data");
-      }
-    };
-    fetchJobData();
-  }, [jobId]);
+  const [deleteJobId, setDeleteJobId] = useState<string | null>(null);
 
   useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (isClustering && remainingTime !== null && remainingTime > 0) {
-      interval = setInterval(() => {
-        setRemainingTime((prev) => {
-          if (prev === null || prev <= 0) return 0;
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(interval);
-  }, [isClustering, remainingTime]);
+    loadData();
+  }, []);
 
-  useEffect(() => {
-    let timeoutId: NodeJS.Timeout;
-    let attempts = 0;
-
-    const checkStatus = async () => {
-      if (!isClustering || !jobId) return;
-
-      try {
-        const jobData = await api.getJob(jobId);
-        
-        if (jobData.status === 'COMPLETED') {
-           const fullData = await api.getJobDetails(jobId);
-           setJob(fullData);
-           if (fullData.clusters) {
-              const sorted = fullData.clusters
-                  .sort((a, b) => a.order_index - b.order_index)
-                  .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
-              setClusters(sorted);
-              toast.success(`Analysis complete. Found ${sorted.length} places.`);
-           }
-           setIsClustering(false);
-           setEstimatedTime(null);
-           setShowClusteringDialog(false);
-           return; 
-        } else if (jobData.status === 'FAILED') {
-           setIsClustering(false);
-           setEstimatedTime(null);
-           setShowClusteringDialog(false);
-           toast.error("Clustering failed.");
-           return;
-        }
-
-        attempts++;
-        const delay = Math.min(2000 * Math.pow(1.5, attempts), 10000); 
-        timeoutId = setTimeout(checkStatus, delay);
-
-      } catch (e) {
-        console.warn("Polling error", e);
-        timeoutId = setTimeout(checkStatus, 5000); 
-      }
-    };
-
-    if (isClustering) {
-       timeoutId = setTimeout(checkStatus, 1000);
-    }
-
-    return () => clearTimeout(timeoutId);
-  }, [isClustering, jobId]);
-
-  const handleUpdateJobInfo = async () => {
-      if (!job) return;
-      try {
-          const updated = await api.updateJob(job.id, {
-              title: jobEditForm.title,
-              company_name: jobEditForm.company_name,
-              work_date: jobEditForm.work_date || undefined,
-              construction_type: jobEditForm.construction_type
-          });
-          setJob(prev => prev ? ({ ...prev, ...updated }) : prev);
-          setEditJobDialogOpen(false);
-          toast.success("Job info updated");
-      } catch (e) {
-          console.error(e);
-          toast.error("Failed to update job info");
-      }
-  };
-
-  const handleDownloadPDF = async () => {
-    if (!job) return;
+  const loadData = async () => {
     try {
-      const response = await api.getDownloadUrl(job.id);
+      const [jobsData, sitesData] = await Promise.all([
+        api.getJobs(),
+        api.getSites()
+      ]);
+      setJobs(jobsData);
+      setSites(sitesData);
+    } catch (error) {
+      toast.error('Failed to load data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleEditClick = (job: Job) => {
+    setEditingJob(job);
+    setEditForm({
+      title: job.title,
+      work_date: job.work_date || '',
+      company_name: job.company_name || '',
+      construction_type: job.construction_type || ''
+    });
+  };
+
+  const handleUpdateJob = async () => {
+    if (!editingJob) return;
+    try {
+      await api.updateJob(editingJob.id, {
+        title: editForm.title,
+        work_date: editForm.work_date || undefined,
+        company_name: editForm.company_name,
+        construction_type: editForm.construction_type
+      });
+      toast.success('Job updated successfully');
+      setEditingJob(null);
+      loadData();
+    } catch (error) {
+      toast.error('Failed to update job');
+    }
+  };
+
+  const handleCreateJob = () => {
+    setCreateForm({
+        title: '',
+        work_date: '',
+        company_name: '',
+        construction_type: ''
+    });
+    setCreateJobDialogOpen(true);
+  };
+
+  const handleConfirmCreateJob = async () => {
+    setCreating(true);
+    try {
+        const titleToUse = createForm.title.trim() || `작업 ${jobs.length + 1}`;
+        const siteIdToUse = (selectedSiteId && selectedSiteId !== 'unclassified') ? selectedSiteId : undefined;
+
+        const newJob = await api.createJob(
+            titleToUse, 
+            createForm.construction_type, 
+            createForm.company_name,
+            siteIdToUse
+        );
+        if (createForm.work_date) {
+            await api.updateJob(newJob.id, { work_date: createForm.work_date });
+        }
+        toast.success('Job created successfully');
+        setCreateJobDialogOpen(false);
+        setCreating(false);
+        setTimeout(() => {
+            navigate(`/jobs/${newJob.id}`);
+        }, 100);
+    } catch (error) {
+        toast.error('Failed to create job');
+        setCreating(false);
+        setCreateJobDialogOpen(false);
+    }
+  };
+
+  const handleDeleteJob = async (jobId: string) => {
+    try {
+      await api.deleteJob(jobId);
+      toast.success('Job deleted successfully');
+    } catch (error) {
+      toast.error('Failed to delete job');
+    } finally {
+      loadData();
+    }
+  };
+
+  const handleDownload = async (jobId: string) => {
+    try {
+      const response = await api.getDownloadUrl(jobId);
       if (response.path) {
         window.open(response.path, '_blank');
-      } else {
-        toast.error("Download URL not found");
       }
-    } catch (e) {
-      toast.error("Failed to download PDF");
+    } catch (error) {
+      toast.error('Failed to download pdf');
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      await AuthService.logout();
+    } finally {
+      navigate('/login');
     }
   };
 
-  const handleEditLabels = (photoId: string) => {
-      const photo = clusters.flatMap(c => c.photos).find(p => p.id === photoId);
-      if (photo) {
-          setEditingPhotoId(photoId);
-          setEditLabelData(photo.labels || {});
-      }
-  };
-
-  const handleSaveLabels = async () => {
-      if (!editingPhotoId || !jobId) return;
-      
-      const newLabels = { ...editLabelData };
-      const targetPhoto = clusters
-          .flatMap(c => c.photos)
-          .find(p => p.id === editingPhotoId);
-
-      if (!targetPhoto) return;
-
-      const updatedPhoto = { ...targetPhoto, labels: newLabels };
-
-      // Optimistic Update
-      setClusters(prev => prev.map(c => ({
-          ...c,
-          photos: c.photos.map(p => p.id === editingPhotoId ? updatedPhoto : p)
-      })));
-      
-      setEditingPhotoId(null);
-      
+  const handleAddSite = async () => {
+    if (newSiteName.trim()) {
       try {
-          await api.updatePhoto(jobId, [updatedPhoto]);
-          toast.success("라벨이 저장되었습니다.");
+        await api.createSite(newSiteName.trim());
+        setNewSiteName('');
+        setIsAddingSite(false);
+        toast.success('새 현장이 생성되었습니다.');
+        loadData();
       } catch (e) {
-          console.error("Failed to save labels", e);
-          toast.error("라벨 저장 실패");
+        toast.error('현장 생성 실패');
       }
+    }
   };
 
-  const handleUpload = async (files: File[]) => {
-    if (!job) return;
+  const handleUpdateSite = async (siteId: string, currentName: string) => {
+    const newName = prompt('현장 이름을 수정하세요', currentName);
+    if (newName && newName !== currentName) {
+      try {
+        await api.updateSite(siteId, { name: newName });
+        toast.success('현장 이름이 수정되었습니다.');
+        loadData();
+      } catch (e) {
+        toast.error('현장 수정 실패');
+      }
+    }
+  };
+
+  const handleDeleteSite = async (siteId: string) => {
+    if (confirm('현장을 삭제하시겠습니까? (작업은 삭제되지 않고 미분류로 이동됩니다)')) {
+      try {
+        await api.deleteSite(siteId);
+        if (selectedSiteId === siteId) setSelectedSiteId(null);
+        toast.success('현장이 삭제되었습니다.');
+        loadData();
+      } catch (e) {
+        toast.error('현장 삭제 실패');
+      }
+    }
+  };
+
+  const handleMoveJob = async (jobId: string, targetSiteId: string | null) => {
     try {
-      toast.info("사진 업로드를 시작합니다...");
-      await api.uploadPhotos(job.id, Array.from(files));
-      
-      setTimeout(async () => {
-          const jobData = await api.getJobDetails(job.id);
-          
-          if (jobData) {
-            setJob(jobData);
-            
-            if (jobData.clusters) {
-              const sorted = jobData.clusters
-                .sort((a, b) => a.order_index - b.order_index)
-                .map(c => ({...c, photos: sortPhotosByOrderIndex(c.photos)}));
-              setClusters(sorted);
-            }
-            if (jobData.photos) setPhotos(jobData.photos);
-          }
-          toast.success("사진 전송을 모두 마쳤습니다.");
-      }, 0);
-    } catch (error) {
-      console.error("Upload failed", error);
-      toast.error("업로드 중 오류가 발생했습니다.");
-    }
-  };
+      const job = jobs.find(j => j.id === jobId);
+      if (!job) return;
+      if (job.site_id === targetSiteId || (job.site_id === null && targetSiteId === null)) return;
 
-  const handleStartClustering = async () => {
-    if (!job) return;
-    setIsClustering(true);
-    setEstimatedTime(null);
-    setRemainingTime(null);
-    setShowClusteringDialog(true);
-    try {
-      const result = await api.startClustering(job.id);
-      if (result.estimated_time) {
-          setEstimatedTime(result.estimated_time);
-          setRemainingTime(result.estimated_time);
-      }
-    } catch (error) {
-      console.error("Clustering failed", error);
-      toast.error("Failed to cluster photos");
-      setIsClustering(false);
-      setShowClusteringDialog(false);
-    }
-  };
-
-  const handleSelectPhoto = (photoId: string, clusterId: string) => {
-    setSelectedPhotos(prev => {
-      const exists = prev.some(p => p.id === photoId);
-      if (exists) {
-        return prev.filter(p => p.id !== photoId);
-      }
-      return [...prev, { id: photoId, clusterId }];
-    });
-  };
-
-  const handleExport = () => {
-    if (!job) return;
-    setExportMetadata({
-      cover_title: job.title,
-      cover_company_name: job.company_name || '',
-    });
-    
-    const allPhotoLabels = new Set<string>();
-    clusters.forEach(cluster => {
-      cluster.photos.forEach(photo => {
-        if (photo.labels) {
-          Object.keys(photo.labels).forEach(key => allPhotoLabels.add(key));
+      if (targetSiteId) {
+        await api.addJobsToSite(targetSiteId, [jobId]);
+      } else {
+        if (job.site_id) {
+            await api.removeJobFromSite(job.site_id, jobId);
         }
-      });
-    });
-
-    setLabelSettings(prev => {
-        const newSettings = [...prev];
-        const existingKeys = new Set(newSettings.map(s => s.key));
-        
-        allPhotoLabels.forEach(labelKey => {
-            if (!existingKeys.has(labelKey)) {
-                newSettings.push({ 
-                    id: `custom-${labelKey}`, 
-                    key: labelKey, 
-                    value: '', 
-                    isAutoDate: false 
-                });
-            }
-        });
-        
-        return newSettings.map(l => {
-            if (l.id === 'company' && !l.value) return { ...l, value: job.company_name || '' };
-            return l;
-        });
-    });
-    
-    setExportDialogOpen(true);
-  };
-
-  const handleConfirmExport = async () => {
-    if (!job) return;
-    setExportDialogOpen(false);
-    setExporting(true);
-    
-    try {
-      const visible_keys: string[] = [];
-      const overrides: Record<string, string> = {};
-
-      labelSettings.forEach(l => {
-          visible_keys.push(l.key);
-          if (l.value) {
-              overrides[l.key] = l.value;
-          }
-      });
-
-      const payload = {
-        ...exportMetadata,
-        labels: {
-            visible_keys,
-            overrides
-        }
-      };
-
-      await api.startExport(job.id, payload);
-      
-      const interval = setInterval(async () => {
-        const status = await api.getExportStatus(job.id);
-        if (status.status === 'EXPORTED') {
-          clearInterval(interval);
-          setExporting(false);
-          toast.success('PDF Export Successful');
-          if (status.pdf_url) {
-            setDownloadUrl(status.pdf_url);
-            setDownloadDialogOpen(true);
-          }
-        } else if (status.status === 'FAILED') {
-          clearInterval(interval);
-          setExporting(false);
-          toast.error(status.error_message || 'Export failed');
-        }
-      }, 2000);
-    } catch (error) {
-      setExporting(false);
-      toast.error('Failed to start export');
-    }
-  };
-
-  const handleBatchDelete = async () => {
-      const toDelete = [...selectedPhotos];
-      for (const p of toDelete) {
-          await handleDeletePhoto(p.id, p.clusterId);
       }
-      setSelectedPhotos([]);
-      setActionDrawerOpen(false);
-  };
-
-  const handleBatchMove = async (targetClusterId: string) => {
-      await handleAddPhotosToExistingCluster(targetClusterId, selectedPhotos);
-      setActionDrawerOpen(false);
-  };
-
-  const previewCluster = clusters.find(c => c.name !== 'reserve') || clusters[0];
-  const previewPhotos = previewCluster?.photos || [];
-  
-  if (error) {
-      return (
-          <div className="h-screen flex flex-col items-center justify-center gap-6 bg-gray-50">
-              <div className="text-center space-y-2">
-                  <p className="text-xl font-bold text-gray-800">{error}</p>
-                  <p className="text-gray-500">네트워크 상태를 확인하거나 잠시 후 다시 시도해주세요.</p>
-              </div>
-              <Button size="lg" onClick={() => window.location.reload()} className="bg-blue-600 hover:bg-blue-700">
-                  <RefreshCw className="w-5 h-5 mr-2" />
-                  다시 시도
-              </Button>
-          </div>
-      );
+      toast.success('작업이 이동되었습니다.');
+      loadData();
+    } catch (e) {
+      toast.error('작업 이동 실패');
     }
-  
-  if (!job) return <div data-testid="loader" className="h-screen flex items-center justify-center"><Loader2 className="w-8 h-8 animate-spin text-blue-600" /></div>;
+  };
+
+  const getTargetJobs = () => {
+    if (selectedSiteId === null) return jobs;
+    if (selectedSiteId === 'unclassified') {
+      return jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id));
+    }
+    const site = sites.find(s => s.id === selectedSiteId);
+    return site?.jobs || [];
+  };
+
+  if (loading) return <div className="h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
 
   return (
-    <div className="h-screen bg-gray-100 flex flex-col font-sans overflow-hidden">
-      <ActionToolbar
-        job={job}
-        clusters={clusters}
-        isClustering={isClustering}
-        exporting={exporting}
-        onEditJob={() => setEditJobDialogOpen(true)}
-        onStartClustering={handleStartClustering}
-        onEditLabels={() => navigate(`/jobs/${job.id}/edit`)}
-        onDownloadPDF={handleDownloadPDF}
-        onExport={handleExport}
-      />
-
-      <main className="flex-1 p-2 md:p-6 max-w-[2000px] mx-auto w-full overflow-y-auto flex flex-col relative">
-        <DashboardSectionErrorBoundary>
-            <div className="flex flex-col h-full gap-4">
-            {clusters.length === 0 ? (
-                <UnsortedGrid 
-                photos={photos} 
-                isClustering={isClustering} 
-                onStartClustering={handleStartClustering} 
-                onUpload={handleUpload} 
-                />
-            ) : (
-                <ClusterSection
-                    clusters={clusters}
-                    isClustering={isClustering}
-                    selectedPhotos={selectedPhotos}
-                    onMovePhoto={handleMovePhoto}
-                    onCreateCluster={handleCreateCluster}
-                    onDeleteCluster={handleDeleteCluster}
-                    onMoveCluster={handleMoveCluster}
-                    onAddPhotosToExistingCluster={handleAddPhotosToExistingCluster}
-                    onRenameCluster={handleRenameCluster}
-                    onDeletePhoto={handleDeletePhoto}
-                    onSelectPhoto={handleSelectPhoto}
-                    onEditLabels={handleEditLabels}
-                />
-            )}
-            </div>
-        </DashboardSectionErrorBoundary>
-
-        <FloatingActionBar 
-            selectedCount={selectedPhotos.length}
-            onClearSelection={() => setSelectedPhotos([])}
-            onMoveClick={() => setActionDrawerOpen(true)}
-            onDeleteClick={handleBatchDelete}
-        />
-      </main>
-
-      <ActionDrawer 
-        open={actionDrawerOpen}
-        onOpenChange={setActionDrawerOpen}
-        selectedCount={selectedPhotos.length}
-        clusters={clusters}
-        onMoveToCluster={handleBatchMove}
-        onDelete={handleBatchDelete}
-      />
-
-      {/* Label Edit Dialog */}
-      <Dialog open={!!editingPhotoId} onOpenChange={(open) => !open && setEditingPhotoId(null)}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle>사진 라벨 수정</DialogTitle>
-             <DialogDescription>
-               사진에 표시될 라벨 정보를 수정합니다.
-             </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4 max-h-[60vh] overflow-y-auto px-1">
-             {Object.entries(editLabelData).map(([key, value]) => (
-                <div key={key} className="grid grid-cols-[1fr_2fr_auto] items-center gap-2">
-                   <Input 
-                     value={key} 
-                     className="bg-gray-50"
-                     readOnly
-                     placeholder="Key" 
-                   />
-                   <Input 
-                     value={value} 
-                     onChange={(e) => {
-                       setEditLabelData({...editLabelData, [key]: e.target.value});
-                     }} 
-                     placeholder="Value" 
-                   />
-                   <Button size="icon" variant="ghost" className="text-red-500 hover:bg-red-50" onClick={() => {
-                       const newLabels = {...editLabelData};
-                       delete newLabels[key];
-                       setEditLabelData(newLabels);
-                   }}>
-                      <X className="w-4 h-4 rotate-180" />
-                   </Button>
-                </div>
-             ))}
-             <div className="relative my-2">
-                <div className="absolute inset-0 flex items-center"><span className="w-full border-t" /></div>
-                <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-muted-foreground">새 항목 추가</span></div>
-             </div>
-             <div className="grid grid-cols-[1fr_2fr_auto] items-center gap-2">
-                <Input id="new-key" placeholder="항목명" />
-                <Input id="new-value" placeholder="내용" />
-                <Button size="icon" variant="outline" onClick={() => {
-                    const keyEl = document.getElementById('new-key') as HTMLInputElement;
-                    const valEl = document.getElementById('new-value') as HTMLInputElement;
-                    if(keyEl.value) {
-                        setEditLabelData({...editLabelData, [keyEl.value]: valEl.value});
-                        keyEl.value = '';
-                        valEl.value = '';
-                    }
-                }}>
-                   <Plus className="w-4 h-4" />
-                </Button>
-             </div>
+    <div className="min-h-screen bg-slate-50 font-sans flex flex-col selection:bg-primary/10 selection:text-primary">
+      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/80">
+        <div className="flex items-center gap-3">
+          <div className="p-2 bg-primary rounded-xl shadow-md">
+            <LayoutGrid className="w-5 h-5 text-primary-foreground" />
           </div>
-          <DialogFooter>
-             <Button variant="outline" onClick={() => setEditingPhotoId(null)}>취소</Button>
-             <Button onClick={handleSaveLabels}>저장</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <h1 className="text-xl font-black text-slate-900 tracking-tight">Field Note</h1>
+        </div>
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="text-slate-600 hover:text-primary font-bold rounded-xl h-10 px-4">
+             <User className="w-4 h-4 mr-2" />
+             내 정보
+          </Button>
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 hover:text-red-600 font-bold rounded-xl h-10 px-4">
+            <LogOut className="w-4 h-4 mr-2" />
+            로그아웃
+          </Button>
+        </div>
+      </header>
 
-      {/* Job Info Edit Dialog */}
-      <Dialog open={editJobDialogOpen} onOpenChange={setEditJobDialogOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>작업 정보 수정</DialogTitle>
-            <DialogDescription>
-              작업명, 시행처 등의 기본 정보를 수정합니다.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="title" className="text-right">
-                작업명
-              </Label>
-              <Input
-                id="title"
-                value={jobEditForm.title}
-                onChange={(e) => setJobEditForm({ ...jobEditForm, title: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="work_date" className="text-right">
-                작업일자
-              </Label>
-              <Input
-                id="work_date"
-                type="date"
-                value={jobEditForm.work_date}
-                onChange={(e) => setJobEditForm({ ...jobEditForm, work_date: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="company_name" className="text-right">
-                시행처
-              </Label>
-              <Input
-                id="company_name"
-                value={jobEditForm.company_name}
-                onChange={(e) => setJobEditForm({ ...jobEditForm, company_name: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="construction_type" className="text-right">
-                공종명
-              </Label>
-              <Input
-                id="construction_type"
-                value={jobEditForm.construction_type}
-                onChange={(e) => setJobEditForm({ ...jobEditForm, construction_type: e.target.value })}
-                className="col-span-3"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditJobDialogOpen(false)}>취소</Button>
-            <Button type="submit" onClick={handleUpdateJobInfo}>저장</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Clustering Progress Dialog */}
-      <Dialog open={showClusteringDialog} onOpenChange={setShowClusteringDialog}>
-        <DialogContent className="max-w-md rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
-          <DialogHeader className="p-8 bg-white border-b shrink-0">
-            <DialogTitle className="text-3xl font-black text-center text-slate-900">사진 분류 작업 중</DialogTitle>
-            <DialogDescription className="text-center text-lg font-bold text-slate-500 mt-2">
-              인공지능이 현장별로 사진을 정리하고 있어요.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-12 px-8 bg-slate-50/50">
-            <div className="relative mb-8">
-              <Loader2 className="w-24 h-24 animate-spin text-blue-600" />
-              <CheckCircle className="w-8 h-8 text-blue-200 absolute inset-0 m-auto" />
-            </div>
-            
-            <p className="text-2xl font-black text-gray-800 text-center">
-              지금 열심히 정리하고 있어요!
-            </p>
-            
-            {remainingTime !== null && remainingTime > 0 ? (
-                <div className="mt-6 bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-xl shadow-xl shadow-blue-100 animate-in zoom-in-50">
-                   약 {Math.ceil(remainingTime)}초 남음
-                </div>
-            ) : (
-                <div className="mt-6 bg-slate-200 text-slate-500 px-8 py-3 rounded-2xl font-black text-xl animate-pulse">
-                   시간 계산 중...
-                </div>
-            )}
-            
-            <p className="mt-10 text-base text-gray-500 text-center font-bold leading-relaxed">
-              페이지를 닫거나 다른 작업을 하셔도 괜찮습니다. <br/>
-              정리가 끝나면 자동으로 사진들이 나타나요!
-            </p>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full md:max-w-[1400px] h-[90vh] flex flex-col p-0 gap-0 bg-gray-50">
-          <DialogHeader className="p-6 bg-white border-b shrink-0">
-            <DialogTitle className="text-xl">PDF 내보내기 설정</DialogTitle>
-            <DialogDescription className="text-base">
-              내보내기 전 표지와 첫 장을 미리보고 수정할 수 있습니다.
-            </DialogDescription>
-          </DialogHeader>
-          
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="flex flex-col xl:flex-row gap-12 justify-center items-start min-h-[700px]">
-              
-              {/* Cover Preview (Left) */}
-              <div className="flex flex-col items-center gap-4">
-                 <h3 className="text-lg font-bold text-gray-700">표지 미리보기</h3>
-                 <div className="w-[450px] h-[636px] bg-white shadow-xl flex flex-col items-center justify-between p-12 relative hover:ring-2 hover:ring-blue-300 transition-all">
-                    {/* Top Title */}
-                    <div className="mt-20 w-full text-center">
-                        <input
-                           className="w-full text-center text-3xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
-                           value={exportMetadata.cover_title}
-                           onChange={(e) => setExportMetadata({...exportMetadata, cover_title: e.target.value})}
-                           placeholder="작업명 입력"
-                        />
-                        <div className="mt-16 bg-gray-100 border border-gray-300 px-10 py-4 inline-block">
-                             <span className="text-3xl font-bold tracking-widest">사 진 대 지</span>
-                        </div>
-                    </div>
-
-                    {/* Bottom Company */}
-                    <div className="mb-20 w-full text-center">
-                      <input
-                          className="w-full text-center text-xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
-                          value={exportMetadata.cover_company_name}
-                          onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
-                          placeholder='시행처 입력'
-                      />
-                    </div>
-                 </div>
-              </div>
-
-              {/* Page 1 Preview (Right) */}
-              <div className="flex flex-col items-center gap-4">
-                 <div className="flex items-center justify-between w-[450px]">
-                    <h3 className="text-lg font-bold text-gray-700">첫장 미리보기 (예시)</h3>
-                    <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 gap-2 text-sm text-gray-600 hover:text-blue-600" onClick={() => navigate(`/jobs/${job.id}/edit`, { state: { labelSettings } })}>
-                           <Edit2 className="w-4 h-4" /> 라벨 전체 보기
-                        </Button>
-                        <Popover>
-                        <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 gap-2 text-sm border-gray-300">
-                            <Settings className="w-4 h-4" /> 라벨 설정
-                            </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-80">
-                            <div className="grid gap-4">
-                                <div className="space-y-2">
-                                    <h4 className="font-medium leading-none">라벨 텍스트 설정</h4>
-                                    <p className="text-xs text-muted-foreground">사진 위에 표시될 정보를 설정합니다.</p>
-                                </div>
-                                <div className="grid gap-2">
-                                    {labelSettings.map((label) => (
-                                        <div key={label.id} className="grid grid-cols-[1fr_2fr_auto] items-center gap-2">
-                                            <Input 
-                                                className="h-8 text-sm px-2" 
-                                                value={label.key}
-                                                onChange={(e) => updateLabelItem(label.id, 'key', e.target.value)}
-                                                placeholder="항목"
-                                            />
-                                            <div className="relative">
-                                                <Input 
-                                                    className="h-8 text-sm px-2" 
-                                                    value={label.value}
-                                                    onChange={(e) => updateLabelItem(label.id, 'value', e.target.value)}
-                                                    placeholder={label.isAutoDate ? "자동 (촬영일자)" : "내용"}
-                                                />
-                                            </div>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeLabelItem(label.id)}>
-                                                <X className="w-4 h-4 rotate-180" />
-                                            </Button>
-                                        </div>
-                                    ))}
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Button variant="outline" size="sm" className="flex-1 h-8 text-sm" onClick={addLabelItem}>
-                                          + 항목 추가
-                                      </Button>
-                                      <PopoverClose asChild>
-                                        <Button 
-                                          variant="outline" 
-                                          size="sm" 
-                                          className="h-8 text-sm"
-                                        >
-                                          저장
-                                        </Button>
-                                      </PopoverClose>
-                                    </div>
-                                </div>
-                            </div>
-                        </PopoverContent>
-                        </Popover>
-                    </div>
-                 </div>
-
-                 <div className="w-[450px] h-[636px] bg-white shadow-xl p-8 relative text-sm flex flex-col">
-                     <div className="text-center text-3xl font-bold mb-6 tracking-widest">사 진 대 지</div>
-                     
-                     {/* Table Structure */}
-                     <div className="border border-black flex-1 flex flex-col w-full overflow-hidden">
-                        {/* Header Row */}
-                        <div className="h-10 flex border-b border-black shrink-0">
-                            <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">공종</div>
-                            <div className="flex-1 flex items-center px-2">
-                                {previewCluster?.name || '공종명 없음'}
-                            </div>
-                        </div>
-
-                        {/* Rows */}
-                        {['전', '중', '후'].map((label, idx) => {
-                             const photo = previewPhotos[idx];
-                             return (
-                                <div key={label} className="flex-1 flex border-b border-black last:border-b-0 min-h-0">
-                                    <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">
-                                        {label}
-                                    </div>
-                                    <div className="flex-1 relative p-1 flex items-center justify-center overflow-hidden bg-gray-50/10">
-                                        {photo ? (
-                                            <>
-                                                <img 
-                                                    src={photo.thumbnail_url || photo.url} 
-                                                    alt={label} 
-                                                    className="w-full h-full object-contain"
-                                                />
-                                                {/* Label Box Overlay */}
-                                                <div className="absolute top-3 left-3 bg-white/95 border border-gray-300 p-2 shadow-sm rounded-sm text-xs leading-relaxed z-10 whitespace-nowrap">
-                                                    {labelSettings.map(l => {
-                                                        const val = l.isAutoDate && !l.value 
-                                                            ? (photo.timestamp ? format(new Date(photo.timestamp), 'yyyy.MM.dd') : '-') 
-                                                            : (l.value || '');
-                                                        
-                                                        if (!val) return null;
-
-                                                        return (
-                                                            <div key={l.id}>
-                                                                <span className="font-bold text-gray-800">{l.key} :</span>{' '}
-                                                                <span className="text-gray-900">{val}</span>
-                                                            </div>
-                                                        );
-                                                    })}
-                                                </div>
-                                            </>
-                                        ) : (
-                                            <div className="text-gray-300 font-medium">No Photo</div>
-                                        )}
-                                    </div>
-                                </div>
-                             )
-                        })}
-                     </div>
-                 </div>
-              </div>
-
-            </div>
-          </div>
-          
-          <DialogFooter className="p-5 bg-white border-t shrink-0 gap-4">
-             <Button variant="outline" size="lg" className="text-lg px-8" onClick={() => setExportDialogOpen(false)}>취소</Button>
-            <Button type="submit" size="lg" className="text-lg px-8 bg-blue-600 hover:bg-blue-700" onClick={handleConfirmExport}>PDF 내보내기</Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      <Dialog open={downloadDialogOpen} onOpenChange={setDownloadDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>PDF 생성 완료!</DialogTitle>
-            <DialogDescription>
-              아래 버튼을 눌러 다운로드하세요.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex items-center justify-center py-6">
-            <Button size="lg" className="w-full gap-2 text-lg h-12 bg-green-600 hover:bg-green-700" onClick={() => {
-              if (downloadUrl) window.open(downloadUrl, '_blank');
-              setDownloadDialogOpen(false);
-            }}>
-              <FileDown className="w-6 h-6" />
-              PDF 다운로드
+      <div className="flex-1 flex max-w-[1600px] mx-auto w-full">
+        <aside className="w-80 bg-white border-r border-slate-200 flex flex-col p-6 sticky top-[73px] h-[calc(100vh-73px)] shrink-0">
+          <div className="flex items-center justify-between mb-6 px-2">
+            <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+              현장 목록
+            </h2>
+            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-lg" onClick={() => setIsAddingSite(true)}>
+              <FolderPlus className="w-5 h-5" />
             </Button>
           </div>
+
+          <nav className="space-y-1 overflow-y-auto pr-2 custom-scrollbar flex-1">
+            <Button
+              variant={selectedSiteId === null ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start text-base font-bold h-12 rounded-xl px-4 transition-all mb-1",
+                selectedSiteId === null 
+                  ? "bg-primary text-primary-foreground hover:bg-primary shadow-md shadow-primary/20" 
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              )}
+              onClick={() => setSelectedSiteId(null)}
+            >
+              <LayoutGrid className="w-5 h-5 mr-3 opacity-70" />
+              전체 보기
+            </Button>
+
+            <Button
+              variant={selectedSiteId === 'unclassified' ? "secondary" : "ghost"}
+              className={cn(
+                "w-full justify-start text-base font-bold h-12 rounded-xl px-4 transition-all mb-4",
+                selectedSiteId === 'unclassified' 
+                  ? "bg-primary text-primary-foreground hover:bg-primary shadow-md shadow-primary/20" 
+                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
+              )}
+              onClick={() => setSelectedSiteId('unclassified')}
+            >
+              <FolderIcon className="w-5 h-5 mr-3 opacity-70" />
+              <span className="truncate flex-1 text-left">미분류 작업</span>
+              <span className={cn(
+                "ml-auto text-xs px-2 py-0.5 rounded-md font-black min-w-[24px] text-center",
+                selectedSiteId === 'unclassified' 
+                  ? "bg-white/20 text-white" 
+                  : "bg-slate-100 text-slate-500"
+              )}>
+                {jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id)).length}
+              </span>
+            </Button>
+
+            <div className="px-2 mb-2 mt-6">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Folders</span>
+            </div>
+
+            {sites.map((site) => (
+              <div key={site.id} className="group relative">
+                <Button
+                  variant={selectedSiteId === site.id ? "secondary" : "ghost"}
+                  className={cn(
+                    "w-full justify-start text-base font-medium h-11 rounded-xl px-4 transition-all pr-10",
+                    selectedSiteId === site.id 
+                      ? "bg-slate-100 text-slate-900 font-bold" 
+                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                  )}
+                  onClick={() => setSelectedSiteId(site.id)}
+                >
+                  <FolderIcon className={cn(
+                    "w-5 h-5 mr-3 transition-colors", 
+                    selectedSiteId === site.id ? "text-primary fill-primary/20" : "text-slate-400"
+                  )} />
+                  <span className="truncate flex-1 text-left">{site.name}</span>
+                  <span className={cn(
+                    "ml-auto text-xs px-2 py-0.5 rounded-md min-w-[24px] text-center transition-colors",
+                    selectedSiteId === site.id 
+                      ? "bg-white text-slate-900 shadow-sm" 
+                      : "text-slate-400 group-hover:text-slate-600"
+                  )}>
+                    {site.jobs ? site.jobs.length : jobs.filter(j => j.site_id === site.id).length}
+                  </span>
+                </Button>
+                
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="absolute right-1 top-1 h-9 w-9 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg text-slate-400 hover:text-slate-600">
+                      <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="rounded-xl shadow-emphasis">
+                    <DropdownMenuItem onClick={() => handleUpdateSite(site.id, site.name)} className="font-bold">이름 수정</DropdownMenuItem>
+                    <DropdownMenuItem className="text-red-600 font-bold" onClick={() => handleDeleteSite(site.id)}>삭제</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ))}
+
+            {isAddingSite && (
+              <div className="pt-2 space-y-2 px-1">
+                <Input
+                  autoFocus
+                  placeholder="새 현장 이름"
+                  className="h-11 rounded-xl border-primary ring-2 ring-primary/20"
+                  value={newSiteName}
+                  onChange={(e) => setNewSiteName(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddSite()}
+                />
+                <div className="flex gap-2">
+                  <Button className="flex-1 h-9 rounded-lg font-bold" onClick={handleAddSite}>확인</Button>
+                  <Button variant="ghost" className="flex-1 h-9 rounded-lg font-bold text-slate-500" onClick={() => setIsAddingSite(false)}>취소</Button>
+                </div>
+              </div>
+            )}
+          </nav>
+        </aside>
+
+        <main className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tight">대시보드</h2>
+              <p className="text-slate-500 font-medium mt-1">프로젝트 현황을 한눈에 확인하세요.</p>
+            </div>
+            <Button 
+              onClick={handleCreateJob} 
+              size="lg" 
+              className="text-lg h-12 px-6 font-black rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95" 
+              disabled={creating}
+            >
+              {creating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Plus className="w-5 h-5 mr-2 stroke-[3]" />}
+              새 작업 추가
+            </Button>
+          </div>
+
+          <DashboardStats jobs={jobs} sites={sites} />
+
+          <div className="mt-12">
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
+                {selectedSiteId === null ? "전체 작업" : selectedSiteId === 'unclassified' ? "미분류 작업" : sites.find(s => s.id === selectedSiteId)?.name}
+              </h2>
+              <Badge className="bg-primary text-primary-foreground hover:bg-primary border-none font-black px-3 py-1 text-sm rounded-full">
+                {getTargetJobs().length}
+              </Badge>
+            </div>
+
+            <JobTable 
+              jobs={getTargetJobs()}
+              sites={sites}
+              onNavigate={(id) => navigate(`/jobs/${id}`)}
+              onEdit={handleEditClick}
+              onDelete={setDeleteJobId}
+              onDownload={handleDownload}
+              onMove={handleMoveJob}
+            />
+          </div>
+        </main>
+      </div>
+
+      <Dialog open={createJobDialogOpen} onOpenChange={setCreateJobDialogOpen}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-black">새 작업 만들기</DialogTitle>
+            <DialogDescription className="font-medium text-slate-500 text-base">새로운 작업의 기본 정보를 입력해주세요.</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-6 py-6">
+            <div className="space-y-2">
+              <Label htmlFor="create-title" className="text-sm font-bold text-slate-700 ml-1">작업명</Label>
+              <Input id="create-title" placeholder="예: 거실 천장 도배 공사" value={createForm.title} onChange={(e) => setCreateForm({ ...createForm, title: e.target.value })} className="h-12 rounded-xl border-slate-200" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-date" className="text-sm font-bold text-slate-700 ml-1">작업일자</Label>
+                <Input id="create-date" type="date" value={createForm.work_date} onChange={(e) => setCreateForm({ ...createForm, work_date: e.target.value })} className="h-12 rounded-xl border-slate-200" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-type" className="text-sm font-bold text-slate-700 ml-1">공종명</Label>
+                <Input id="create-type" placeholder="예: 목공사" value={createForm.construction_type} onChange={(e) => setCreateForm({ ...createForm, construction_type: e.target.value })} className="h-12 rounded-xl border-slate-200" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-company" className="text-sm font-bold text-slate-700 ml-1">시행처</Label>
+              <Input id="create-company" placeholder="예: (주)필드노트" value={createForm.company_name} onChange={(e) => setCreateForm({ ...createForm, company_name: e.target.value })} className="h-12 rounded-xl border-slate-200" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setCreateJobDialogOpen(false)} className="h-12 rounded-xl font-bold flex-1">취소</Button>
+            <Button type="submit" onClick={handleConfirmCreateJob} disabled={creating} className="h-12 rounded-xl font-black flex-1 shadow-lg shadow-primary/20">
+              {creating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : "작업 생성"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!editingJob} onOpenChange={(open) => !open && setEditingJob(null)}>
+        <DialogContent className="rounded-2xl">
+          <DialogHeader><DialogTitle className="text-2xl font-black">작업 정보 수정</DialogTitle></DialogHeader>
+          <div className="grid gap-6 py-6">
+            <div className="space-y-2">
+              <Label htmlFor="edit-title" className="text-sm font-bold text-slate-700 ml-1">작업명</Label>
+              <Input id="edit-title" value={editForm.title} onChange={(e) => setEditForm({ ...editForm, title: e.target.value })} className="h-12 rounded-xl border-slate-200" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-date" className="text-sm font-bold text-slate-700 ml-1">작업일자</Label>
+                <Input id="edit-date" type="date" value={editForm.work_date} onChange={(e) => setEditForm({ ...editForm, work_date: e.target.value })} className="h-12 rounded-xl border-slate-200" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-type" className="text-sm font-bold text-slate-700 ml-1">공종명</Label>
+                <Input id="edit-type" value={editForm.construction_type} onChange={(e) => setEditForm({ ...editForm, construction_type: e.target.value })} className="h-12 rounded-xl border-slate-200" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-company" className="text-sm font-bold text-slate-700 ml-1">시행처</Label>
+              <Input id="edit-company" value={editForm.company_name} onChange={(e) => setEditForm({ ...editForm, company_name: e.target.value })} className="h-12 rounded-xl border-slate-200" />
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setEditingJob(null)} className="h-12 rounded-xl font-bold flex-1">취소</Button>
+            <Button type="submit" onClick={handleUpdateJob} className="h-12 rounded-xl font-black flex-1 shadow-lg shadow-primary/20">저장하기</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deleteJobId} onOpenChange={(open) => !open && setDeleteJobId(null)}>
+        <AlertDialogContent className="rounded-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-2xl font-black">정말 삭제하시겠습니까?</AlertDialogTitle>
+            <AlertDialogDescription className="font-medium text-slate-500 text-base">
+              이 작업과 포함된 모든 사진 데이터는 영구적으로 삭제되며, 이 작업은 되돌릴 수 없습니다.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 mt-4">
+            <AlertDialogCancel onClick={() => setDeleteJobId(null)} className="h-12 rounded-xl font-bold flex-1">취소</AlertDialogCancel>
+            <AlertDialogAction onClick={() => { if (deleteJobId) handleDeleteJob(deleteJobId); setDeleteJobId(null); }} className="h-12 rounded-xl font-black flex-1 bg-red-600 text-white hover:bg-red-700 shadow-lg shadow-red-100">
+              삭제하기
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

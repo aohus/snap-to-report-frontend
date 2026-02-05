@@ -4,8 +4,8 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
-import JobList from './pages/JobList';
 import Dashboard from './pages/Dashboard';
+import JobWorkspace from './pages/JobWorkspace';
 import JobEditor from './pages/JobEditor';
 import NotFound from './pages/NotFound';
 import Profile from './pages/Profile';
@@ -29,9 +29,9 @@ const App = () => (
           <Route path="/signup" element={<Signup />} />
           
           <Route element={<ProtectedRoute />}>
-            <Route path="/" element={<JobList />} />
+            <Route path="/" element={<Dashboard />} />
             <Route path="/profile" element={<Profile />} />
-            <Route path="/jobs/:jobId" element={<Dashboard />} />
+            <Route path="/jobs/:jobId" element={<JobWorkspace />} />
             <Route path="/jobs/:jobId/edit" element={<JobEditor />} />
           </Route>
           

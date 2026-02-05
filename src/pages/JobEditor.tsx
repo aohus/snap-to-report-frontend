@@ -20,10 +20,11 @@ import {
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { cn } from '@/lib/utils';
 
-// --- Silver UX Style Constants ---
-const INPUT_CLASS = "h-12 text-lg bg-white border-gray-400 focus:border-blue-600 shadow-sm";
-const LABEL_TEXT = "text-base font-bold text-gray-600 w-24 flex-shrink-0 text-right mr-3";
+// --- Style Constants ---
+const INPUT_CLASS = "h-12 text-lg bg-white border-slate-200 focus:border-primary focus:ring-primary rounded-xl shadow-sm";
+const LABEL_TEXT = "text-base font-bold text-slate-600 w-24 flex-shrink-0 text-right mr-3";
 
 export default function JobEditor() {
   const navigate = useNavigate();
@@ -389,23 +390,23 @@ export default function JobEditor() {
   const previewPhotos = previewCluster?.photos || [];
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col font-sans text-gray-900 pb-20">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 pb-20 selection:bg-primary/10 selection:text-primary">
       
       {/* 1. Top Header */}
-      <header className="bg-white border-b border-gray-300 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-md">
+      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/80">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/jobs/${jobId}`)}>
-            <ArrowLeft className="w-8 h-8 text-gray-700" />
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/jobs/${jobId}`)} className="rounded-xl h-10 w-10">
+            <ArrowLeft className="w-6 h-6 text-slate-600" />
           </Button>
-          <h1 className="text-2xl font-bold text-gray-900">{job?.title} - 상세 편집</h1>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">{job?.title} <span className="text-slate-400 font-medium ml-2">상세 편집</span></h1>
         </div>
         <div className="flex items-center gap-3">
-            <Button onClick={handleSave} disabled={saving} className="h-12 text-lg bg-blue-600 hover:bg-blue-700 px-6">
+            <Button onClick={handleSave} disabled={saving} className="h-11 text-base font-bold bg-slate-800 hover:bg-slate-900 px-6 rounded-xl shadow-lg shadow-slate-200">
               {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
               저장하기
             </Button>
             <Button 
-              className="h-12 text-lg bg-blue-600 hover:bg-blue-700 px-6"
+              className="h-11 text-base font-black bg-primary hover:bg-primary/90 px-6 rounded-xl shadow-lg shadow-primary/20"
               onClick={handleExport}
               disabled={exporting || clusters.length === 0}
             >
@@ -417,33 +418,33 @@ export default function JobEditor() {
       </header>
 
       {/* 2. Batch Tool Bar (Sticky below header) */}
-      <div className="bg-blue-50 border-b border-blue-200 sticky top-[81px] z-20 px-6 py-4 shadow-sm">
+      <div className="bg-white border-b border-slate-200 sticky top-[77px] z-20 px-6 py-4 shadow-sm">
           <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-4 justify-between">
               <div className="flex items-center gap-2">
-                  <Button variant="ghost" className="text-lg font-bold hover:bg-blue-100" onClick={toggleAllSelection}>
-                      {selectedClusterIds.size === clusters.length ? <CheckSquare className="w-6 h-6 mr-2 text-blue-600"/> : <Square className="w-6 h-6 mr-2 text-gray-400"/>}
+                  <Button variant="ghost" className="text-lg font-black hover:bg-slate-50 rounded-xl px-4 h-12" onClick={toggleAllSelection}>
+                      {selectedClusterIds.size === clusters.length ? <CheckSquare className="w-6 h-6 mr-2 text-primary"/> : <Square className="w-6 h-6 mr-2 text-slate-300"/>}
                       {selectedClusterIds.size}개 그룹 선택됨
                   </Button>
               </div>
               
               <div className="flex items-center gap-2 flex-1 w-full md:w-auto overflow-x-auto p-1">
-                  <span className="text-sm font-bold text-gray-500 whitespace-nowrap hidden md:inline">일괄 편집:</span>
+                  <span className="text-sm font-black text-slate-400 uppercase tracking-widest mr-2 hidden md:inline">일괄 편집</span>
                   <Input 
                     placeholder="항목 이름 (예: 위치)" 
-                    className="h-12 text-lg min-w-[150px] bg-white"
+                    className="h-12 text-base font-bold min-w-[150px] bg-white rounded-xl border-slate-200"
                     value={batchKey}
                     onChange={(e) => setBatchKey(e.target.value)}
                   />
                   <Input 
                     placeholder="내용 (예: 1층)" 
-                    className="h-12 text-lg min-w-[150px] bg-white"
+                    className="h-12 text-base font-bold min-w-[150px] bg-white rounded-xl border-slate-200"
                     value={batchValue}
                     onChange={(e) => setBatchValue(e.target.value)}
                   />
-                  <Button onClick={() => handleBatchAction('add')} className="h-12 bg-slate-700 hover:bg-slate-800 text-white whitespace-nowrap">
-                      <Plus className="w-5 h-5 mr-1" /> 선택항목 추가
+                  <Button onClick={() => handleBatchAction('add')} className="h-12 bg-primary hover:bg-primary/90 text-white font-black px-6 rounded-xl shadow-md shadow-primary/10 whitespace-nowrap">
+                      <Plus className="w-5 h-5 mr-1 stroke-[3]" /> 추가
                   </Button>
-                  <Button onClick={() => handleBatchAction('delete')} variant="outline" className="h-12 border-red-300 text-red-600 hover:bg-red-50 whitespace-nowrap">
+                  <Button onClick={() => handleBatchAction('delete')} variant="outline" className="h-12 border-red-100 text-red-600 hover:bg-red-50 font-bold px-6 rounded-xl whitespace-nowrap">
                       <Trash2 className="w-5 h-5 mr-1" /> 삭제
                   </Button>
               </div>
@@ -452,85 +453,88 @@ export default function JobEditor() {
 
       <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full space-y-12 mt-4">
         {clusters.filter(c => c.name !== 'reserve').map((cluster) => (
-            <div key={cluster.id} className={`bg-white rounded-2xl shadow-sm border-2 transition-colors ${selectedClusterIds.has(cluster.id) ? 'border-blue-500 bg-blue-50/10' : 'border-gray-200'}`}>
+            <div key={cluster.id} className={cn(
+                "bg-white rounded-3xl shadow-professional border transition-all duration-300",
+                selectedClusterIds.has(cluster.id) ? 'border-primary ring-4 ring-primary/5 bg-primary/[0.01]' : 'border-slate-200'
+            )}>
                 
                 {/* Cluster Header */}
-                <div className="p-4 md:p-6 border-b border-gray-100 flex items-center gap-4 bg-gray-50 rounded-t-2xl">
-                    <div onClick={() => toggleClusterSelection(cluster.id)} className="cursor-pointer">
+                <div className="p-6 md:p-8 border-b border-slate-100 flex items-center gap-6 bg-slate-50/50 rounded-t-3xl">
+                    <div onClick={() => toggleClusterSelection(cluster.id)} className="cursor-pointer group">
                         {selectedClusterIds.has(cluster.id) 
-                            ? <CheckSquare className="w-8 h-8 text-blue-600" /> 
-                            : <Square className="w-8 h-8 text-gray-300 hover:text-gray-400" />
+                            ? <CheckSquare className="w-10 h-10 text-primary" /> 
+                            : <Square className="w-10 h-10 text-slate-200 group-hover:text-slate-300 transition-colors" />
                         }
                     </div>
                     <div className="flex-1">
-                        <label className="block text-sm font-bold text-gray-500 mb-1">공종(그룹)명</label>
+                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">공종(그룹)명</label>
                         <Input 
                             value={cluster.name} 
                             onChange={(e) => handleClusterNameChange(cluster.id, e.target.value)}
                             onBlur={(e) => handleClusterNameBlur(cluster.id, e.target.value)}
-                            className="h-12 text-xl font-bold bg-white border-gray-300 max-w-md"
+                            className="h-14 text-2xl font-black bg-white border-slate-200 rounded-2xl focus:ring-primary/20 max-w-lg shadow-sm"
                         />
                     </div>
                 </div>
 
                 {/* Photo List (1 Column Layout) */}
-                <div className="p-4 md:p-6 space-y-8">
+                <div className="p-6 md:p-8 space-y-12">
                     {cluster.photos.map((photo) => {
                         const sortedLabels = getSortedLabels(photo.labels);
                         
                         return (
-                            <div key={photo.id} className="flex flex-col md:flex-row gap-6 p-4 border rounded-xl bg-white shadow-sm hover:border-blue-400 transition-all">
+                            <div key={photo.id} className="flex flex-col md:flex-row gap-8 p-6 border border-slate-100 rounded-3xl bg-white shadow-sm hover:shadow-emphasis hover:border-primary/20 transition-all group/photo">
                                 {/* 1. Photo Section (Large) */}
-                                <div className="w-full md:w-[400px] flex-shrink-0">
-                                    <div className="aspect-[4/3] bg-gray-100 rounded-lg overflow-hidden border border-gray-200 relative">
+                                <div className="w-full md:w-[450px] flex-shrink-0">
+                                    <div className="aspect-[4/3] bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 relative shadow-inner">
                                         <img 
                                             src={api.getPhotoUrl(photo.url)} 
                                             alt="현장 사진" 
-                                            className="w-full h-full object-cover"
+                                            className="w-full h-full object-cover transition-transform duration-500 group-hover/photo:scale-105"
                                         />
                                     </div>
                                 </div>
 
                                 {/* 2. Label Inputs Section */}
-                                <div className="flex-1 flex flex-col gap-3 min-w-0">
+                                <div className="flex-1 flex flex-col gap-4 min-w-0">
                                     <div className="flex items-center justify-between mb-2">
-                                        <h3 className="text-lg font-bold text-gray-700 flex items-center gap-2">
-                                            사진 정보 입력
+                                        <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                            사진 상세 정보
                                         </h3>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button variant="outline" size="sm" className="h-10 text-blue-600 border-blue-200 hover:bg-blue-50">
-                                                    <Plus className="w-4 h-4 mr-1" /> 항목 추가
+                                                <Button variant="outline" size="sm" className="h-11 px-4 text-primary font-bold border-primary/20 hover:bg-primary/5 rounded-xl">
+                                                    <Plus className="w-4 h-4 mr-2 stroke-[3]" /> 항목 추가
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-72 p-4">
-                                                <div className="space-y-3">
-                                                    <h4 className="font-bold text-gray-700">새 항목 추가</h4>
+                                            <PopoverContent className="w-80 p-5 rounded-2xl shadow-emphasis border-slate-200">
+                                                <div className="space-y-4">
+                                                    <h4 className="font-black text-slate-900 tracking-tight">새 항목 추가</h4>
                                                     <div className="flex gap-2">
-                                                        <Input id={`new-key-${photo.id}`} placeholder="항목명 (예: 날씨)" className="h-10" />
+                                                        <Input id={`new-key-${photo.id}`} placeholder="예: 위치, 날씨 등" className="h-11 rounded-xl" />
                                                         <Button onClick={() => {
                                                             const el = document.getElementById(`new-key-${photo.id}`) as HTMLInputElement;
                                                             if (el.value.trim()) {
                                                                 handlePhotoLabelChange(cluster.id, photo.id, el.value.trim(), '');
                                                                 el.value = '';
                                                             }
-                                                        }}>확인</Button>
+                                                        }} className="rounded-xl font-bold">확인</Button>
                                                     </div>
-                                                    <div className="text-xs text-gray-500">
-                                                        * 삭제된 '일자', '시행처'도 여기서 다시 추가할 수 있습니다.
-                                                    </div>
+                                                    <p className="text-[11px] text-slate-400 font-medium">
+                                                        * 촬영일자, 시행처 등 누락된 항목을 자유롭게 추가하세요.
+                                                    </p>
                                                 </div>
                                             </PopoverContent>
                                         </Popover>
                                     </div>
 
-                                    <div className="space-y-3 bg-gray-50 p-4 rounded-lg">
+                                    <div className="space-y-4 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
                                         {sortedLabels.map(({ key, value }) => (
-                                            <div key={key} className="flex items-center group">
+                                            <div key={key} className="flex items-center group/label">
                                                 {/* Label Name */}
-                                                <div className={LABEL_TEXT}>
-                                                    {key === '일자' && <CalendarIcon className="w-4 h-4 inline mr-1 mb-1"/>}
-                                                    {key === '시행처' && <MapPin className="w-4 h-4 inline mr-1 mb-1"/>}
+                                                <div className={cn(LABEL_TEXT, "text-slate-500 font-black uppercase tracking-wider text-sm")}>
+                                                    {key === '일자' && <CalendarIcon className="w-4 h-4 inline mr-2 mb-1 opacity-50"/>}
+                                                    {key === '시행처' && <MapPin className="w-4 h-4 inline mr-2 mb-1 opacity-50"/>}
                                                     {key}
                                                 </div>
 
@@ -539,16 +543,16 @@ export default function JobEditor() {
                                                     {key === '일자' ? (
                                                         <Input 
                                                             type="date"
-                                                            className={`${INPUT_CLASS} pl-4`}
+                                                            className={cn(INPUT_CLASS, "pl-4 font-bold text-slate-700")}
                                                             value={value}
                                                             onChange={(e) => handlePhotoLabelChange(cluster.id, photo.id, key, e.target.value)}
                                                             onBlur={(e) => handlePhotoLabelBlur(photo.id, { ...photo.labels, [key]: e.target.value })}
                                                         />
                                                     ) : (
                                                         <Input 
-                                                            className={INPUT_CLASS}
+                                                            className={cn(INPUT_CLASS, "font-bold text-slate-700")}
                                                             value={value}
-                                                            placeholder={`${key} 입력`}
+                                                            placeholder={`${key} 입력...`}
                                                             onChange={(e) => handlePhotoLabelChange(cluster.id, photo.id, key, e.target.value)}
                                                             onBlur={() => handlePhotoLabelBlur(photo.id, photo.labels!)}
                                                         />
@@ -559,7 +563,7 @@ export default function JobEditor() {
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    className="ml-2 h-12 w-12 text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity"
+                                                    className="ml-3 h-12 w-12 text-slate-200 hover:text-red-500 hover:bg-red-50 opacity-100 md:opacity-0 md:group-hover/label:opacity-100 transition-all rounded-xl"
                                                     onClick={() => handleDeleteLabel(cluster.id, photo.id, key)}
                                                     title={`${key} 삭제`}
                                                 >
@@ -568,8 +572,8 @@ export default function JobEditor() {
                                             </div>
                                         ))}
                                         {sortedLabels.length === 0 && (
-                                            <div className="text-center py-6 text-gray-400">
-                                                등록된 정보가 없습니다. <br/> 위의 '항목 추가' 버튼을 눌러주세요.
+                                            <div className="text-center py-10 text-slate-400 font-medium italic">
+                                                등록된 정보가 없습니다. <br/> 상단의 '항목 추가' 버튼을 이용해 정보를 입력하세요.
                                             </div>
                                         )}
                                     </div>
@@ -583,79 +587,59 @@ export default function JobEditor() {
       </main>
 
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full md:max-w-[1400px] h-[90vh] flex flex-col p-0 gap-0 bg-gray-50">
-          <DialogHeader className="p-6 bg-white border-b shrink-0">
-            <DialogTitle className="text-xl">PDF 내보내기 설정</DialogTitle>
-            <DialogDescription className="text-base">
-              내보내기 전 표지와 첫 장을 미리보고 수정할 수 있습니다.
+        <DialogContent className="max-w-[95vw] w-full md:max-w-[1400px] h-[90vh] flex flex-col p-0 gap-0 bg-slate-50 border-none rounded-3xl overflow-hidden shadow-2xl">
+          <DialogHeader className="p-6 md:p-8 bg-white border-b border-slate-100 shrink-0">
+            <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">PDF 내보내기 설정</DialogTitle>
+            <DialogDescription className="text-lg font-medium text-slate-500 mt-1">
+              내보내기 전 표지와 첫 장을 확인하고 필요한 정보를 수정하세요.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="flex flex-col xl:flex-row gap-12 justify-center items-start min-h-[700px]">
+          <div className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar">
+            <div className="flex flex-col xl:flex-row gap-16 justify-center items-start">
               
               {/* Cover Preview (Left) */}
-              <div className="flex flex-col items-center gap-4">
-                 <h3 className="text-lg font-bold text-gray-700">표지 미리보기</h3>
-                 <div className="w-[450px] h-[636px] bg-white shadow-xl flex flex-col items-center justify-between p-12 relative hover:ring-2 hover:ring-blue-300 transition-all">
+              <div className="flex flex-col items-center gap-6">
+                 <h3 className="text-xl font-black text-slate-700 uppercase tracking-widest text-sm">표지 미리보기</h3>
+                 <div className="w-[450px] h-[636px] bg-white shadow-2xl flex flex-col items-center justify-between p-16 relative hover:ring-4 hover:ring-primary/10 transition-all rounded-sm border border-slate-100">
                     {/* Top Title */}
                     <div className="mt-20 w-full text-center">
                         <input
-                           className="w-full text-center text-3xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
+                           className="w-full text-center text-3xl font-black border-b-2 border-transparent hover:border-slate-200 focus:border-primary focus:outline-none bg-transparent py-2 text-slate-900 transition-colors"
                            value={exportMetadata.cover_title}
                            onChange={(e) => setExportMetadata({...exportMetadata, cover_title: e.target.value})}
                            placeholder="작업명 입력"
                         />
-                        <div className="mt-16 bg-gray-100 border border-gray-300 px-10 py-4 inline-block">
-                             <span className="text-3xl font-bold tracking-widest">사 진 대 지</span>
+                        <div className="mt-16 bg-slate-50 border border-slate-200 px-12 py-6 inline-block rounded-xl shadow-inner">
+                             <span className="text-4xl font-black tracking-[0.2em] text-slate-800">사 진 대 지</span>
                         </div>
                     </div>
 
                     {/* Bottom Company */}
                     <div className="mb-20 w-full text-center">
-                        {exportMetadata.cover_company_name ? (
-                            <input
-                                className="w-full text-center text-xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
-                                value={exportMetadata.cover_company_name}
-                                onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
-                            />
-                        ) : (
-                            <div 
-                                className="w-full border-2 border-dashed border-gray-300 rounded-lg p-4 text-xl text-gray-400 cursor-text hover:border-blue-400 hover:text-blue-500 transition-colors"
-                                onClick={() => setExportMetadata({...exportMetadata, cover_company_name: ' '})} // trigger input
-                            >
-                                시행처 입력 (클릭)
-                            </div>
-                        )}
-                        {/* Fallback input if empty but focused */}
-                        {exportMetadata.cover_company_name === ' ' && (
-                             <input
-                                className="w-full text-center text-2xl font-bold border-b-2 border-blue-500 focus:outline-none bg-transparent absolute bottom-20 left-0 px-12"
-                                autoFocus
-                                value={exportMetadata.cover_company_name}
-                                onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
-                                onBlur={() => { if(exportMetadata.cover_company_name.trim() === '') setExportMetadata({...exportMetadata, cover_company_name: ''}) }}
-                            />
-                        )}
+                        <input
+                            className="w-full text-center text-xl font-bold border-b-2 border-transparent hover:border-slate-200 focus:border-primary focus:outline-none bg-transparent py-2 text-slate-600 transition-colors"
+                            value={exportMetadata.cover_company_name}
+                            onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
+                            placeholder='시행처 입력'
+                        />
                     </div>
                  </div>
               </div>
 
               {/* Page 1 Preview (Right) */}
-              <div className="flex flex-col items-center gap-4">
-                 <div className="flex items-center justify-between w-[450px]">
-                    <h3 className="text-lg font-bold text-gray-700">첫장 미리보기 (예시)</h3>
-                 </div>
+              <div className="flex flex-col items-center gap-6">
+                 <h3 className="text-xl font-black text-slate-700 uppercase tracking-widest text-sm">본문 미리보기 (예시)</h3>
 
-                 <div className="w-[450px] h-[636px] bg-white shadow-xl p-8 relative text-sm flex flex-col">
-                     <div className="text-center text-3xl font-bold mb-6 tracking-widest">사 진 대 지</div>
+                 <div className="w-[450px] h-[636px] bg-white shadow-2xl p-10 relative text-sm flex flex-col rounded-sm border border-slate-100">
+                     <div className="text-center text-3xl font-black mb-8 tracking-[0.15em] text-slate-900">사 진 대 지</div>
                      
                      {/* Table Structure */}
-                     <div className="border border-black flex-1 flex flex-col w-full overflow-hidden">
+                     <div className="border-2 border-slate-900 flex-1 flex flex-col w-full overflow-hidden">
                         {/* Header Row */}
-                        <div className="h-10 flex border-b border-black shrink-0">
-                            <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">공종</div>
-                            <div className="flex-1 flex items-center px-2">
+                        <div className="h-12 flex border-b-2 border-slate-900 shrink-0">
+                            <div className="w-24 bg-slate-50 border-r-2 border-slate-900 flex items-center justify-center font-black text-lg text-slate-800">공종</div>
+                            <div className="flex-1 flex items-center px-4 font-bold text-slate-700 text-base">
                                 {previewCluster.name || '공종명 없음'}
                             </div>
                         </div>
@@ -664,20 +648,20 @@ export default function JobEditor() {
                         {['전', '중', '후'].map((label, idx) => {
                              const photo = previewPhotos[idx];
                              return (
-                                <div key={label} className="flex-1 flex border-b border-black last:border-b-0 min-h-0">
-                                    <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">
+                                <div key={label} className="flex-1 flex border-b-2 border-slate-900 last:border-b-0 min-h-0">
+                                    <div className="w-24 bg-slate-50 border-r-2 border-slate-900 flex items-center justify-center font-black text-xl text-slate-800">
                                         {label}
                                     </div>
-                                    <div className="flex-1 relative p-1 flex items-center justify-center overflow-hidden bg-gray-50/10">
+                                    <div className="flex-1 relative p-1 flex items-center justify-center overflow-hidden bg-slate-50/20">
                                         {photo ? (
                                             <>
                                                 <img 
-                                                    src={photo.thumbnail_url || photo.url} 
+                                                    src={api.getPhotoUrl(photo.url)} 
                                                     alt={label} 
                                                     className="w-full h-full object-contain"
                                                 />
                                                 {/* Label Box Overlay */}
-                                                <div className="absolute top-3 left-3 bg-white/95 border border-gray-300 p-2 shadow-sm rounded-sm text-xs leading-relaxed z-10 whitespace-nowrap">
+                                                <div className="absolute top-4 left-4 bg-white/95 border-2 border-slate-900 p-3 shadow-xl text-[10px] leading-tight z-10 whitespace-nowrap font-bold text-slate-900">
                                                     {labelSettings.map(l => {
                                                         const val = l.isAutoDate && !l.value 
                                                             ? (photo.timestamp ? format(new Date(photo.timestamp), 'yyyy.MM.dd') : '-') 
@@ -686,16 +670,16 @@ export default function JobEditor() {
                                                         if (!val) return null;
 
                                                         return (
-                                                            <div key={l.id}>
-                                                                <span className="font-bold text-gray-800">{l.key} :</span>{' '}
-                                                                <span className="text-gray-900">{val}</span>
+                                                            <div key={l.id} className="mb-0.5 last:mb-0">
+                                                                <span>{l.key} :</span>{' '}
+                                                                <span>{val}</span>
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
                                             </>
                                         ) : (
-                                            <div className="text-gray-300 font-medium">No Photo</div>
+                                            <div className="text-slate-200 font-black text-lg uppercase tracking-widest">No Photo</div>
                                         )}
                                     </div>
                                 </div>
@@ -708,31 +692,31 @@ export default function JobEditor() {
             </div>
           </div>
           
-          <DialogFooter className="p-5 bg-white border-t shrink-0 gap-4">
-             <Button variant="outline" size="lg" className="text-lg px-8" onClick={() => setExportDialogOpen(false)}>취소</Button>
-            <Button type="submit" size="lg" className="text-lg px-8 bg-blue-600 hover:bg-blue-700" onClick={handleConfirmExport}>PDF 내보내기</Button>
+          <DialogFooter className="p-6 md:p-8 bg-white border-t border-slate-100 shrink-0 gap-4">
+             <Button variant="outline" size="lg" className="text-lg font-bold px-10 h-14 rounded-2xl border-slate-200" onClick={() => setExportDialogOpen(false)}>취소</Button>
+            <Button type="submit" size="lg" className="text-lg font-black px-12 h-14 rounded-2xl bg-primary hover:bg-primary/90 shadow-xl shadow-primary/20" onClick={handleConfirmExport}>PDF 내보내기 시작</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={downloadDialogOpen} onOpenChange={setDownloadDialogOpen}>
-        <DialogContent className="sm:max-w-md p-8">
-          <DialogHeader className="mb-6">
-            <DialogTitle className="text-2xl text-center mb-2">PDF 생성 완료!</DialogTitle>
-            <DialogDescription className="text-center text-lg">
-              아래 버튼을 눌러 문서를 저장하세요.
+        <DialogContent className="sm:max-w-md p-10 rounded-3xl border-none shadow-2xl">
+          <DialogHeader className="mb-8">
+            <DialogTitle className="text-3xl font-black text-center mb-2 tracking-tight text-slate-900">PDF 생성 완료!</DialogTitle>
+            <DialogDescription className="text-center text-lg font-medium text-slate-500">
+              보고서가 성공적으로 만들어졌습니다. <br/>아래 버튼을 눌러 파일을 저장하세요.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col items-center justify-center gap-4">
-            <Button size="lg" className="w-full h-16 text-xl bg-green-600 hover:bg-green-700 shadow-lg" onClick={() => {
+            <Button size="lg" className="w-full h-16 text-xl font-black bg-green-600 hover:bg-green-700 shadow-xl shadow-green-100 rounded-2xl transition-all active:scale-95" onClick={() => {
               if (downloadUrl) window.open(downloadUrl, '_blank');
               setDownloadDialogOpen(false);
             }}>
-              <FileDown className="w-8 h-8 mr-3" />
+              <FileDown className="w-7 h-7 mr-3 stroke-[2.5]" />
               PDF 다운로드
             </Button>
-            <Button type="button" variant="ghost" size="lg" className="w-full h-12 text-lg text-gray-500" onClick={() => setDownloadDialogOpen(false)}>
-              닫기
+            <Button type="button" variant="ghost" size="lg" className="w-full h-12 text-lg font-bold text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl" onClick={() => setDownloadDialogOpen(false)}>
+              나중에 받기
             </Button>
           </div>
         </DialogContent>
