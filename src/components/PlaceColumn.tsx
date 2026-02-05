@@ -24,6 +24,7 @@ interface PlaceColumnProps {
   onSelectPhoto: (photoId: string, clusterId: string) => void;
   isCompact?: boolean; // Kept for compatibility, though column might ignore it or use it for card size
   onEditLabels: (photoId: string) => void;
+  isDragging?: boolean;
 }
 
 export function PlaceColumn({ 
@@ -37,7 +38,8 @@ export function PlaceColumn({
   selectedPhotos, 
   onSelectPhoto,
   isCompact = false,
-  onEditLabels
+  onEditLabels,
+  isDragging = false
 }: PlaceColumnProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);

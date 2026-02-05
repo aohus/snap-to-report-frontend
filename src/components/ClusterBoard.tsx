@@ -29,10 +29,16 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
   const [collapsedClusterIds, setCollapsedClusterIds] = useState<Set<string>>(new Set());
   const [hideCompleted, setHideCompleted] = useState(false);
   const [isReserveCollapsed, setIsReserveCollapsed] = useState(false);
+  const [isDragging, setIsDragging] = useState(false); // Global drag state
   
   const selectedPhotoIds = selectedPhotos.map(p => p.id);
 
+  const handleDragStart = () => {
+    setIsDragging(true);
+  };
+
   const handleDragEnd = (result: DropResult) => {
+    setIsDragging(false);
     const { source, destination, draggableId } = result;
 
     if (!destination) return;
@@ -86,7 +92,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
   });
 
   return (
-    <DragDropContext onDragEnd={handleDragEnd}>
+    <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-col md:flex-row h-full gap-4 md:gap-6">
         {/* Reserve Area Sidebar (Sticky) */}
         <div 
@@ -135,15 +141,30 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                     className={`
-                    flex-1 p-3 transition-colors custom-scrollbar
+                    flex-1 p-3 transition-all duration-200 custom-scrollbar relative
                     ${isMobile
                         ? 'overflow-x-auto overflow-y-hidden flex flex-row gap-3 items-start'
                         : 'overflow-y-auto overflow-x-hidden flex flex-col gap-3'
                     }
                     ${snapshot.isDraggingOver ? 'bg-primary/5' : ''}
+                    ${(isDragging && !snapshot.isDraggingOver) ? 'bg-slate-100/50' : ''}
                     `}
                 >
-                    {reserveCluster?.photos.length === 0 && (
+                    {/* Drag Overlay Indicator */}
+                    {isDragging && (
+                        <div className={cn(
+                            "absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-200 z-10 p-3",
+                            snapshot.isDraggingOver ? "opacity-0" : "opacity-100"
+                        )}>
+                            <div className="border-2 border-dashed border-slate-300 rounded-xl w-full h-full flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
+                                <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest text-center">
+                                    Drop to<br/>Reserve
+                                </span>
+                            </div>
+                        </div>
+                    )}
+
+                    {reserveCluster?.photos.length === 0 && !isDragging && (
                     <div className="text-center text-slate-400 m-auto px-4 py-8 border-2 border-dashed border-slate-200 rounded-xl w-full">
                         <p className="text-xs font-bold">잘못 분류된 사진을<br/>여기에 보관하세요.</p>
                     </div>
@@ -240,6 +261,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     isCollapsed={collapsedClusterIds.has(cluster.id)}
                     onToggleCollapse={() => toggleClusterCollapse(cluster.id)}
                     onEditLabels={onEditLabels}
+                    isDragging={isDragging} // Pass global drag state
                   />
               ))}
             </div>
