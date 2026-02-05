@@ -176,43 +176,43 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
 
   return (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-      <div className="flex flex-col md:flex-row h-full gap-4 md:gap-6">
+      <div className="flex flex-col md:flex-row h-full gap-4">
         {/* Reserve Area Sidebar (Sticky) */}
         <div 
           className={`
-            flex-shrink-0 flex flex-col bg-white/40 backdrop-blur-xl rounded-3xl border border-slate-200/60 shadow-xl overflow-hidden 
-            w-full md:sticky md:top-6 md:h-[calc(100vh-120px)] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
+            flex-shrink-0 flex flex-col bg-white border border-slate-200 shadow-subtle overflow-hidden 
+            w-full md:sticky md:top-0 md:h-[calc(100vh-100px)] transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] rounded-md
             ${isReserveCollapsed 
-              ? 'md:w-[80px] max-h-[60px] md:max-h-none' 
-              : ((reserveCluster?.photos.length || 0) === 0 ? 'md:w-[320px]' : 'md:w-[440px]') + ' h-auto md:h-full max-h-[400px] md:max-h-none'
+              ? 'md:w-[60px] max-h-[50px] md:max-h-none' 
+              : ((reserveCluster?.photos.length || 0) === 0 ? 'md:w-[280px]' : 'md:w-[380px]') + ' h-auto md:h-full max-h-[400px] md:max-h-none'
             }
           `}
         >
-          <div className="p-4 bg-slate-50/50 border-b border-slate-200/50 flex items-center justify-between gap-2 z-10 h-[64px]">
-             <div className="flex items-center gap-3 overflow-hidden ml-1">
-                {!isReserveCollapsed && <Archive className="w-5 h-5 text-slate-400 flex-shrink-0" />}
+          <div className="p-3 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between gap-2 z-10 h-[56px]">
+             <div className="flex items-center gap-2.5 overflow-hidden ml-1">
+                {!isReserveCollapsed && <Archive className="w-4 h-4 text-slate-400 flex-shrink-0" />}
                 {!isReserveCollapsed && (
-                  <h3 className="text-base font-black text-slate-800 tracking-tight whitespace-nowrap">임시 보관</h3>
+                  <h3 className="text-sm font-bold text-slate-700 tracking-tight whitespace-nowrap">임시 보관</h3>
                 )}
-                <span className={cn(
-                    "bg-slate-900 text-white px-2.5 py-1 rounded-full text-[11px] font-black shadow-lg shadow-slate-200",
+                <Badge variant="secondary" className={cn(
+                    "px-1.5 py-0 rounded-md text-[10px] font-bold",
                     isReserveCollapsed ? "mx-auto" : ""
                 )}>
                   {reserveCluster?.photos.length || 0}
-                </span>
+                </Badge>
              </div>
 
             {/* Toggle Button */}
             <Button 
                variant="ghost" 
                size="icon" 
-               className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-200/50 rounded-full transition-all"
+               className="h-8 w-8 text-slate-400 hover:text-slate-900 hover:bg-slate-200/50 rounded-md transition-all"
                onClick={() => setIsReserveCollapsed(!isReserveCollapsed)}
             >
                {isMobile ? (
-                   isReserveCollapsed ? <ChevronsDown className="w-5 h-5" /> : <ChevronsUp className="w-5 h-5" />
+                   isReserveCollapsed ? <ChevronsDown className="w-4 h-4" /> : <ChevronsUp className="w-4 h-4" />
                ) : (
-                   isReserveCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />
+                   isReserveCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />
                )}
             </Button>
           </div>
@@ -224,32 +224,17 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     ref={provided.innerRef}
                     {...provided.droppableProps}
                     className={`
-                    flex-1 p-3 transition-all duration-200 custom-scrollbar relative
+                    flex-1 p-2 transition-all duration-200 custom-scrollbar relative
                     ${isMobile
-                        ? 'overflow-x-auto overflow-y-hidden flex flex-row gap-3 items-start'
-                        : 'overflow-y-auto overflow-x-hidden flex flex-col gap-3'
+                        ? 'overflow-x-auto overflow-y-hidden flex flex-row gap-2 items-start'
+                        : 'overflow-y-auto overflow-x-hidden flex flex-col gap-2'
                     }
                     ${snapshot.isDraggingOver ? 'bg-primary/5' : ''}
-                    ${(isDragging && !snapshot.isDraggingOver) ? 'bg-slate-100/50' : ''}
                     `}
                 >
-                    {/* Drag Overlay Indicator */}
-                    {isDragging && (
-                        <div className={cn(
-                            "absolute inset-0 flex items-center justify-center pointer-events-none transition-opacity duration-200 z-10 p-3",
-                            snapshot.isDraggingOver ? "opacity-0" : "opacity-100"
-                        )}>
-                            <div className="border-2 border-dashed border-slate-300 rounded-xl w-full h-full flex items-center justify-center bg-white/40 backdrop-blur-[1px]">
-                                <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest text-center">
-                                    Drop to<br/>Reserve
-                                </span>
-                            </div>
-                        </div>
-                    )}
-
                     {reserveCluster?.photos.length === 0 && !isDragging && (
-                    <div className="text-center text-slate-400 m-auto px-4 py-8 border-2 border-dashed border-slate-200 rounded-xl w-full">
-                        <p className="text-xs font-bold">잘못 분류된 사진을<br/>여기에 보관하세요.</p>
+                    <div className="text-center text-slate-400 m-auto px-4 py-6 border-2 border-dashed border-slate-100 rounded-md w-full">
+                        <p className="text-[11px] font-semibold leading-relaxed">잘못 분류된 사진을<br/>여기에 보관하세요.</p>
                     </div>
                     )}
                     {reserveCluster?.photos.map((photo, index) => (
@@ -262,9 +247,9 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                         onSelect={(e) => handleSelectPhotoInternal(photo.id.toString(), reserveCluster.id, e)}
                         onPreview={() => setPreviewPhoto(photo as any)}
                         isSelected={selectedPhotoIds.includes(photo.id.toString())}
-                        isCompact={isCompact} // Use state instead of forcing true
+                        isCompact={true}
                         onEditLabels={onEditLabels}
-                        isDraggingSomewhere={isDragging} // Pass global drag state
+                        isDraggingSomewhere={isDragging} 
                         />
                     </div>
                     ))}
@@ -278,37 +263,42 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
         {/* Main Grid Area */}
         <div className="flex-1 flex flex-col min-w-0">
           {/* Controls Toolbar */}
-          <div className="flex-shrink-0 flex items-center justify-between gap-4 mb-8 p-4 bg-white/60 rounded-3xl border border-slate-200/60 shadow-xl shadow-slate-200/50 sticky top-6 z-20 backdrop-blur-xl">
-            <h2 className="text-2xl font-black text-slate-900 tracking-tight ml-2">
-                분류된 장소 <span className="text-primary/40 ml-1 font-medium">{displayedClusters.length}</span>
-            </h2>
+          <div className="flex-shrink-0 flex items-center justify-between gap-4 mb-6 p-2 bg-white/80 rounded-md border border-slate-200 shadow-subtle sticky top-0 z-30 backdrop-blur-md">
+            <div className="flex items-center gap-3 ml-2">
+              <h2 className="text-base font-bold text-slate-900 tracking-tight">
+                  분류된 장소
+              </h2>
+              <Badge variant="outline" className="text-[10px] font-bold text-slate-400 px-1.5 rounded-md">
+                {displayedClusters.length}
+              </Badge>
+            </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5">
                 <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsCompact(!isCompact)}
                 className={cn(
-                    "h-10 px-4 rounded-2xl border border-transparent font-black transition-all",
-                    isCompact ? "bg-primary text-white shadow-lg shadow-primary/30" : "text-slate-500 hover:bg-slate-100"
+                    "h-8 px-3 rounded-md border border-transparent font-bold transition-all text-xs",
+                    isCompact ? "bg-slate-900 text-white shadow-subtle" : "text-slate-500 hover:bg-slate-100"
                 )}
                 >
-                {isCompact ? <Maximize2 className="w-4 h-4 mr-2" /> : <Minimize2 className="w-4 h-4 mr-2" />}
+                {isCompact ? <Maximize2 className="w-3.5 h-3.5 mr-1.5" /> : <Minimize2 className="w-3.5 h-3.5 mr-1.5" />}
                 {isCompact ? "크게 보기" : "작게 보기"}
                 </Button>
 
-                <div className="w-px h-5 bg-slate-200 mx-2"></div>
+                <div className="w-px h-4 bg-slate-200 mx-1"></div>
 
                 <Button
                 variant="ghost"
                 size="sm"
                 onClick={() => setHideCompleted(!hideCompleted)}
                 className={cn(
-                    "h-10 px-4 rounded-2xl border border-transparent font-black transition-all",
-                    hideCompleted ? "bg-orange-500 text-white shadow-lg shadow-orange-200" : "text-slate-500 hover:bg-slate-100"
+                    "h-8 px-3 rounded-md border border-transparent font-bold transition-all text-xs",
+                    hideCompleted ? "bg-orange-500 text-white shadow-subtle" : "text-slate-500 hover:bg-slate-100"
                 )}
                 >
-                {hideCompleted ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                {hideCompleted ? <EyeOff className="w-3.5 h-3.5 mr-1.5" /> : <Eye className="w-3.5 h-3.5 mr-1.5" />}
                 완료 숨김
                 </Button>
 
@@ -316,9 +306,9 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                 variant="ghost"
                 size="sm"
                 onClick={toggleCollapseCompleted}
-                className="h-10 px-4 rounded-2xl border border-slate-200 bg-white shadow-sm font-black text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95"
+                className="h-8 px-3 rounded-md border border-slate-200 bg-white shadow-subtle font-bold text-xs text-slate-600 hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95"
                 >
-                {areAllCompletedCollapsed ? <ChevronsDown className="w-4 h-4 mr-2" /> : <ChevronsUp className="w-4 h-4 mr-2" />}
+                {areAllCompletedCollapsed ? <ChevronsDown className="w-3.5 h-3.5 mr-1.5" /> : <ChevronsUp className="w-3.5 h-3.5 mr-1.5" />}
                 완료 {areAllCompletedCollapsed ? "펼치기" : "접기"}
                 </Button>
             </div>

@@ -23,8 +23,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from '@/lib/utils';
 
 // --- Style Constants ---
-const INPUT_CLASS = "h-12 text-lg bg-white border-slate-200 focus:border-primary focus:ring-primary rounded-xl shadow-sm";
-const LABEL_TEXT = "text-base font-bold text-slate-600 w-24 flex-shrink-0 text-right mr-3";
+const INPUT_CLASS = "h-10 text-base bg-white border-slate-200 focus:border-primary focus:ring-primary/5 rounded-md shadow-subtle font-medium";
+const LABEL_TEXT = "text-xs font-bold text-slate-400 w-20 flex-shrink-0 text-right mr-3 uppercase tracking-wider";
 
 export default function JobEditor() {
   const navigate = useNavigate();
@@ -393,86 +393,90 @@ export default function JobEditor() {
     <div className="min-h-screen bg-slate-50 flex flex-col font-sans text-slate-900 pb-20 selection:bg-primary/10 selection:text-primary">
       
       {/* 1. Top Header */}
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/80">
+      <header className="bg-white/90 border-b border-slate-200 px-6 py-3 flex items-center justify-between sticky top-0 z-40 backdrop-blur-xl shadow-subtle">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/jobs/${jobId}`)} className="rounded-xl h-10 w-10">
-            <ArrowLeft className="w-6 h-6 text-slate-600" />
+          <Button variant="ghost" size="icon" onClick={() => navigate(`/jobs/${jobId}`)} className="rounded-md h-9 w-9">
+            <ArrowLeft className="w-5 h-5 text-slate-600" />
           </Button>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">{job?.title} <span className="text-slate-400 font-medium ml-2">상세 편집</span></h1>
+          <div className="flex flex-col">
+            <h1 className="text-lg font-bold text-slate-900 tracking-tight leading-none">{job?.title}</h1>
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mt-1">상세 편집 모드</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-            <Button onClick={handleSave} disabled={saving} className="h-11 text-base font-bold bg-slate-800 hover:bg-slate-900 px-6 rounded-xl shadow-lg shadow-slate-200">
-              {saving ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Save className="w-5 h-5 mr-2" />}
-              저장하기
+        <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={handleSave} disabled={saving} className="h-9 text-sm font-semibold px-4 rounded-md border-slate-200 hover:bg-slate-50 transition-all">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save className="w-4 h-4 mr-2" />}
+              변경사항 저장
             </Button>
             <Button 
-              className="h-11 text-base font-black bg-primary hover:bg-primary/90 px-6 rounded-xl shadow-lg shadow-primary/20"
+              className="h-9 text-sm font-bold bg-primary hover:bg-primary/95 px-5 rounded-md shadow-emphasis shadow-primary/10 transition-all"
               onClick={handleExport}
               disabled={exporting || clusters.length === 0}
             >
-              {exporting ? <Loader2 className="w-4 h-4 md:w-5 md:h-5 animate-spin md:mr-2" /> : <FileDown className="w-4 h-4 md:w-5 md:h-5 md:mr-2" />}
-              <span className="hidden md:inline">PDF 미리보기</span>
+              {exporting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <FileDown className="w-4 h-4 mr-2" />}
+              <span className="hidden md:inline">PDF 리포트 생성</span>
               <span className="md:hidden">PDF</span>
             </Button>
         </div>
       </header>
 
       {/* 2. Batch Tool Bar (Sticky below header) */}
-      <div className="bg-white border-b border-slate-200 sticky top-[77px] z-20 px-6 py-4 shadow-sm">
-          <div className="max-w-5xl mx-auto flex flex-col md:flex-row items-center gap-4 justify-between">
+      <div className="bg-white/80 border-b border-slate-200 sticky top-[61px] z-30 px-6 py-3 backdrop-blur-md shadow-subtle">
+          <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center gap-4 justify-between">
               <div className="flex items-center gap-2">
-                  <Button variant="ghost" className="text-lg font-black hover:bg-slate-50 rounded-xl px-4 h-12" onClick={toggleAllSelection}>
-                      {selectedClusterIds.size === clusters.length ? <CheckSquare className="w-6 h-6 mr-2 text-primary"/> : <Square className="w-6 h-6 mr-2 text-slate-300"/>}
-                      {selectedClusterIds.size}개 그룹 선택됨
-                  </Button>
+                  <div className="flex items-center bg-slate-100 rounded-md p-0.5">
+                    <Button variant="ghost" className="text-sm font-bold hover:bg-white hover:shadow-subtle rounded-md px-3 h-8 transition-all" onClick={toggleAllSelection}>
+                        {selectedClusterIds.size === clusters.length ? <CheckSquare className="w-4 h-4 mr-2 text-primary"/> : <Square className="w-4 h-4 mr-2 text-slate-400"/>}
+                        {selectedClusterIds.size}개 그룹 선택됨
+                    </Button>
+                  </div>
               </div>
               
-              <div className="flex items-center gap-2 flex-1 w-full md:w-auto overflow-x-auto p-1">
-                  <span className="text-sm font-black text-slate-400 uppercase tracking-widest mr-2 hidden md:inline">일괄 편집</span>
+              <div className="flex items-center gap-2 flex-1 w-full md:w-auto">
                   <Input 
                     placeholder="항목 이름 (예: 위치)" 
-                    className="h-12 text-base font-bold min-w-[150px] bg-white rounded-xl border-slate-200"
+                    className="h-9 text-sm font-semibold flex-1 md:flex-none md:w-40 bg-white rounded-md border-slate-200"
                     value={batchKey}
                     onChange={(e) => setBatchKey(e.target.value)}
                   />
                   <Input 
-                    placeholder="내용 (예: 1층)" 
-                    className="h-12 text-base font-bold min-w-[150px] bg-white rounded-xl border-slate-200"
+                    placeholder="내용 입력 (예: 1층)" 
+                    className="h-9 text-sm font-semibold flex-1 md:flex-none md:w-60 bg-white rounded-md border-slate-200"
                     value={batchValue}
                     onChange={(e) => setBatchValue(e.target.value)}
                   />
-                  <Button onClick={() => handleBatchAction('add')} className="h-12 bg-primary hover:bg-primary/90 text-white font-black px-6 rounded-xl shadow-md shadow-primary/10 whitespace-nowrap">
-                      <Plus className="w-5 h-5 mr-1 stroke-[3]" /> 추가
+                  <Button onClick={() => handleBatchAction('add')} className="h-9 bg-slate-900 hover:bg-slate-800 text-white font-bold px-4 rounded-md transition-all">
+                      추가
                   </Button>
-                  <Button onClick={() => handleBatchAction('delete')} variant="outline" className="h-12 border-red-100 text-red-600 hover:bg-red-50 font-bold px-6 rounded-xl whitespace-nowrap">
-                      <Trash2 className="w-5 h-5 mr-1" /> 삭제
+                  <Button onClick={() => handleBatchAction('delete')} variant="ghost" className="h-9 text-red-600 hover:bg-red-50 font-bold px-4 rounded-md transition-all">
+                      삭제
                   </Button>
               </div>
           </div>
       </div>
 
-      <main className="flex-1 p-4 md:p-8 max-w-5xl mx-auto w-full space-y-12 mt-4">
+      <main className="flex-1 p-6 md:p-10 max-w-6xl mx-auto w-full space-y-10 mt-4">
         {clusters.filter(c => c.name !== 'reserve').map((cluster) => (
             <div key={cluster.id} className={cn(
-                "bg-white rounded-3xl shadow-professional border transition-all duration-300",
-                selectedClusterIds.has(cluster.id) ? 'border-primary ring-4 ring-primary/5 bg-primary/[0.01]' : 'border-slate-200'
+                "bg-white rounded-md shadow-subtle border transition-all duration-300",
+                selectedClusterIds.has(cluster.id) ? 'border-primary ring-2 ring-primary/5' : 'border-slate-200'
             )}>
                 
                 {/* Cluster Header */}
-                <div className="p-6 md:p-8 border-b border-slate-100 flex items-center gap-6 bg-slate-50/50 rounded-t-3xl">
+                <div className="p-4 md:p-6 border-b border-slate-100 flex items-center gap-4 bg-slate-50/30 rounded-t-md">
                     <div onClick={() => toggleClusterSelection(cluster.id)} className="cursor-pointer group">
                         {selectedClusterIds.has(cluster.id) 
-                            ? <CheckSquare className="w-10 h-10 text-primary" /> 
-                            : <Square className="w-10 h-10 text-slate-200 group-hover:text-slate-300 transition-colors" />
+                            ? <CheckSquare className="w-6 h-6 text-primary" /> 
+                            : <Square className="w-6 h-6 text-slate-300 group-hover:text-slate-400 transition-colors" />
                         }
                     </div>
                     <div className="flex-1">
-                        <label className="block text-xs font-black text-slate-400 uppercase tracking-widest mb-2 ml-1">공종(그룹)명</label>
                         <Input 
                             value={cluster.name} 
                             onChange={(e) => handleClusterNameChange(cluster.id, e.target.value)}
                             onBlur={(e) => handleClusterNameBlur(cluster.id, e.target.value)}
-                            className="h-14 text-2xl font-black bg-white border-slate-200 rounded-2xl focus:ring-primary/20 max-w-lg shadow-sm"
+                            className="h-10 text-xl font-bold bg-transparent border-transparent hover:border-slate-200 focus:bg-white focus:border-primary/20 rounded-md max-w-lg transition-all"
+                            placeholder="그룹 이름을 입력하세요..."
                         />
                     </div>
                 </div>
@@ -483,10 +487,10 @@ export default function JobEditor() {
                         const sortedLabels = getSortedLabels(photo.labels);
                         
                         return (
-                            <div key={photo.id} className="flex flex-col md:flex-row gap-8 p-6 border border-slate-100 rounded-3xl bg-white shadow-sm hover:shadow-emphasis hover:border-primary/20 transition-all group/photo">
+                            <div key={photo.id} className="flex flex-col md:flex-row gap-8 p-4 border-b border-slate-50 last:border-b-0 pb-12 group/photo">
                                 {/* 1. Photo Section (Large) */}
-                                <div className="w-full md:w-[450px] flex-shrink-0">
-                                    <div className="aspect-[4/3] bg-slate-100 rounded-2xl overflow-hidden border border-slate-200 relative shadow-inner">
+                                <div className="w-full md:w-[480px] flex-shrink-0">
+                                    <div className="aspect-[4/3] bg-slate-100 rounded-md overflow-hidden border border-slate-200 relative shadow-inner group-hover/photo:border-primary/20 transition-all">
                                         <img 
                                             src={api.getPhotoUrl(photo.url)} 
                                             alt="현장 사진" 
@@ -497,85 +501,64 @@ export default function JobEditor() {
 
                                 {/* 2. Label Inputs Section */}
                                 <div className="flex-1 flex flex-col gap-4 min-w-0">
-                                    <div className="flex items-center justify-between mb-2">
-                                        <h3 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                                    <div className="flex items-center justify-between mb-1">
+                                        <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                             사진 상세 정보
                                         </h3>
                                         <Popover>
                                             <PopoverTrigger asChild>
-                                                <Button variant="outline" size="sm" className="h-11 px-4 text-primary font-bold border-primary/20 hover:bg-primary/5 rounded-xl">
-                                                    <Plus className="w-4 h-4 mr-2 stroke-[3]" /> 항목 추가
+                                                <Button variant="ghost" size="sm" className="h-8 px-3 text-primary font-bold hover:bg-primary/5 rounded-md">
+                                                    <Plus className="w-3.5 h-3.5 mr-1.5 stroke-[3]" /> 항목 추가
                                                 </Button>
                                             </PopoverTrigger>
-                                            <PopoverContent className="w-80 p-5 rounded-2xl shadow-emphasis border-slate-200">
+                                            <PopoverContent className="w-80 p-4 rounded-md shadow-elevated border-slate-200">
                                                 <div className="space-y-4">
-                                                    <h4 className="font-black text-slate-900 tracking-tight">새 항목 추가</h4>
+                                                    <h4 className="text-sm font-bold text-slate-900 tracking-tight">새 항목 추가</h4>
                                                     <div className="flex gap-2">
-                                                        <Input id={`new-key-${photo.id}`} placeholder="예: 위치, 날씨 등" className="h-11 rounded-xl" />
+                                                        <Input id={`new-key-${photo.id}`} placeholder="예: 위치, 상태 등" className="h-9 rounded-md" />
                                                         <Button onClick={() => {
                                                             const el = document.getElementById(`new-key-${photo.id}`) as HTMLInputElement;
                                                             if (el.value.trim()) {
                                                                 handlePhotoLabelChange(cluster.id, photo.id, el.value.trim(), '');
                                                                 el.value = '';
                                                             }
-                                                        }} className="rounded-xl font-bold">확인</Button>
+                                                        }} className="rounded-md font-bold h-9">확인</Button>
                                                     </div>
-                                                    <p className="text-[11px] text-slate-400 font-medium">
-                                                        * 촬영일자, 시행처 등 누락된 항목을 자유롭게 추가하세요.
-                                                    </p>
                                                 </div>
                                             </PopoverContent>
                                         </Popover>
                                     </div>
 
-                                    <div className="space-y-4 bg-slate-50/50 p-6 rounded-2xl border border-slate-100">
+                                    <div className="space-y-3 bg-white p-2 rounded-md">
                                         {sortedLabels.map(({ key, value }) => (
                                             <div key={key} className="flex items-center group/label">
                                                 {/* Label Name */}
-                                                <div className={cn(LABEL_TEXT, "text-slate-500 font-black uppercase tracking-wider text-sm")}>
-                                                    {key === '일자' && <CalendarIcon className="w-4 h-4 inline mr-2 mb-1 opacity-50"/>}
-                                                    {key === '시행처' && <MapPin className="w-4 h-4 inline mr-2 mb-1 opacity-50"/>}
+                                                <div className={LABEL_TEXT}>
                                                     {key}
                                                 </div>
 
                                                 {/* Label Input */}
                                                 <div className="flex-1 relative">
-                                                    {key === '일자' ? (
-                                                        <Input 
-                                                            type="date"
-                                                            className={cn(INPUT_CLASS, "pl-4 font-bold text-slate-700")}
-                                                            value={value}
-                                                            onChange={(e) => handlePhotoLabelChange(cluster.id, photo.id, key, e.target.value)}
-                                                            onBlur={(e) => handlePhotoLabelBlur(photo.id, { ...photo.labels, [key]: e.target.value })}
-                                                        />
-                                                    ) : (
-                                                        <Input 
-                                                            className={cn(INPUT_CLASS, "font-bold text-slate-700")}
-                                                            value={value}
-                                                            placeholder={`${key} 입력...`}
-                                                            onChange={(e) => handlePhotoLabelChange(cluster.id, photo.id, key, e.target.value)}
-                                                            onBlur={() => handlePhotoLabelBlur(photo.id, photo.labels!)}
-                                                        />
-                                                    )}
+                                                    <Input 
+                                                        className={cn(INPUT_CLASS, "font-bold text-slate-800")}
+                                                        value={value}
+                                                        placeholder={`${key} 내용을 입력하세요...`}
+                                                        onChange={(e) => handlePhotoLabelChange(cluster.id, photo.id, key, e.target.value)}
+                                                        onBlur={() => handlePhotoLabelBlur(photo.id, photo.labels!)}
+                                                    />
                                                 </div>
 
                                                 {/* Delete Button */}
                                                 <Button 
                                                     variant="ghost" 
                                                     size="icon" 
-                                                    className="ml-3 h-12 w-12 text-slate-200 hover:text-red-500 hover:bg-red-50 opacity-100 md:opacity-0 md:group-hover/label:opacity-100 transition-all rounded-xl"
+                                                    className="ml-2 h-9 w-9 text-slate-200 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover/label:opacity-100 transition-all rounded-md"
                                                     onClick={() => handleDeleteLabel(cluster.id, photo.id, key)}
-                                                    title={`${key} 삭제`}
                                                 >
-                                                    <X className="w-6 h-6" />
+                                                    <X className="w-5 h-5" />
                                                 </Button>
                                             </div>
                                         ))}
-                                        {sortedLabels.length === 0 && (
-                                            <div className="text-center py-10 text-slate-400 font-medium italic">
-                                                등록된 정보가 없습니다. <br/> 상단의 '항목 추가' 버튼을 이용해 정보를 입력하세요.
-                                            </div>
-                                        )}
                                     </div>
                                 </div>
                             </div>
