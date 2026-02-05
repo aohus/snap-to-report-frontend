@@ -10,22 +10,9 @@
     - [x] Ensure all base components use the defined semantic colors and tokens
 - [x] Task: Conductor - User Manual Verification 'Design System Foundation' (Protocol in workflow.md) [checkpoint: f7c8eba]
 
-## Phase 2: Dashboard Renewal (Layout & Components)
-- [x] Task: Create Dashboard Widgets (Bento Grid)
-    - [x] Implement `DashboardStats` component using new Card style
-- [x] Task: Reorganize Pages for clarity
-    - [x] Rename current `Dashboard.tsx` to `JobWorkspace.tsx`
-    - [x] Rename `JobList.tsx` to `Dashboard.tsx`
-    - [x] Update `App.tsx` routes
-- [x] Task: Implement Advanced Job List (Data Grid)
-    - [x] Create `JobTable` component with sorting and filtering
-    - [x] Implement search functionality with debouncing (moved into JobTable)
-- [x] Task: Update Dashboard Layout
-    - [x] Assemble Widgets and JobTable into the main `Dashboard` page layout
-    - [x] Apply responsive design for mobile and desktop
-- [ ] Task: Conductor - User Manual Verification 'Dashboard Renewal' (Protocol in workflow.md)
-
-## Phase 3: Global Consistency & Polish
+## Phase 2: Dashboard Renewal (Layout & Components) [checkpoint: a5ddebe]
+...
+## Phase 3: Global Consistency & Polish [checkpoint: a5ddebe]
 - [x] Task: Increase Global Font Size for Accessibility
     - [x] Update `src/index.css` base styles (html font-size, p, headings)
 - [x] Task: Modernize Sidebar Navigation
