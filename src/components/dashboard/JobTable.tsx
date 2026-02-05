@@ -172,7 +172,7 @@ export function JobTable({
                 >
                   <TableCell className="py-3">
                     <div className="flex flex-col gap-1">
-                      <span className="text-lg font-black text-slate-900 group-hover:text-blue-600 transition-colors">
+                      <span className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
                         {job.title}
                       </span>
                     </div>

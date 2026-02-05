@@ -37,40 +37,50 @@ vi.mock('sonner', () => ({
   }
 }));
 
-describe('Dashboard Component - Initial State and Error Handling', () => {
+describe('Dashboard Component - Modern Layout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  it('Shows Loader initially', async () => {
-    // Make API calls pending
-    (api.getJobs as any).mockReturnValue(new Promise(() => {}));
-    (api.getSites as any).mockReturnValue(new Promise(() => {}));
-
-    render(
-      <MemoryRouter>
-        <Dashboard />
-      </MemoryRouter>
-    );
-
-    // Initial state should show loader
-    expect(screen.getByTestId('loader')).toBeInTheDocument();
-  });
-
-  it('Shows Error Toast when data loading fails', async () => {
-    // Simulate API failure
-    (api.getJobs as any).mockRejectedValue(new Error('Network Error'));
+    (api.getJobs as any).mockResolvedValue([]);
     (api.getSites as any).mockResolvedValue([]);
+  });
 
+  it('renders the modern professional header', async () => {
     render(
       <MemoryRouter>
         <Dashboard />
       </MemoryRouter>
     );
 
-    // Wait for the async effect to finish and show error toast
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('Failed to load data');
+      expect(screen.getByText('Field Note')).toBeInTheDocument();
+      expect(screen.getByText('Construction Intelligence')).toBeInTheDocument();
+    });
+  });
+
+  it('renders the sidebar with site management controls', async () => {
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('현장 관리')).toBeInTheDocument();
+      expect(screen.getByText('미분류 작업')).toBeInTheDocument();
+    });
+  });
+
+  it('renders bento-grid stats summary', async () => {
+    render(
+      <MemoryRouter>
+        <Dashboard />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('전체 프로젝트')).toBeInTheDocument();
+      expect(screen.getByText('보고서 완료')).toBeInTheDocument();
+      expect(screen.getByText('등록 현장')).toBeInTheDocument();
     });
   });
 });

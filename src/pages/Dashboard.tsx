@@ -256,167 +256,148 @@ export default function Dashboard() {
     return site?.jobs || [];
   };
 
-  if (loading) return <div data-testid="loader" className="h-screen flex items-center justify-center bg-slate-50"><Loader2 className="w-12 h-12 animate-spin text-primary" /></div>;
+  if (loading) return <div data-testid="loader" className="h-screen flex items-center justify-center bg-surface-2"><Loader2 className="w-12 h-12 animate-spin text-primary/20" /></div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col selection:bg-primary/10 selection:text-primary">
-      <header className="bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 shadow-sm backdrop-blur-md bg-white/80">
-        <div className="flex items-center gap-3">
-          <div className="p-2 bg-primary rounded-xl shadow-md">
-            <LayoutGrid className="w-5 h-5 text-primary-foreground" />
+      <header className="bg-white/90 border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 backdrop-blur-xl shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="p-2 bg-primary rounded-xl shadow-emphasis shadow-primary/20">
+            <LayoutGrid className="w-6 h-6 text-primary-foreground" />
           </div>
-          <h1 className="text-xl font-black text-slate-900 tracking-tight">Field Note</h1>
+          <div className="flex flex-col">
+            <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">Field Note</h1>
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Construction Intelligence</span>
+          </div>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="text-slate-600 hover:text-primary font-bold rounded-xl h-10 px-4">
-             <User className="w-4 h-4 mr-2" />
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="text-base text-slate-600 hover:text-primary font-black rounded-xl h-11 px-5 transition-all">
+             <User className="w-5 h-5 mr-2 opacity-70" />
              내 정보
           </Button>
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-slate-500 hover:text-red-600 font-bold rounded-xl h-10 px-4">
-            <LogOut className="w-4 h-4 mr-2" />
+          <div className="w-px h-5 bg-slate-200 mx-2" />
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-base text-slate-400 hover:text-red-600 font-black rounded-xl h-11 px-5 transition-all">
+            <LogOut className="w-5 h-5 mr-2 opacity-70" />
             로그아웃
           </Button>
         </div>
       </header>
 
-      <div className="flex-1 flex max-w-[1600px] mx-auto w-full">
-        <aside className="w-80 bg-white border-r border-slate-200 flex flex-col p-6 sticky top-[73px] h-[calc(100vh-73px)] shrink-0">
-          <div className="flex items-center justify-between mb-6 px-2">
-            <h2 className="text-sm font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
-              현장 목록
-            </h2>
-            <Button variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-primary/5 rounded-lg" onClick={() => setIsAddingSite(true)}>
-              <FolderPlus className="w-5 h-5" />
-            </Button>
-          </div>
-
-          <nav className="space-y-1 overflow-y-auto pr-2 custom-scrollbar flex-1">
-            <Button
-              variant={selectedSiteId === null ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start text-base font-bold h-12 rounded-xl px-4 transition-all mb-1",
-                selectedSiteId === null 
-                  ? "bg-primary text-primary-foreground hover:bg-primary shadow-md shadow-primary/20" 
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              )}
-              onClick={() => setSelectedSiteId(null)}
-            >
-              <LayoutGrid className="w-5 h-5 mr-3 opacity-70" />
-              전체 보기
-            </Button>
-
-            <Button
-              variant={selectedSiteId === 'unclassified' ? "secondary" : "ghost"}
-              className={cn(
-                "w-full justify-start text-base font-bold h-12 rounded-xl px-4 transition-all mb-4",
-                selectedSiteId === 'unclassified' 
-                  ? "bg-primary text-primary-foreground hover:bg-primary shadow-md shadow-primary/20" 
-                  : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
-              )}
-              onClick={() => setSelectedSiteId('unclassified')}
-            >
-              <FolderIcon className="w-5 h-5 mr-3 opacity-70" />
-              <span className="truncate flex-1 text-left">미분류 작업</span>
-              <span className={cn(
-                "ml-auto text-xs px-2 py-0.5 rounded-md font-black min-w-[24px] text-center",
-                selectedSiteId === 'unclassified' 
-                  ? "bg-white/20 text-white" 
-                  : "bg-slate-100 text-slate-500"
-              )}>
-                {jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id)).length}
-              </span>
-            </Button>
-
-            <div className="px-2 mb-2 mt-6">
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Folders</span>
+      <div className="flex-1 flex max-w-[1400px] mx-auto w-full gap-4 px-3 py-4">
+        <aside className="w-64 flex flex-col shrink-0">
+          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-emphasis sticky top-20 h-[calc(100vh-100px)] flex flex-col">
+            <div className="flex items-center justify-between mb-4 px-1">
+              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+                현장 관리
+              </h2>
+              <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/5 rounded-full transition-all" onClick={() => setIsAddingSite(true)}>
+                <FolderPlus className="w-4 h-4" />
+              </Button>
             </div>
 
-            {sites.map((site) => (
-              <div key={site.id} className="group relative">
-                <Button
-                  variant={selectedSiteId === site.id ? "secondary" : "ghost"}
-                  className={cn(
-                    "w-full justify-start text-base font-medium h-11 rounded-xl px-4 transition-all pr-10",
-                    selectedSiteId === site.id 
-                      ? "bg-slate-100 text-slate-900 font-bold" 
-                      : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-                  )}
-                  onClick={() => setSelectedSiteId(site.id)}
-                >
-                  <FolderIcon className={cn(
-                    "w-5 h-5 mr-3 transition-colors", 
-                    selectedSiteId === site.id ? "text-primary fill-primary/20" : "text-slate-400"
-                  )} />
-                  <span className="truncate flex-1 text-left">{site.name}</span>
-                  <span className={cn(
-                    "ml-auto text-xs px-2 py-0.5 rounded-md min-w-[24px] text-center transition-colors",
-                    selectedSiteId === site.id 
-                      ? "bg-white text-slate-900 shadow-sm" 
-                      : "text-slate-400 group-hover:text-slate-600"
-                  )}>
-                    {site.jobs ? site.jobs.length : jobs.filter(j => j.site_id === site.id).length}
-                  </span>
-                </Button>
-                
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="absolute right-1 top-1 h-9 w-9 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg text-slate-400 hover:text-slate-600">
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="rounded-xl shadow-emphasis">
-                    <DropdownMenuItem onClick={() => handleUpdateSite(site.id, site.name)} className="font-bold">이름 수정</DropdownMenuItem>
-                    <DropdownMenuItem className="text-red-600 font-bold" onClick={() => handleDeleteSite(site.id)}>삭제</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-            ))}
+            <nav className="space-y-1 overflow-y-auto pr-1 custom-scrollbar flex-1">
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-sm font-black h-10 rounded-xl px-3 transition-all",
+                  selectedSiteId === null 
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary" 
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                )}
+                onClick={() => setSelectedSiteId(null)}
+              >
+                <LayoutGrid className={cn("w-4 h-4 mr-2.5", selectedSiteId === null ? "opacity-100" : "opacity-40")} />
+                전체 보기
+              </Button>
 
-            {isAddingSite && (
-              <div className="pt-2 space-y-2 px-1">
-                <Input
-                  autoFocus
-                  placeholder="새 현장 이름"
-                  className="h-11 rounded-xl border-primary ring-2 ring-primary/20"
-                  value={newSiteName}
-                  onChange={(e) => setNewSiteName(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAddSite()}
-                />
-                <div className="flex gap-2">
-                  <Button className="flex-1 h-9 rounded-lg font-bold" onClick={handleAddSite}>확인</Button>
-                  <Button variant="ghost" className="flex-1 h-9 rounded-lg font-bold text-slate-500" onClick={() => setIsAddingSite(false)}>취소</Button>
-                </div>
+              <Button
+                variant="ghost"
+                className={cn(
+                  "w-full justify-start text-sm font-black h-10 rounded-xl px-3 transition-all mb-3",
+                  selectedSiteId === 'unclassified' 
+                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary" 
+                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                )}
+                onClick={() => setSelectedSiteId('unclassified')}
+              >
+                <FolderIcon className={cn("w-4 h-4 mr-2.5", selectedSiteId === 'unclassified' ? "opacity-100" : "opacity-40")} />
+                <span className="truncate flex-1 text-left">미분류</span>
+                <span className={cn(
+                  "ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center",
+                  selectedSiteId === 'unclassified' 
+                    ? "bg-white/20 text-white" 
+                    : "bg-slate-100 text-slate-400"
+                )}>
+                  {jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id)).length}
+                </span>
+              </Button>
+
+              <div className="px-3 mb-1 mt-4">
+                <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Folders</span>
               </div>
-            )}
-          </nav>
+
+              {sites.map((site) => (
+                <div key={site.id} className="group relative">
+                  <Button
+                    variant="ghost"
+                    className={cn(
+                      "w-full justify-start text-sm font-bold h-10 rounded-xl px-3 transition-all pr-8",
+                      selectedSiteId === site.id 
+                        ? "bg-slate-900 text-white shadow-sm" 
+                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    )}
+                    onClick={() => setSelectedSiteId(site.id)}
+                  >
+                    <FolderIcon className={cn(
+                      "w-4 h-4 mr-2.5 transition-colors", 
+                      selectedSiteId === site.id ? "text-primary-foreground fill-white/10" : "text-slate-300"
+                    )} />
+                    <span className="truncate flex-1 text-left">{site.name}</span>
+                  </Button>
+                  
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="absolute right-1 top-1 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg text-slate-400 hover:text-slate-600">
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="rounded-xl shadow-elevated border-slate-100 p-1 min-w-[120px]">
+                      <DropdownMenuItem onClick={() => handleUpdateSite(site.id, site.name)} className="text-xs font-bold rounded-lg cursor-pointer py-1.5">이름 수정</DropdownMenuItem>
+                      <DropdownMenuItem className="text-xs text-red-600 font-bold rounded-lg cursor-pointer py-1.5" onClick={() => handleDeleteSite(site.id)}>삭제</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              ))}
+            </nav>
+          </div>
         </aside>
 
-        <main className="flex-1 p-8 overflow-y-auto custom-scrollbar">
-          <div className="flex items-center justify-between mb-8">
+        <main className="flex-1 overflow-hidden">
+          <div className="flex items-center justify-between mb-6">
             <div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tight">대시보드</h2>
-              <p className="text-slate-500 font-medium mt-1">프로젝트 현황을 한눈에 확인하세요.</p>
+              <h2 className="text-3xl font-black text-slate-900 tracking-tighter leading-tight">대시보드</h2>
+              <p className="text-slate-400 font-bold text-xs tracking-tight">현장 데이터를 한눈에 관리하세요.</p>
             </div>
             <Button 
               onClick={handleCreateJob} 
-              size="lg" 
-              className="text-lg h-12 px-6 font-black rounded-xl shadow-lg shadow-primary/20 transition-all active:scale-95" 
+              size="sm" 
+              className="h-10 px-6 font-black rounded-xl shadow-emphasis shadow-primary/20 transition-all active:scale-95" 
               disabled={creating}
             >
-              {creating ? <Loader2 className="w-5 h-5 animate-spin mr-2" /> : <Plus className="w-5 h-5 mr-2 stroke-[3]" />}
-              새 작업 추가
+              {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2 stroke-[3]" />}
+              새 작업
             </Button>
           </div>
 
           <DashboardStats jobs={jobs} sites={sites} />
 
-          <div className="mt-12">
-            <div className="flex items-center gap-3 mb-6">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">
-                {selectedSiteId === null ? "전체 작업" : selectedSiteId === 'unclassified' ? "미분류 작업" : sites.find(s => s.id === selectedSiteId)?.name}
+          <div className="mt-8">
+            <div className="flex items-center gap-3 mb-4 ml-1">
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                {selectedSiteId === null ? "전체 작업" : selectedSiteId === 'unclassified' ? "미분류" : sites.find(s => s.id === selectedSiteId)?.name}
               </h2>
-              <Badge className="bg-primary text-primary-foreground hover:bg-primary border-none font-black px-3 py-1 text-sm rounded-full">
-                {getTargetJobs().length}
+              <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none font-black px-2.5 py-1 text-[10px] rounded-full">
+                {getTargetJobs().length} 건
               </Badge>
             </div>
 

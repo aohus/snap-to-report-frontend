@@ -91,9 +91,9 @@ export default {
         '2xl': ['1.5rem', { lineHeight: '1.4', letterSpacing: '-0.025em' }],
       },
       boxShadow: {
-        'professional': '0 1px 3px 0 rgb(0 0 0 / 0.05), 0 1px 2px -1px rgb(0 0 0 / 0.05)',
-        'emphasis': '0 4px 6px -1px rgb(0 0 0 / 0.07), 0 2px 4px -2px rgb(0 0 0 / 0.07)',
-        'elevated': '0 10px 15px -3px rgb(0 0 0 / 0.08), 0 4px 6px -4px rgb(0 0 0 / 0.08)',
+        'professional': '0 4px 12px -2px rgb(0 0 0 / 0.12), 0 2px 8px -2px rgb(0 0 0 / 0.06)',
+        'emphasis': '0 12px 24px -4px rgb(0 0 0 / 0.15), 0 8px 12px -4px rgb(0 0 0 / 0.1)',
+        'elevated': '0 25px 35px -5px rgb(0 0 0 / 0.2), 0 12px 15px -5px rgb(0 0 0 / 0.15)',
       },
       borderRadius: {
         lg: "var(--radius)",
