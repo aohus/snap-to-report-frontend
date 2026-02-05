@@ -283,57 +283,57 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <div className="flex-1 flex max-w-[1400px] mx-auto w-full gap-4 px-3 py-4">
-        <aside className="w-64 flex flex-col shrink-0">
-          <div className="bg-white rounded-2xl border border-slate-200 p-4 shadow-emphasis sticky top-20 h-[calc(100vh-100px)] flex flex-col">
-            <div className="flex items-center justify-between mb-4 px-1">
-              <h2 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
+      <div className="flex-1 flex w-full">
+        <aside className="w-64 flex flex-col shrink-0 border-r border-slate-200 bg-white/50 backdrop-blur-sm">
+          <div className="p-4 flex flex-col h-[calc(100vh-73px)] sticky top-[73px]">
+            <div className="flex items-center justify-between mb-2 px-2">
+              <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                 현장 관리
               </h2>
-              <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:bg-primary/5 rounded-full transition-all" onClick={() => setIsAddingSite(true)}>
-                <FolderPlus className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/5 rounded-md transition-all" onClick={() => setIsAddingSite(true)}>
+                <FolderPlus className="w-3.5 h-3.5" />
               </Button>
             </div>
 
-            <nav className="space-y-1 overflow-y-auto pr-1 custom-scrollbar flex-1">
+            <nav className="space-y-0.5 overflow-y-auto pr-1 custom-scrollbar flex-1">
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start text-sm font-black h-10 rounded-xl px-3 transition-all",
+                  "w-full justify-start text-sm font-semibold h-9 rounded-md px-3 transition-all",
                   selectedSiteId === null 
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary" 
-                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    ? "bg-primary text-primary-foreground shadow-subtle hover:bg-primary/95" 
+                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
                 )}
                 onClick={() => setSelectedSiteId(null)}
               >
-                <LayoutGrid className={cn("w-4 h-4 mr-2.5", selectedSiteId === null ? "opacity-100" : "opacity-40")} />
+                <LayoutGrid className={cn("w-4 h-4 mr-2.5", selectedSiteId === null ? "opacity-100" : "opacity-50")} />
                 전체 보기
               </Button>
 
               <Button
                 variant="ghost"
                 className={cn(
-                  "w-full justify-start text-sm font-black h-10 rounded-xl px-3 transition-all mb-3",
+                  "w-full justify-start text-sm font-semibold h-9 rounded-md px-3 transition-all",
                   selectedSiteId === 'unclassified' 
-                    ? "bg-primary text-primary-foreground shadow-md shadow-primary/20 hover:bg-primary" 
-                    : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                    ? "bg-primary text-primary-foreground shadow-subtle hover:bg-primary/95" 
+                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
                 )}
                 onClick={() => setSelectedSiteId('unclassified')}
               >
-                <FolderIcon className={cn("w-4 h-4 mr-2.5", selectedSiteId === 'unclassified' ? "opacity-100" : "opacity-40")} />
+                <FolderIcon className={cn("w-4 h-4 mr-2.5", selectedSiteId === 'unclassified' ? "opacity-100" : "opacity-50")} />
                 <span className="truncate flex-1 text-left">미분류</span>
-                <span className={cn(
-                  "ml-auto text-[10px] px-1.5 py-0.5 rounded-full font-black min-w-[18px] text-center",
+                <Badge variant="secondary" className={cn(
+                  "ml-auto text-[10px] px-1.5 py-0 rounded-md font-bold",
                   selectedSiteId === 'unclassified' 
                     ? "bg-white/20 text-white" 
-                    : "bg-slate-100 text-slate-400"
+                    : "bg-slate-100 text-slate-500"
                 )}>
                   {jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id)).length}
-                </span>
+                </Badge>
               </Button>
 
-              <div className="px-3 mb-1 mt-4">
-                <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Folders</span>
+              <div className="px-3 mb-1 mt-6">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">현장별 폴더</span>
               </div>
 
               {sites.map((site) => (
@@ -341,29 +341,29 @@ export default function Dashboard() {
                   <Button
                     variant="ghost"
                     className={cn(
-                      "w-full justify-start text-sm font-bold h-10 rounded-xl px-3 transition-all pr-8",
+                      "w-full justify-start text-sm font-medium h-9 rounded-md px-3 transition-all pr-8",
                       selectedSiteId === site.id 
-                        ? "bg-slate-900 text-white shadow-sm" 
-                        : "text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                        ? "bg-slate-900 text-white shadow-subtle" 
+                        : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
                     )}
                     onClick={() => setSelectedSiteId(site.id)}
                   >
                     <FolderIcon className={cn(
                       "w-4 h-4 mr-2.5 transition-colors", 
-                      selectedSiteId === site.id ? "text-primary-foreground fill-white/10" : "text-slate-300"
+                      selectedSiteId === site.id ? "text-white/80" : "text-slate-400"
                     )} />
                     <span className="truncate flex-1 text-left">{site.name}</span>
                   </Button>
                   
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="absolute right-1 top-1 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-lg text-slate-400 hover:text-slate-600">
+                      <Button variant="ghost" size="icon" className="absolute right-1 top-0.5 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-md text-slate-400 hover:text-slate-600">
                         <MoreHorizontal className="w-4 h-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl shadow-elevated border-slate-100 p-1 min-w-[120px]">
-                      <DropdownMenuItem onClick={() => handleUpdateSite(site.id, site.name)} className="text-xs font-bold rounded-lg cursor-pointer py-1.5">이름 수정</DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs text-red-600 font-bold rounded-lg cursor-pointer py-1.5" onClick={() => handleDeleteSite(site.id)}>삭제</DropdownMenuItem>
+                    <DropdownMenuContent align="end" className="rounded-md shadow-elevated border-slate-100 p-1 min-w-[120px]">
+                      <DropdownMenuItem onClick={() => handleUpdateSite(site.id, site.name)} className="text-xs font-semibold rounded-md cursor-pointer py-1.5">이름 수정</DropdownMenuItem>
+                      <DropdownMenuItem className="text-xs text-red-600 font-semibold rounded-md cursor-pointer py-1.5" onClick={() => handleDeleteSite(site.id)}>삭제</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -372,44 +372,45 @@ export default function Dashboard() {
           </div>
         </aside>
 
-        <main className="flex-1 overflow-hidden">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-3xl font-black text-slate-900 tracking-tighter leading-tight">대시보드</h2>
-              <p className="text-slate-400 font-bold text-xs tracking-tight">현장 데이터를 한눈에 관리하세요.</p>
-            </div>
-            <Button 
-              onClick={handleCreateJob} 
-              size="sm" 
-              className="h-10 px-6 font-black rounded-xl shadow-emphasis shadow-primary/20 transition-all active:scale-95" 
-              disabled={creating}
-            >
-              {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2 stroke-[3]" />}
-              새 작업
-            </Button>
-          </div>
-
-          <DashboardStats jobs={jobs} sites={sites} />
-
-          <div className="mt-8">
-            <div className="flex items-center gap-3 mb-4 ml-1">
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                {selectedSiteId === null ? "전체 작업" : selectedSiteId === 'unclassified' ? "미분류" : sites.find(s => s.id === selectedSiteId)?.name}
-              </h2>
-              <Badge className="bg-slate-100 text-slate-500 hover:bg-slate-100 border-none font-black px-2.5 py-1 text-[10px] rounded-full">
-                {getTargetJobs().length} 건
-              </Badge>
+        <main className="flex-1 p-8 overflow-y-auto custom-scrollbar">
+          <div className="max-w-6xl mx-auto">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h2 className="text-3xl font-bold text-slate-900 tracking-tight leading-tight">대시보드</h2>
+                <p className="text-slate-500 font-medium text-sm">현장 데이터를 한눈에 관리하세요.</p>
+              </div>
+              <Button 
+                onClick={handleCreateJob} 
+                className="h-10 px-5 font-bold rounded-md shadow-emphasis shadow-primary/10 transition-all" 
+                disabled={creating}
+              >
+                {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2 stroke-[2.5]" />}
+                새 작업
+              </Button>
             </div>
 
-            <JobTable 
-              jobs={getTargetJobs()}
-              sites={sites}
-              onNavigate={(id) => navigate(`/jobs/${id}`)}
-              onEdit={handleEditClick}
-              onDelete={setDeleteJobId}
-              onDownload={handleDownload}
-              onMove={handleMoveJob}
-            />
+            <DashboardStats jobs={jobs} sites={sites} />
+
+            <div className="mt-10">
+              <div className="flex items-center gap-3 mb-6">
+                <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
+                  {selectedSiteId === null ? "전체 작업" : selectedSiteId === 'unclassified' ? "미분류" : sites.find(s => s.id === selectedSiteId)?.name}
+                </h2>
+                <Badge variant="outline" className="text-slate-500 font-semibold px-2 py-0.5 text-[11px] rounded-md">
+                  {getTargetJobs().length} 건
+                </Badge>
+              </div>
+
+              <JobTable 
+                jobs={getTargetJobs()}
+                sites={sites}
+                onNavigate={(id) => navigate(`/jobs/${id}`)}
+                onEdit={handleEditClick}
+                onDelete={setDeleteJobId}
+                onDownload={handleDownload}
+                onMove={handleMoveJob}
+              />
+            </div>
           </div>
         </main>
       </div>
