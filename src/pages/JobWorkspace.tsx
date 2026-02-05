@@ -680,38 +680,38 @@ function DashboardContent() {
       </Dialog>
 
       <Dialog open={exportDialogOpen} onOpenChange={setExportDialogOpen}>
-        <DialogContent className="max-w-[95vw] w-full md:max-w-[1400px] h-[90vh] flex flex-col p-0 gap-0 bg-gray-50">
-          <DialogHeader className="p-6 bg-white border-b shrink-0">
-            <DialogTitle className="text-xl">PDF 내보내기 설정</DialogTitle>
-            <DialogDescription className="text-base">
-              내보내기 전 표지와 첫 장을 미리보고 수정할 수 있습니다.
+        <DialogContent className="max-w-[95vw] w-full md:max-w-[1400px] h-[90vh] flex flex-col p-0 gap-0 bg-slate-50 overflow-hidden border-none shadow-2xl rounded-3xl">
+          <DialogHeader className="p-8 bg-white border-b shrink-0">
+            <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight">PDF 내보내기 설정</DialogTitle>
+            <DialogDescription className="text-base font-medium text-slate-500 mt-1">
+              최종 리포트를 생성하기 전 표지와 레이아웃을 확인하세요.
             </DialogDescription>
           </DialogHeader>
           
-          <div className="flex-1 overflow-y-auto p-8">
-            <div className="flex flex-col xl:flex-row gap-12 justify-center items-start min-h-[700px]">
+          <div className="flex-1 overflow-y-auto p-10 custom-scrollbar">
+            <div className="flex flex-col xl:flex-row gap-16 justify-center items-start min-h-[700px]">
               
               {/* Cover Preview (Left) */}
-              <div className="flex flex-col items-center gap-4">
-                 <h3 className="text-lg font-bold text-gray-700">표지 미리보기</h3>
-                 <div className="w-[450px] h-[636px] bg-white shadow-xl flex flex-col items-center justify-between p-12 relative hover:ring-2 hover:ring-blue-300 transition-all">
+              <div className="flex flex-col items-center gap-6">
+                 <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">표지 미리보기</h3>
+                 <div className="w-[450px] h-[636px] bg-white shadow-elevated rounded-sm flex flex-col items-center justify-between p-12 relative ring-1 ring-slate-200 hover:ring-2 hover:ring-primary/20 transition-all">
                     {/* Top Title */}
                     <div className="mt-20 w-full text-center">
                         <input
-                           className="w-full text-center text-3xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
+                           className="w-full text-center text-3xl font-black border-b-2 border-transparent hover:border-slate-200 focus:border-primary focus:outline-none bg-transparent py-2 transition-all"
                            value={exportMetadata.cover_title}
                            onChange={(e) => setExportMetadata({...exportMetadata, cover_title: e.target.value})}
                            placeholder="작업명 입력"
                         />
-                        <div className="mt-16 bg-gray-100 border border-gray-300 px-10 py-4 inline-block">
-                             <span className="text-3xl font-bold tracking-widest">사 진 대 지</span>
+                        <div className="mt-16 bg-slate-50 border border-slate-200 px-10 py-4 inline-block rounded-lg shadow-inner">
+                             <span className="text-3xl font-black tracking-[0.3em] text-slate-800">사 진 대 지</span>
                         </div>
                     </div>
 
                     {/* Bottom Company */}
                     <div className="mb-20 w-full text-center">
                       <input
-                          className="w-full text-center text-xl font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-blue-500 focus:outline-none bg-transparent py-2"
+                          className="w-full text-center text-xl font-bold border-b-2 border-transparent hover:border-slate-200 focus:border-primary focus:outline-none bg-transparent py-2 transition-all text-slate-600"
                           value={exportMetadata.cover_company_name}
                           onChange={(e) => setExportMetadata({...exportMetadata, cover_company_name: e.target.value})}
                           placeholder='시행처 입력'
@@ -721,58 +721,58 @@ function DashboardContent() {
               </div>
 
               {/* Page 1 Preview (Right) */}
-              <div className="flex flex-col items-center gap-4">
+              <div className="flex flex-col items-center gap-6">
                  <div className="flex items-center justify-between w-[450px]">
-                    <h3 className="text-lg font-bold text-gray-700">첫장 미리보기 (예시)</h3>
+                    <h3 className="text-sm font-black text-slate-400 uppercase tracking-widest">첫 장 레이아웃</h3>
                     <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="sm" className="h-8 gap-2 text-sm text-gray-600 hover:text-blue-600" onClick={() => navigate(`/jobs/${job.id}/edit`, { state: { labelSettings } })}>
-                           <Edit2 className="w-4 h-4" /> 라벨 전체 보기
+                        <Button variant="ghost" size="sm" className="h-9 px-4 gap-2 text-sm font-black text-slate-500 hover:text-primary hover:bg-primary/5 rounded-xl transition-all" onClick={() => navigate(`/jobs/${job.id}/edit`, { state: { labelSettings } })}>
+                           <Edit2 className="w-4 h-4" /> 라벨 전체 편집
                         </Button>
                         <Popover>
                         <PopoverTrigger asChild>
-                            <Button variant="outline" size="sm" className="h-8 gap-2 text-sm border-gray-300">
-                            <Settings className="w-4 h-4" /> 라벨 설정
+                            <Button variant="outline" size="sm" className="h-9 px-4 gap-2 text-sm font-black border-slate-200 rounded-xl shadow-sm hover:bg-white hover:border-slate-300">
+                            <Settings className="w-4 h-4 opacity-60" /> 라벨 설정
                             </Button>
                         </PopoverTrigger>
-                        <PopoverContent className="w-80">
+                        <PopoverContent className="w-80 rounded-2xl shadow-elevated border-slate-100 p-4">
                             <div className="grid gap-4">
-                                <div className="space-y-2">
-                                    <h4 className="font-medium leading-none">라벨 텍스트 설정</h4>
-                                    <p className="text-xs text-muted-foreground">사진 위에 표시될 정보를 설정합니다.</p>
+                                <div className="space-y-1.5">
+                                    <h4 className="text-sm font-black text-slate-900 leading-none">라벨 텍스트 설정</h4>
+                                    <p className="text-[11px] font-medium text-slate-400">사진 위에 표시될 정보를 설정합니다.</p>
                                 </div>
                                 <div className="grid gap-2">
                                     {labelSettings.map((label) => (
                                         <div key={label.id} className="grid grid-cols-[1fr_2fr_auto] items-center gap-2">
                                             <Input 
-                                                className="h-8 text-sm px-2" 
+                                                className="h-8 text-xs px-2 font-bold rounded-lg" 
                                                 value={label.key}
                                                 onChange={(e) => updateLabelItem(label.id, 'key', e.target.value)}
                                                 placeholder="항목"
                                             />
                                             <div className="relative">
                                                 <Input 
-                                                    className="h-8 text-sm px-2" 
+                                                    className="h-8 text-xs px-2 font-bold rounded-lg bg-slate-50" 
                                                     value={label.value}
                                                     onChange={(e) => updateLabelItem(label.id, 'value', e.target.value)}
                                                     placeholder={label.isAutoDate ? "자동 (촬영일자)" : "내용"}
                                                 />
                                             </div>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => removeLabelItem(label.id)}>
-                                                <X className="w-4 h-4 rotate-180" />
+                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-rose-500 rounded-lg" onClick={() => removeLabelItem(label.id)}>
+                                                <X className="w-4 h-4" />
                                             </Button>
                                         </div>
                                     ))}
-                                    <div className="flex items-center gap-2 mt-1">
-                                      <Button variant="outline" size="sm" className="flex-1 h-8 text-sm" onClick={addLabelItem}>
+                                    <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-100">
+                                      <Button variant="ghost" size="sm" className="flex-1 h-9 text-xs font-black text-primary hover:bg-primary/5 rounded-xl" onClick={addLabelItem}>
                                           + 항목 추가
                                       </Button>
                                       <PopoverClose asChild>
                                         <Button 
-                                          variant="outline" 
+                                          variant="default" 
                                           size="sm" 
-                                          className="h-8 text-sm"
+                                          className="h-9 px-4 text-xs font-black rounded-xl shadow-md"
                                         >
-                                          저장
+                                          적용
                                         </Button>
                                       </PopoverClose>
                                     </div>
@@ -783,15 +783,15 @@ function DashboardContent() {
                     </div>
                  </div>
 
-                 <div className="w-[450px] h-[636px] bg-white shadow-xl p-8 relative text-sm flex flex-col">
-                     <div className="text-center text-3xl font-bold mb-6 tracking-widest">사 진 대 지</div>
+                 <div className="w-[450px] h-[636px] bg-white shadow-elevated rounded-sm p-10 relative ring-1 ring-slate-200 flex flex-col transition-all">
+                     <div className="text-center text-3xl font-black mb-8 tracking-[0.2em] text-slate-800">사 진 대 지</div>
                      
                      {/* Table Structure */}
-                     <div className="border border-black flex-1 flex flex-col w-full overflow-hidden">
+                     <div className="border border-slate-900 flex-1 flex flex-col w-full overflow-hidden">
                         {/* Header Row */}
-                        <div className="h-10 flex border-b border-black shrink-0">
-                            <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">공종</div>
-                            <div className="flex-1 flex items-center px-2">
+                        <div className="h-12 flex border-b border-slate-900 shrink-0">
+                            <div className="w-24 bg-slate-50 border-r border-slate-900 flex items-center justify-center font-black text-base text-slate-700">공종</div>
+                            <div className="flex-1 flex items-center px-4 font-bold text-slate-900">
                                 {previewCluster?.name || '공종명 없음'}
                             </div>
                         </div>
@@ -800,11 +800,11 @@ function DashboardContent() {
                         {['전', '중', '후'].map((label, idx) => {
                              const photo = previewPhotos[idx];
                              return (
-                                <div key={label} className="flex-1 flex border-b border-black last:border-b-0 min-h-0">
-                                    <div className="w-20 bg-gray-50 border-r border-black flex items-center justify-center font-bold text-lg">
+                                <div key={label} className="flex-1 flex border-b border-slate-900 last:border-b-0 min-h-0">
+                                    <div className="w-24 bg-slate-50 border-r border-slate-900 flex items-center justify-center font-black text-base text-slate-700">
                                         {label}
                                     </div>
-                                    <div className="flex-1 relative p-1 flex items-center justify-center overflow-hidden bg-gray-50/10">
+                                    <div className="flex-1 relative p-1.5 flex items-center justify-center overflow-hidden bg-slate-50/20">
                                         {photo ? (
                                             <>
                                                 <img 
@@ -813,7 +813,7 @@ function DashboardContent() {
                                                     className="w-full h-full object-contain"
                                                 />
                                                 {/* Label Box Overlay */}
-                                                <div className="absolute top-3 left-3 bg-white/95 border border-gray-300 p-2 shadow-sm rounded-sm text-xs leading-relaxed z-10 whitespace-nowrap">
+                                                <div className="absolute top-4 left-4 bg-white/95 border border-slate-200 p-2.5 shadow-md rounded-lg text-[10px] leading-relaxed z-10 whitespace-nowrap ring-1 ring-black/5">
                                                     {labelSettings.map(l => {
                                                         const val = l.isAutoDate && !l.value 
                                                             ? (photo.timestamp ? format(new Date(photo.timestamp), 'yyyy.MM.dd') : '-') 
@@ -822,16 +822,16 @@ function DashboardContent() {
                                                         if (!val) return null;
 
                                                         return (
-                                                            <div key={l.id}>
-                                                                <span className="font-bold text-gray-800">{l.key} :</span>{' '}
-                                                                <span className="text-gray-900">{val}</span>
+                                                            <div key={l.id} className="flex items-center gap-2">
+                                                                <span className="font-black text-slate-400 uppercase tracking-tighter">{l.key}</span>
+                                                                <span className="font-black text-slate-900">{val}</span>
                                                             </div>
                                                         );
                                                     })}
                                                 </div>
                                             </>
                                         ) : (
-                                            <div className="text-gray-300 font-medium">No Photo</div>
+                                            <div className="text-slate-300 font-black text-xs uppercase tracking-widest">No Photo</div>
                                         )}
                                     </div>
                                 </div>
@@ -844,28 +844,31 @@ function DashboardContent() {
             </div>
           </div>
           
-          <DialogFooter className="p-5 bg-white border-t shrink-0 gap-4">
-             <Button variant="outline" size="lg" className="text-lg px-8" onClick={() => setExportDialogOpen(false)}>취소</Button>
-            <Button type="submit" size="lg" className="text-lg px-8 bg-blue-600 hover:bg-blue-700" onClick={handleConfirmExport}>PDF 내보내기</Button>
+          <DialogFooter className="p-6 bg-white border-t shrink-0 gap-3">
+             <Button variant="outline" size="lg" className="text-base px-8 h-12 rounded-xl font-bold border-slate-200" onClick={() => setExportDialogOpen(false)}>취소</Button>
+            <Button type="submit" size="lg" className="text-base px-10 h-12 bg-primary hover:bg-primary/90 text-white rounded-xl font-black shadow-lg shadow-primary/20 transition-all active:scale-95" onClick={handleConfirmExport}>
+                <FileDown className="w-5 h-5 mr-2" />
+                PDF 리포트 생성
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
       <Dialog open={downloadDialogOpen} onOpenChange={setDownloadDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>PDF 생성 완료!</DialogTitle>
-            <DialogDescription>
-              아래 버튼을 눌러 다운로드하세요.
+        <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-8">
+          <DialogHeader className="mb-4">
+            <DialogTitle className="text-2xl font-black text-slate-900 tracking-tight text-center">PDF 생성 완료!</DialogTitle>
+            <DialogDescription className="text-base font-medium text-slate-500 text-center">
+              보고서가 성공적으로 생성되었습니다. <br/>아래 버튼을 눌러 다운로드하세요.
             </DialogDescription>
           </DialogHeader>
           <div className="flex items-center justify-center py-6">
-            <Button size="lg" className="w-full gap-2 text-lg h-12 bg-green-600 hover:bg-green-700" onClick={() => {
+            <Button size="lg" className="w-full gap-3 text-lg h-14 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl font-black shadow-xl shadow-emerald-100 transition-all active:scale-95" onClick={() => {
               if (downloadUrl) window.open(downloadUrl, '_blank');
               setDownloadDialogOpen(false);
             }}>
               <FileDown className="w-6 h-6" />
-              PDF 다운로드
+              지금 다운로드
             </Button>
           </div>
         </DialogContent>

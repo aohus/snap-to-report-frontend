@@ -9,6 +9,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { Pencil, Check, AlertCircle, Plus, CheckCircle2, ArrowUp, ArrowDown, Trash2, Image as ImageIcon, MoveDown, BringToFront } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -78,23 +79,23 @@ export function PlaceRow({
 
   return (
     <div className={`
-      flex flex-col bg-white rounded-xl border-2 shadow-sm transition-all group
-      ${isComplete ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}
+      flex flex-col bg-white rounded-2xl border border-slate-200 shadow-professional transition-all group
+      ${isComplete ? 'border-emerald-200 bg-emerald-50/10' : ''}
       ${isCompact ? 'text-sm' : ''}
     `}>
       {/* Header Section */}
       <div className={`
-        border-b flex items-start justify-between gap-4 bg-gray-50/50 rounded-t-lg
-        ${isCompact ? 'px-2 py-1' : 'px-3 py-2 md:px-4 md:py-2'}
+        border-b border-slate-100 flex items-start justify-between gap-4 bg-slate-50/30 rounded-t-2xl
+        ${isCompact ? 'px-3 py-1.5' : 'px-4 py-2'}
       `}>
-        <div className="flex-1 space-y-1 md:space-y-2 w-full">
-          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-3">
+        <div className="flex-1 space-y-1 w-full">
+          <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
             <div className="flex-1 w-full flex items-center justify-between md:justify-start gap-2">
               {onToggleCollapse && (
                  <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-6 w-6 -ml-1 text-gray-500 mr-1 flex-shrink-0" 
+                  className="h-7 w-7 -ml-1.5 text-slate-400 hover:text-slate-900 rounded-full transition-all" 
                   onClick={onToggleCollapse}
                 >
                   {isCollapsed ? <ArrowDown className="w-4 h-4" /> : <ArrowUp className="w-4 h-4" />}
@@ -105,21 +106,21 @@ export function PlaceRow({
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className={`font-bold bg-white shadow-inner ${isCompact ? 'h-7 text-base' : 'h-8 text-lg'}`}
+                    className={`font-black bg-white shadow-inner focus-visible:ring-primary/10 ${isCompact ? 'h-8 text-base' : 'h-10 text-lg'}`}
                     autoFocus
                     onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                   />
-                  <Button size="sm" onClick={handleSave} className={`bg-green-600 hover:bg-green-700 ${isCompact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'}`}>
-                    <Check className={`mr-1 ${isCompact ? 'w-3 h-3' : 'w-4 h-4'}`} /> <span className="hidden md:inline">저장</span>
+                  <Button size="sm" onClick={handleSave} className={`bg-emerald-600 hover:bg-emerald-700 h-10 px-4 rounded-xl shadow-lg shadow-emerald-100`}>
+                    <Check className={`mr-1.5 w-4 h-4`} /> <span className="hidden md:inline font-black">저장</span>
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 md:gap-3 group/title cursor-pointer flex-1 overflow-hidden" onClick={() => setIsEditing(true)}>
-                  <h3 className={`font-bold text-gray-800 group-hover/title:text-blue-700 transition-colors truncate ${isCompact ? 'text-base' : 'text-lg'}`}>
+                  <h3 className={`font-black text-slate-900 group-hover/title:text-primary transition-colors truncate mb-0 ${isCompact ? 'text-base' : 'text-xl'}`}>
                     {name}
                   </h3>
-                  <Button variant="ghost" size="icon" className={`flex-shrink-0 rounded-full bg-gray-100 hover:bg-blue-100 text-gray-500 hover:text-blue-600 ${isCompact ? 'h-6 w-6' : 'h-8 w-8'}`}>
-                    <Pencil className={isCompact ? "w-3 h-3" : "w-4 h-4"} />
+                  <Button variant="ghost" size="icon" className={`flex-shrink-0 rounded-full bg-slate-100/50 hover:bg-primary/5 text-slate-400 hover:text-primary opacity-0 group-hover/title:opacity-100 transition-all ${isCompact ? 'h-7 w-7' : 'h-8 w-8'}`}>
+                    <Pencil className={isCompact ? "w-3.5 h-3.5" : "w-4 h-4"} />
                   </Button>
                 </div>
               )}
@@ -127,37 +128,37 @@ export function PlaceRow({
             
             <div className="flex items-center justify-between md:justify-start gap-2 w-full md:w-auto mt-1 md:mt-0">
               {/* Action Buttons: Move & Delete */}
-              <div className="flex items-center gap-0.5 md:gap-1 mx-1 md:mx-2 bg-gray-100/50 rounded-lg p-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-0.5 bg-slate-100/50 rounded-xl p-0.5 opacity-40 group-hover:opacity-100 transition-all">
                 <Button 
                   variant="ghost" size="icon" 
-                  className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
+                  className={`text-slate-500 hover:text-primary hover:bg-white rounded-lg ${isCompact ? 'h-7 w-7' : 'h-8 w-8'}`}
                   onClick={() => onMoveCluster(cluster.id, 'up')}
                   title="위로 이동"
                 >
-                  <ArrowUp className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+                  <ArrowUp className={isCompact ? "w-3.5 h-3.5" : "w-4 h-4"} />
                 </Button>
                 <Button
                   variant="ghost" size="icon"
-                  className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
+                  className={`text-slate-500 hover:text-primary hover:bg-white rounded-lg ${isCompact ? 'h-7 w-7' : 'h-8 w-8'}`}
                   onClick={() => onMoveCluster(cluster.id, 'down')}
                   title="아래로 이동"
                 >
-                  <ArrowDown className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+                  <ArrowDown className={isCompact ? "w-3.5 h-3.5" : "w-4 h-4"} />
                 </Button>
-                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                <div className="w-px h-3 bg-slate-200 mx-1"></div>
                 <Button
                   variant="ghost" size="icon"
-                  className={`text-gray-400 hover:text-red-600 hover:bg-red-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
+                  className={`text-slate-400 hover:text-rose-600 hover:bg-white rounded-lg ${isCompact ? 'h-7 w-7' : 'h-8 w-8'}`}
                   onClick={() => onDeleteCluster(cluster.id)}
                   title="장소 삭제"
                 >
-                  <Trash2 className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+                  <Trash2 className={isCompact ? "w-3.5 h-3.5" : "w-4 h-4"} />
                 </Button>
               </div>
                 
               {/* Add Button: Visible on group hover or when selection exists */}
               <div className={cn(
-                "transition-opacity duration-200",
+                "transition-all duration-200",
                 selectedPhotoIds.length > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
               )}>
             
@@ -181,25 +182,25 @@ export function PlaceRow({
             
                                       size="sm"
             
-                                      variant="outline"
+                                      variant="default"
             
-                                      className={`border-2 border-green-600 bg-green-600 text-white hover:bg-green-700 ml-auto md:ml-0 ${isCompact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'}`}
+                                      className={`bg-primary text-white shadow-lg shadow-primary/20 rounded-xl ml-auto md:ml-0 font-black tracking-tight ${isCompact ? 'h-8 px-3 text-xs' : 'h-10 px-4 text-sm'}`}
             
                                       onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
             
                                     >
             
-                                      <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-4 h-4 mr-1"} />
+                                      <Plus className={isCompact ? "w-3.5 h-3.5 mr-1" : "w-4 h-4 mr-1.5 stroke-[3]"} />
             
-                                      <span className={isCompact ? "" : "hidden md:inline"}>
+                                      <span className={isCompact ? "" : "hidden lg:inline"}>
             
-                                        추가 ({selectedPhotoIds.length})
+                                        이 장소에 추가 ({selectedPhotoIds.length})
             
                                       </span>
             
-                                      {!isCompact && <span className="md:hidden">
+                                      {!isCompact && <span className="lg:hidden">
             
-                                        ({selectedPhotoIds.length})
+                                        추가 ({selectedPhotoIds.length})
             
                                       </span>}
             
@@ -212,7 +213,7 @@ export function PlaceRow({
                                 <DropdownMenuContent
             
                                   align="end"
-            
+                                  className="rounded-2xl shadow-elevated border-slate-100 p-1.5 min-w-[200px]"
                                   onMouseEnter={() => setIsOpen(true)}
             
                                   onMouseLeave={() => setIsOpen(false)}
@@ -220,32 +221,37 @@ export function PlaceRow({
                                 >
             
                                   <DropdownMenuItem
-            
+                                    className="font-black rounded-lg cursor-pointer py-2 text-sm"
                                     onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
             
                                   >
             
-                                    <BringToFront className="mr-2 h-4 w-4" />
+                                    <BringToFront className="mr-3 h-4 w-4 opacity-60" />
             
-                                    <span>선택 사진 ({selectedPhotoIds.length}장) 여기 추가</span>
+                                    <span>현재 위치에 추가</span>
             
                                   </DropdownMenuItem>
             
                                   <DropdownMenuItem
-            
+                                    className="font-black rounded-lg cursor-pointer py-2 text-sm"
                                     onClick={() => onCreate(cluster.order_index + 1, selectedPhotos)}
             
                                   >
             
-                                    <MoveDown className="mr-2 h-4 w-4" />
+                                    <MoveDown className="mr-3 h-4 w-4 opacity-60" />
             
-                                    <span>선택 사진 ({selectedPhotoIds.length}장) 아래 추가</span>
+                                    <span>아래에 새 장소로 추가</span>
             
                                   </DropdownMenuItem>
             
-                                  <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, [])}>
+                                  <DropdownMenuSeparator className="bg-slate-100" />
+
+                                  <DropdownMenuItem 
+                                    className="font-black rounded-lg cursor-pointer py-2 text-sm text-slate-500"
+                                    onClick={() => onCreate(cluster.order_index + 1, [])}
+                                  >
             
-                                    <Plus className="mr-2 h-4 w-4" />
+                                    <Plus className="mr-3 h-4 w-4 opacity-60" />
             
                                     <span>빈 장소 추가</span>
             
@@ -263,17 +269,17 @@ export function PlaceRow({
             
                                 variant="outline"
             
-                                className={`border-2 border-green-600 text-green-600 hover:bg-green-100 ml-auto md:ml-0 ${isCompact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'}`}
+                                className={`border-2 border-emerald-600/20 text-emerald-600 hover:bg-emerald-50 rounded-xl ml-auto md:ml-0 font-black ${isCompact ? 'h-8 px-3 text-xs' : 'h-10 px-4 text-sm'}`}
             
                                 onClick={handleCreateEmpty}
             
                               >
             
-                                <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-4 h-4 mr-1"} />
+                                <Plus className={isCompact ? "w-3.5 h-3.5 mr-1" : "w-4 h-4 mr-1.5 stroke-[3]"} />
             
                                 <span className={isCompact ? "" : "hidden md:inline"}>
             
-                                  추가
+                                  빈 장소 추가
             
                                 </span>
             
@@ -304,7 +310,7 @@ export function PlaceRow({
             {...provided.droppableProps}
             className={`
               transition-all duration-200 rounded-b-2xl flex flex-wrap relative
-              ${isCompact ? 'p-2 gap-2 min-h-[60px]' : 'p-3 md:py-6 md:pl-6 gap-3 md:gap-6 min-h-[80px] md:min-h-[100px]'}
+              ${isCompact ? 'p-2 gap-2 min-h-[80px]' : 'p-3 md:py-6 md:pl-6 gap-3 md:gap-6 min-h-[120px] md:min-h-[160px]'}
               ${snapshot.isDraggingOver ? 'bg-primary/5 ring-2 ring-inset ring-primary/20' : ''}
               ${(isDragging && !snapshot.isDraggingOver) ? 'bg-slate-50/50' : ''}
             `}
@@ -329,7 +335,7 @@ export function PlaceRow({
             )}
             {cluster.photos
               .map((photo, index) => (
-                <div key={photo.id}>
+                <div key={photo.id} className="relative">
                   <PhotoCard 
                     photo={photo}
                     index={index}

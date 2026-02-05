@@ -40,18 +40,18 @@ export const PhotoCard = React.memo(function PhotoCard({
           {...provided.dragHandleProps}
           onClick={onSelect}
           className={`
-            relative group flex flex-col bg-white rounded-3xl shadow-md overflow-hidden cursor-grab active:cursor-grabbing
+            relative group flex flex-col bg-white rounded-3xl shadow-professional overflow-hidden cursor-grab active:cursor-grabbing
             transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
             ${isCompact 
               ? 'w-[200px] h-[150px] md:w-[240px] md:h-[180px] rounded-2xl' 
               : 'w-[280px] h-[160px] sm:w-[340px] sm:h-[200px] md:w-[420px] md:h-[240px]'
             }
             ${snapshot.isDragging 
-              ? 'shadow-2xl ring-4 ring-primary/40 z-50 scale-105 rotate-2' 
-              : 'border border-slate-200/60 hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/10 hover:-translate-y-1'
+              ? 'shadow-elevated ring-4 ring-primary/40 z-50 scale-105 rotate-2' 
+              : 'border border-slate-200/60 hover:border-primary/40 hover:shadow-emphasis hover:-translate-y-1'
             }
             ${!isReserve && index < 3 && !isSelected ? 'ring-2 ring-emerald-500/50 border-emerald-500/50' : ''}
-            ${isSelected ? 'ring-4 ring-primary border-primary bg-primary/5 shadow-xl shadow-primary/20' : ''}
+            ${isSelected ? 'ring-4 ring-primary border-primary bg-primary/5 shadow-emphasis shadow-primary/20' : ''}
             ${!snapshot.isDragging && isDraggingSomewhere && isSelected ? 'opacity-40 scale-[0.98] grayscale-[0.5]' : ''}
           `}
           style={{

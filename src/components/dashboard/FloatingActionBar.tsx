@@ -19,43 +19,48 @@ export function FloatingActionBar({
     <AnimatePresence>
       {selectedCount > 0 && (
         <motion.div
-          initial={{ y: 100, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: 100, opacity: 0 }}
-          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-slate-900 text-white p-2 pl-4 pr-2 rounded-full shadow-2xl border border-slate-700/50 backdrop-blur-md"
+          initial={{ y: 100, opacity: 0, scale: 0.9 }}
+          animate={{ y: 0, opacity: 1, scale: 1 }}
+          exit={{ y: 100, opacity: 0, scale: 0.9 }}
+          className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 bg-slate-900/90 text-white p-2 pl-6 pr-2 rounded-2xl shadow-elevated border border-white/10 backdrop-blur-xl"
         >
-          <span className="font-semibold mr-2">{selectedCount}개 선택됨</span>
+          <div className="flex flex-col mr-4">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Selected</span>
+            <span className="text-lg font-black leading-none mt-1">{selectedCount}</span>
+          </div>
           
-          <div className="h-6 w-px bg-slate-700 mx-1" />
+          <div className="h-8 w-px bg-white/10 mx-2" />
           
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-white hover:bg-slate-800 hover:text-white rounded-full h-9 px-3 gap-2"
-            onClick={onMoveClick}
-          >
-            <FolderInput className="w-4 h-4" />
-            이동
-          </Button>
-          
-          <Button
-            size="sm"
-            variant="ghost"
-            className="text-red-400 hover:bg-slate-800 hover:text-red-300 rounded-full h-9 px-3 gap-2"
-            onClick={onDeleteClick}
-          >
-            <Trash2 className="w-4 h-4" />
-            삭제
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+                size="sm"
+                variant="ghost"
+                className="text-white hover:bg-white/10 rounded-xl h-10 px-4 gap-2 font-bold transition-all active:scale-95"
+                onClick={onMoveClick}
+            >
+                <FolderInput className="w-4 h-4 opacity-70" />
+                이동
+            </Button>
+            
+            <Button
+                size="sm"
+                variant="ghost"
+                className="text-rose-400 hover:bg-rose-500/20 hover:text-rose-300 rounded-xl h-10 px-4 gap-2 font-bold transition-all active:scale-95"
+                onClick={onDeleteClick}
+            >
+                <Trash2 className="w-4 h-4 opacity-70" />
+                삭제
+            </Button>
 
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-slate-400 hover:bg-slate-800 hover:text-white rounded-full h-9 w-9 ml-1"
-            onClick={onClearSelection}
-          >
-            <X className="w-5 h-5" />
-          </Button>
+            <Button
+                size="icon"
+                variant="ghost"
+                className="text-slate-400 hover:bg-white/10 hover:text-white rounded-xl h-10 w-10 ml-1 transition-all active:scale-95"
+                onClick={onClearSelection}
+            >
+                <X className="w-5 h-5" />
+            </Button>
+          </div>
         </motion.div>
       )}
     </AnimatePresence>

@@ -170,7 +170,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
     count: displayedClusters.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => isCompact ? 200 : 300, 
-    overscan: 10,
+    overscan: isDragging ? displayedClusters.length : 10, // Render all items during drag to prevent lost drop targets
     measureElement: (el) => el.getBoundingClientRect().height,
   });
 
