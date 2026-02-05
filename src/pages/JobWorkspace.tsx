@@ -644,36 +644,49 @@ function DashboardContent() {
 
       {/* Clustering Progress Dialog */}
       <Dialog open={showClusteringDialog} onOpenChange={setShowClusteringDialog}>
-        <DialogContent className="max-w-md rounded-3xl border-none shadow-2xl p-0 overflow-hidden">
-          <DialogHeader className="p-8 bg-white border-b shrink-0">
-            <DialogTitle className="text-3xl font-black text-center text-slate-900">사진 분류 작업 중</DialogTitle>
-            <DialogDescription className="text-center text-lg font-bold text-slate-500 mt-2">
-              인공지능이 현장별로 사진을 정리하고 있어요.
+        <DialogContent className="max-w-md rounded-[2.5rem] border-none shadow-elevated p-0 overflow-hidden bg-white">
+          <DialogHeader className="p-10 pb-0 shrink-0">
+            <div className="bg-primary/5 w-16 h-16 rounded-[1.5rem] flex items-center justify-center mb-6 mx-auto">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+            <DialogTitle className="text-3xl font-black text-center text-slate-900 tracking-tighter">사진 분류 분석 중</DialogTitle>
+            <DialogDescription className="text-center text-base font-bold text-slate-400 mt-2 tracking-tight">
+              인공지능이 최적의 현장별 분류를 <br/>구성하고 있습니다.
             </DialogDescription>
           </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-12 px-8 bg-slate-50/50">
-            <div className="relative mb-8">
-              <Loader2 className="w-24 h-24 animate-spin text-blue-600" />
-              <CheckCircle className="w-8 h-8 text-blue-200 absolute inset-0 m-auto" />
-            </div>
-            
-            <p className="text-2xl font-black text-gray-800 text-center">
-              지금 열심히 정리하고 있어요!
+          
+          <div className="flex flex-col items-center justify-center py-12 px-10">
+            <p className="text-xl font-black text-slate-800 text-center tracking-tight mb-8">
+              거의 다 되었습니다!
             </p>
             
             {remainingTime !== null && remainingTime > 0 ? (
-                <div className="mt-6 bg-blue-600 text-white px-8 py-3 rounded-2xl font-black text-xl shadow-xl shadow-blue-100 animate-in zoom-in-50">
-                   약 {Math.ceil(remainingTime)}초 남음
+                <div className="w-full space-y-4">
+                    <div className="relative h-3 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner ring-1 ring-slate-200/50">
+                        <motion.div 
+                            className="absolute top-0 left-0 h-full bg-primary shadow-[0_0_15px_rgba(16,42,67,0.3)]"
+                            initial={{ width: "0%" }}
+                            animate={{ width: "100%" }}
+                            transition={{ duration: estimatedTime || 30, ease: "linear" }}
+                        />
+                    </div>
+                    <div className="flex justify-center">
+                        <span className="bg-slate-900 text-white px-6 py-2 rounded-full font-black text-sm tracking-widest shadow-xl border border-white/10 animate-in zoom-in-50">
+                           APPROX. {Math.ceil(remainingTime)}S LEFT
+                        </span>
+                    </div>
                 </div>
             ) : (
-                <div className="mt-6 bg-slate-200 text-slate-500 px-8 py-3 rounded-2xl font-black text-xl animate-pulse">
-                   시간 계산 중...
+                <div className="flex flex-col items-center gap-4">
+                    <div className="h-12 px-8 bg-slate-100 text-slate-400 rounded-2xl flex items-center justify-center font-black text-sm animate-pulse tracking-widest uppercase">
+                       Calculating...
+                    </div>
                 </div>
             )}
             
-            <p className="mt-10 text-base text-gray-500 text-center font-bold leading-relaxed">
-              페이지를 닫거나 다른 작업을 하셔도 괜찮습니다. <br/>
-              정리가 끝나면 자동으로 사진들이 나타나요!
+            <p className="mt-12 text-xs text-slate-400 text-center font-black uppercase tracking-[0.2em] leading-relaxed opacity-60">
+              You can close this window. <br/>
+              Results will appear automatically.
             </p>
           </div>
         </DialogContent>

@@ -1,6 +1,6 @@
 import { useUploadStore } from '@/lib/uploadStore';
 import { Progress } from '@/components/ui/progress';
-import { CheckCircle2, Loader2, AlertCircle, RotateCcw } from 'lucide-react';
+import { CheckCircle2, Loader2, AlertCircle, RotateCcw, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { api } from '@/lib/api';
 import { useParams } from 'react-router-dom';
@@ -22,67 +22,70 @@ export const UploadProgress: React.FC = () => {
   };
 
   return (
-    <div className="fixed bottom-4 right-4 w-96 bg-white border-2 border-blue-100 rounded-xl shadow-2xl p-5 z-50 animate-in slide-in-from-bottom-5">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-lg font-black text-gray-900">
+    <div className="fixed bottom-8 right-8 w-[22rem] bg-white/95 border border-slate-200/60 rounded-3xl shadow-elevated p-6 z-50 backdrop-blur-xl animate-in slide-in-from-bottom-10 duration-500 ring-1 ring-black/5">
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-sm font-black text-slate-900 tracking-tighter uppercase flex items-center gap-2">
           {isUploading ? (
-            <span className="flex items-center gap-2 text-blue-600">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              사진 전송 중...
-            </span>
+            <>
+              <Loader2 className="w-4 h-4 animate-spin text-primary" />
+              Processing...
+            </>
           ) : failedCount > 0 ? (
-            <span className="flex items-center gap-2 text-orange-600">
-              <AlertCircle className="w-5 h-5" />
-              일부 실패했어요
-            </span>
-          ) : completedCount === totalCount ? (
-            <span className="flex items-center gap-2 text-green-600">
-              <CheckCircle2 className="w-5 h-5" />
-              전송 완료!
-            </span>
+            <>
+              <AlertCircle className="w-4 h-4 text-rose-500" />
+              Failed
+            </>
           ) : (
-            "대기 중"
+            <>
+              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+              Finished
+            </>
           )}
         </h3>
-        <span className="text-sm font-bold bg-gray-100 px-2 py-1 rounded text-gray-600">
-          {completedCount} / {totalCount}
+        <span className="text-[10px] font-black bg-slate-900 text-white px-2 py-0.5 rounded-full tracking-widest shadow-sm">
+          {completedCount}/{totalCount}
         </span>
       </div>
 
-      <Progress value={totalProgress} className="h-4 mb-4 bg-gray-100" />
+      <div className="relative h-2 w-full bg-slate-100 rounded-full overflow-hidden mb-6 shadow-inner ring-1 ring-slate-200/50">
+        <div 
+            className="absolute top-0 left-0 h-full bg-primary transition-all duration-700 ease-out shadow-[0_0_10px_rgba(16,42,67,0.2)]"
+            style={{ width: `${totalProgress}%` }}
+        />
+      </div>
 
-      <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
+      <div className="max-h-48 overflow-y-auto space-y-2.5 pr-1 custom-scrollbar -mx-1 px-1">
         {itemIds.map((id) => {
           const item = items[id];
           return (
             <div key={id} className={cn(
-              "flex items-center justify-between p-2 rounded-lg border text-sm transition-colors",
-              item.status === 'failed' ? "bg-red-50 border-red-100" : "bg-white border-gray-50"
+              "flex items-center justify-between p-3 rounded-2xl border transition-all text-xs font-bold",
+              item.status === 'failed' ? "bg-rose-50/50 border-rose-100 text-rose-700" : "bg-white border-slate-100 text-slate-600 hover:border-primary/20"
             )}>
               <div className="flex flex-col min-w-0 flex-1">
-                <span className="truncate font-medium text-gray-700">{item.fileName}</span>
+                <span className="truncate tracking-tight">{item.fileName}</span>
                 {item.status === 'failed' && (
-                  <span className="text-[10px] text-red-500 truncate">{item.error || '연결 오류'}</span>
+                  <span className="text-[9px] font-black uppercase opacity-60 mt-0.5">Error occurred</span>
                 )}
               </div>
               
-              <div className="flex items-center gap-2 shrink-0 ml-3">
+              <div className="flex items-center gap-2 shrink-0 ml-4">
                 {item.status === 'compressing' && (
-                  <span className="text-[11px] text-blue-500 font-bold animate-pulse">압축 중</span>
+                  <span className="text-[9px] font-black text-primary animate-pulse uppercase tracking-wider">Wait</span>
                 )}
                 {item.status === 'uploading' && (
-                  <span className="text-[11px] text-blue-500 font-black">{item.progress}%</span>
+                  <span className="text-[9px] font-black text-primary tabular-nums tracking-widest">{item.progress}%</span>
                 )}
                 {item.status === 'completed' && (
-                  <CheckCircle2 className="w-5 h-5 text-green-500" />
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                 )}
                 {item.status === 'failed' && (
                   <button 
                     onClick={() => handleRetry(id)}
-                    className="p-1.5 bg-white border border-red-200 rounded-full text-red-500 hover:bg-red-50 transition-colors"
+                    className="p-1.5 bg-white border border-rose-200 rounded-full text-rose-500 hover:bg-rose-500 hover:text-white transition-all shadow-sm"
                     title="다시 시도"
                   >
-                    <RotateCcw className="w-4 h-4" />
+                    <RotateCcw className="w-3.5 h-3.5" />
                   </button>
                 )}
               </div>
@@ -92,12 +95,12 @@ export const UploadProgress: React.FC = () => {
       </div>
 
       {!isUploading && (
-        <button
+        <Button
           onClick={() => useUploadStore.getState().clearQueue()}
-          className="w-full mt-5 py-3 bg-slate-800 hover:bg-slate-900 text-white rounded-lg font-black text-lg transition-all shadow-lg active:scale-95"
+          className="w-full mt-6 h-12 bg-slate-900 hover:bg-black text-white rounded-2xl font-black text-base transition-all shadow-lg active:scale-95"
         >
-          확인
-        </button>
+          Confirm
+        </Button>
       )}
     </div>
   );
