@@ -14,12 +14,8 @@
 ## Phase 2: Dashboard - Layout Overhaul
 사이드바와 메인 영역의 균형을 맞추고 공간 활용을 극대화합니다.
 
-- [ ] Task: Dashboard 사이드바 구조 개선
-    - [ ] 사이드바 너비 최적화 및 메인 콘텐츠와의 시각적 연결성 강화
-    - [ ] 고밀도 대시보드 배치를 위한 `src/pages/Dashboard.tsx` 레이아웃 수정
-- [ ] Task: 대시보드 카드 및 리스트 정렬 고도화
-    - [ ] 엄격한 그리드 시스템 적용으로 선(Alignment) 맞춤
-    - [ ] 그림자 및 보더 효과를 통한 세련된 패널 디자인 적용
+- [x] Task: Dashboard 사이드바 구조 개선 b3b65d4
+- [x] Task: 대시보드 카드 및 리스트 정렬 고도화 b3b65d4
 - [ ] Task: Conductor - User Manual Verification 'Phase 2: Dashboard' (Protocol in workflow.md)
 
 ## Phase 3: Job Editor - Density & Alignment Optimization
