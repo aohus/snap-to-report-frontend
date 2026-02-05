@@ -131,11 +131,11 @@ export const PhotoCard = React.memo(function PhotoCard({
           )}
 
           {/* Image */}
-          <div className="flex-1 overflow-hidden bg-slate-50 flex items-center justify-center">
+          <div className="flex-1 overflow-hidden bg-gray-100">
             <img
               src={photo.thumbnail_url || photo.url} 
               alt={photo.original_filename}
-              className="max-w-full max-h-full object-contain transition-transform group-hover:scale-105"
+              className="w-full h-full object-cover transition-transform group-hover:scale-105"
               loading="lazy"
               decoding="async" 
             />
