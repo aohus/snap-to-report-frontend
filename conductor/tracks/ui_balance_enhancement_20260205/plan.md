@@ -28,6 +28,6 @@
 ## Phase 4: Final Polish & Visual Quality
 전체적인 완성도를 높이기 위한 정교한 마감 작업을 진행합니다.
 
-- [ ] Task: 전역 시각 효과(Elevation, Blur) 일관성 부여
-- [ ] Task: 전체 페이지 반응형/균형 최종 점검
-- [ ] Task: Conductor - User Manual Verification 'Phase 4: Final Polish' (Protocol in workflow.md)
+- [x] Task: 전역 시각 효과(Elevation, Blur) 일관성 부여 9fc51b8
+- [x] Task: 전체 페이지 반응형/균형 최종 점검 9fc51b8
+- [x] Task: Conductor - User Manual Verification 'Phase 4: Final Polish' (Protocol in workflow.md) 9fc51b8

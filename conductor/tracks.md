@@ -27,3 +27,6 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: 프론트엔드 독립 배포 파이프라인 구축 (백엔드 무중단)**
   Link: [./tracks/frontend_independent_deploy_20260202/](./tracks/frontend_independent_deploy_20260202/)
+
+- [x] **Track: 디자인 고도화: 컴포넌트 정렬 등 균형 및 고밀도 UI 최적화**
+  Link: [./tracks/ui_balance_enhancement_20260205/](./tracks/ui_balance_enhancement_20260205/)
