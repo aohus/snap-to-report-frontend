@@ -15,6 +15,7 @@ interface ClusterSectionProps {
   onDeletePhoto: (photoId: string, clusterId: string) => void;
   onSelectPhoto: (photoId: string, clusterId: string, e?: React.MouseEvent) => void;
   onSetSelectedPhotos?: (photos: SelectedPhoto[]) => void;
+  onPreviewPhoto?: (photo: Photo) => void;
   onEditLabels: (photoId: string) => void;
 }
 
@@ -31,6 +32,7 @@ export function ClusterSection({
   onDeletePhoto,
   onSelectPhoto,
   onSetSelectedPhotos,
+  onPreviewPhoto,
   onEditLabels,
 }: ClusterSectionProps) {
   return (
@@ -52,6 +54,7 @@ export function ClusterSection({
         selectedPhotos={selectedPhotos}
         onSelectPhoto={onSelectPhoto}
         onSetSelectedPhotos={onSetSelectedPhotos}
+        onPreviewPhoto={onPreviewPhoto}
         onEditLabels={onEditLabels}
       />
     </div>

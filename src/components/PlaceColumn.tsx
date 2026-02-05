@@ -22,6 +22,7 @@ interface PlaceColumnProps {
   onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
   selectedPhotos: { id: string, clusterId: string }[];
   onSelectPhoto: (photoId: string, clusterId: string, e?: React.MouseEvent) => void;
+  onPreviewPhoto?: (photo: Photo) => void;
   isCompact?: boolean; // Kept for compatibility, though column might ignore it or use it for card size
   onEditLabels: (photoId: string) => void;
   isDragging?: boolean;
@@ -37,10 +38,10 @@ export function PlaceColumn({
   onMoveCluster,
   selectedPhotos,
   onSelectPhoto,
+  onPreviewPhoto,
   isCompact = false,
-  onEditLabels,
-  isDragging = false
-}: PlaceColumnProps) {  const [isEditing, setIsEditing] = useState(false);
+  onEditLabels
+}: PlaceColumnProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState(cluster.name || `Place ${cluster.order_index + 1}`);
   
@@ -193,6 +194,7 @@ export function PlaceColumn({
                   index={index} 
                   onDelete={onDeletePhoto ? () => onDeletePhoto(photo.id.toString()) : undefined}
                   onSelect={(e) => onSelectPhoto(photo.id.toString(), cluster.id, e)}
+                  onPreview={() => onPreviewPhoto?.(photo as any)}
                   isSelected={selectedPhotoIds.includes(photo.id.toString())}
                   isCompact={isCompact} 
                   onEditLabels={onEditLabels}

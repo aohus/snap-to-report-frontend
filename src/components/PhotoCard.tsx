@@ -2,7 +2,7 @@ import React from 'react'; // React.memo 사용을 위해 import
 import { Draggable } from '@hello-pangea/dnd';
 import { Photo } from '@/types';
 // import { api } from '@/lib/api'; // 사용되지 않아 제거 가능
-import { X, Tags } from 'lucide-react';
+import { X, Tags, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface PhotoCardProps {
@@ -11,6 +11,7 @@ interface PhotoCardProps {
   onDelete?: (id: number | string) => void;
   isReserve?: boolean;
   onSelect?: (e: React.MouseEvent) => void;
+  onPreview?: () => void; // New prop for triggering preview
   isSelected?: boolean;
   isCompact?: boolean;
   onEditLabels?: (id: string) => void;
@@ -18,12 +19,13 @@ interface PhotoCardProps {
 }
 
 // React.memo로 감싸서 props가 변하지 않으면 리렌더링 방지
-export const PhotoCard = React.memo(function PhotoCard({ 
-  photo, 
-  index, 
-  onDelete, 
-  isReserve, 
-  onSelect, 
+export const PhotoCard = React.memo(function PhotoCard({
+  photo,
+  index,
+  onDelete,
+  isReserve,
+  onSelect,
+  onPreview,
   isSelected,
   isCompact = false,
   onEditLabels,
@@ -67,8 +69,23 @@ export const PhotoCard = React.memo(function PhotoCard({
           )}
 
           <div className="absolute top-1 right-1 flex gap-1 z-10">
-             {/* Edit Labels Button */}
-             {onEditLabels && (
+             {/* Preview Button */}
+             {onPreview && (
+                <Button 
+                    variant="secondary" 
+                    size="icon" 
+                    className={`opacity-0 group-hover:opacity-100 transition-opacity shadow-sm bg-white/80 backdrop-blur-sm hover:bg-white ${isCompact ? 'h-5 w-5' : 'h-6 w-6 md:h-7 md:w-7'}`}
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        onPreview();
+                    }}
+                    title="크게 보기"
+                >
+                    <Maximize2 className={isCompact ? "w-2.5 h-2.5" : "w-3 h-3 md:w-4 md:h-4"} />
+                </Button>
+             )}
+
+             {/* Edit Labels Button */}             {onEditLabels && (
                 <Button 
                     variant="secondary" 
                     size="icon" 

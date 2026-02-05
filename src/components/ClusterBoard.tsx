@@ -10,6 +10,8 @@ import { cn } from '@/lib/utils';
 
 import { calculateNextSelection, SelectedPhoto } from '@/hooks/useMultiSelection';
 
+import { Lightbox } from './dashboard/Lightbox';
+
 interface ClusterBoardProps {
   clusters: Cluster[];
   onMovePhoto: (photoId: string, sourceClusterId: string, targetClusterId: string, targetIndex?: number) => void;
@@ -21,11 +23,12 @@ interface ClusterBoardProps {
   onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
   selectedPhotos: { id: string, clusterId: string }[];
   onSelectPhoto: (photoId: string, clusterId: string, e?: React.MouseEvent) => void;
-  onSetSelectedPhotos?: (photos: SelectedPhoto[]) => void; // New prop for bulk updates
+  onSetSelectedPhotos?: (photos: ((prev: SelectedPhoto[]) => SelectedPhoto[]) | SelectedPhoto[]) => void; // New prop for bulk updates
+  onPreviewPhoto?: (photo: Photo) => void;
   onEditLabels: (photoId: string) => void;
 }
 
-export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotos, onSelectPhoto, onSetSelectedPhotos, onEditLabels }: ClusterBoardProps) {
+export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotos, onSelectPhoto, onSetSelectedPhotos, onPreviewPhoto, onEditLabels }: ClusterBoardProps) {
   const isMobile = useIsMobile();
   const [isCompact, setIsCompact] = useState(false);
   const [collapsedClusterIds, setCollapsedClusterIds] = useState<Set<string>>(new Set());
@@ -35,8 +38,42 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
   
   const [lastSelected, setLastSelected] = useState<SelectedPhoto | null>(null);
   const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null);
+  const [previewPhoto, setPreviewPhoto] = useState<Photo | null>(null); // New state for Lightbox
   
   const selectedPhotoIds = selectedPhotos.map(p => p.id);
+
+  // Helper to get all currently visible photos in order
+  const getVisiblePhotos = () => {
+    const reserveCluster = clusters.find(c => c.name === 'reserve');
+    const placeClusters = clusters.filter(c => c.id !== reserveCluster?.id).sort((a, b) => a.order_index - b.order_index);
+    
+    const photos: Photo[] = [];
+    if (reserveCluster && !isReserveCollapsed) {
+        photos.push(...reserveCluster.photos as any);
+    }
+    placeClusters.forEach(c => {
+        if (!collapsedClusterIds.has(c.id)) {
+            photos.push(...c.photos as any);
+        }
+    });
+    return photos;
+  };
+
+  const handleNextPhoto = () => {
+    const visiblePhotos = getVisiblePhotos();
+    const currentIndex = visiblePhotos.findIndex(p => p.id === previewPhoto?.id);
+    if (currentIndex !== -1 && currentIndex < visiblePhotos.length - 1) {
+        setPreviewPhoto(visiblePhotos[currentIndex + 1]);
+    }
+  };
+
+  const handlePrevPhoto = () => {
+    const visiblePhotos = getVisiblePhotos();
+    const currentIndex = visiblePhotos.findIndex(p => p.id === previewPhoto?.id);
+    if (currentIndex > 0) {
+        setPreviewPhoto(visiblePhotos[currentIndex - 1]);
+    }
+  };
 
   const handleDragStart = (start: any) => {
     setIsDragging(true);
@@ -212,6 +249,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                         onDelete={(pid) => onDeletePhoto(pid.toString(), reserveCluster.id)}
                         isReserve={true}
                         onSelect={(e) => handleSelectPhotoInternal(photo.id.toString(), reserveCluster.id, e)}
+                        onPreview={() => setPreviewPhoto(photo as any)}
                         isSelected={selectedPhotoIds.includes(photo.id.toString())}
                         isCompact={isCompact} // Use state instead of forcing true
                         onEditLabels={onEditLabels}
@@ -297,6 +335,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     isCollapsed={collapsedClusterIds.has(cluster.id)}
                     onToggleCollapse={() => toggleClusterCollapse(cluster.id)}
                     onEditLabels={onEditLabels}
+                    onPreviewPhoto={onPreviewPhoto}
                     isDragging={isDragging}
                   />
               ))}
@@ -304,6 +343,16 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
           </div>
         </div>
       </div>
+
+      {/* Lightbox Preview */}
+      <Lightbox
+        photo={previewPhoto}
+        onClose={() => setPreviewPhoto(null)}
+        onNext={handleNextPhoto}
+        onPrev={handlePrevPhoto}
+        hasNext={getVisiblePhotos().findIndex(p => p.id === previewPhoto?.id) < getVisiblePhotos().length - 1}
+        hasPrev={getVisiblePhotos().findIndex(p => p.id === previewPhoto?.id) > 0}
+      />
     </DragDropContext>
   );
 }

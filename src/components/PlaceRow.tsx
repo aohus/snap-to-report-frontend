@@ -23,6 +23,7 @@ interface PlaceRowProps {
   onMoveCluster: (clusterId: string, direction: 'up' | 'down') => void;
   selectedPhotos: { id: string, clusterId: string }[];
   onSelectPhoto: (photoId: string, clusterId: string, e?: React.MouseEvent) => void;
+  onPreviewPhoto?: (photo: Photo) => void;
   isCompact?: boolean;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
@@ -41,6 +42,7 @@ export function PlaceRow({
   onMoveCluster, 
   selectedPhotos, 
   onSelectPhoto,
+  onPreviewPhoto,
   isCompact = false,
   isCollapsed = false,
   onToggleCollapse,
@@ -76,7 +78,7 @@ export function PlaceRow({
 
   return (
     <div className={`
-      flex flex-col bg-white rounded-xl border-2 shadow-sm transition-all
+      flex flex-col bg-white rounded-xl border-2 shadow-sm transition-all group
       ${isComplete ? 'border-green-200 bg-green-50/30' : 'border-gray-200'}
       ${isCompact ? 'text-sm' : ''}
     `}>
@@ -112,8 +114,8 @@ export function PlaceRow({
                   </Button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 md:gap-3 group cursor-pointer flex-1 overflow-hidden" onClick={() => setIsEditing(true)}>
-                  <h3 className={`font-bold text-gray-800 group-hover:text-blue-700 transition-colors truncate ${isCompact ? 'text-base' : 'text-lg'}`}>
+                <div className="flex items-center gap-2 md:gap-3 group/title cursor-pointer flex-1 overflow-hidden" onClick={() => setIsEditing(true)}>
+                  <h3 className={`font-bold text-gray-800 group-hover/title:text-blue-700 transition-colors truncate ${isCompact ? 'text-base' : 'text-lg'}`}>
                     {name}
                   </h3>
                   <Button variant="ghost" size="icon" className={`flex-shrink-0 rounded-full bg-gray-100 hover:bg-blue-100 text-gray-500 hover:text-blue-600 ${isCompact ? 'h-6 w-6' : 'h-8 w-8'}`}>
@@ -123,75 +125,41 @@ export function PlaceRow({
               )}
             </div>
             
-                        <div className="flex items-center justify-between md:justify-start gap-2 w-full md:w-auto mt-1 md:mt-0">
-            
-                          {/* Action Buttons: Move & Delete */}
-            
-                          <div className="flex items-center gap-0.5 md:gap-1 mx-1 md:mx-2 bg-gray-100/50 rounded-lg p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            
-                            <Button 
-            
-                              variant="ghost" size="icon" 
-            
-                              className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
-            
-                              onClick={() => onMoveCluster(cluster.id, 'up')}
-            
-                              title="위로 이동"
-            
-                            >
-            
-                              <ArrowUp className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
-            
-                            </Button>
-            
-                            <Button
-            
-                              variant="ghost" size="icon"
-            
-                              className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
-            
-                              onClick={() => onMoveCluster(cluster.id, 'down')}
-            
-                              title="아래로 이동"
-            
-                            >
-            
-                              <ArrowDown className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
-            
-                            </Button>
-            
-                            <div className="w-px h-4 bg-gray-300 mx-1"></div>
-            
-                            <Button
-            
-                              variant="ghost" size="icon"
-            
-                              className={`text-gray-400 hover:text-red-600 hover:bg-red-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
-            
-                              onClick={() => onDeleteCluster(cluster.id)}
-            
-                              title="장소 삭제"
-            
-                            >
-            
-                              <Trash2 className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
-            
-                            </Button>
-            
-                          </div>
-            
-                            
-            
-                          {/* Add Button: Visible on group hover or when selection exists */}
-            
-                          <div className={cn(
-            
-                            "transition-opacity duration-200",
-            
-                            selectedPhotoIds.length > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-            
-                          )}>
+            <div className="flex items-center justify-between md:justify-start gap-2 w-full md:w-auto mt-1 md:mt-0">
+              {/* Action Buttons: Move & Delete */}
+              <div className="flex items-center gap-0.5 md:gap-1 mx-1 md:mx-2 bg-gray-100/50 rounded-lg p-0.5 opacity-60 group-hover:opacity-100 transition-opacity">
+                <Button 
+                  variant="ghost" size="icon" 
+                  className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
+                  onClick={() => onMoveCluster(cluster.id, 'up')}
+                  title="위로 이동"
+                >
+                  <ArrowUp className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+                </Button>
+                <Button
+                  variant="ghost" size="icon"
+                  className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
+                  onClick={() => onMoveCluster(cluster.id, 'down')}
+                  title="아래로 이동"
+                >
+                  <ArrowDown className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+                </Button>
+                <div className="w-px h-4 bg-gray-300 mx-1"></div>
+                <Button
+                  variant="ghost" size="icon"
+                  className={`text-gray-400 hover:text-red-600 hover:bg-red-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
+                  onClick={() => onDeleteCluster(cluster.id)}
+                  title="장소 삭제"
+                >
+                  <Trash2 className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+                </Button>
+              </div>
+                
+              {/* Add Button: Visible on group hover or when selection exists */}
+              <div className={cn(
+                "transition-opacity duration-200",
+                selectedPhotoIds.length > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+              )}>
             
                             {selectedPhotoIds.length > 0 ? (
             
@@ -367,6 +335,7 @@ export function PlaceRow({
                     index={index}
                     onDelete={onDeletePhoto ? () => onDeletePhoto(photo.id.toString()) : undefined}
                     onSelect={(e) => onSelectPhoto(photo.id.toString(), cluster.id, e)}
+                    onPreview={() => onPreviewPhoto?.(photo as any)}
                     isSelected={selectedPhotoIds.includes(photo.id.toString())}
                     isCompact={isCompact}
                     onEditLabels={onEditLabels}
