@@ -248,7 +248,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                         onSelect={(e) => handleSelectPhotoInternal(photo.id.toString(), reserveCluster.id, e)}
                         onPreview={() => setPreviewPhoto(photo as any)}
                         isSelected={selectedPhotoIds.includes(photo.id.toString())}
-                        isCompact={true}
+                        isCompact={isReserveCollapsed}
                         onEditLabels={onEditLabels}
                         isDraggingSomewhere={isDragging} 
                         />

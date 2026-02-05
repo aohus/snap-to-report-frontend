@@ -43,8 +43,8 @@ export const PhotoCard = React.memo(function PhotoCard({
             relative group flex flex-col bg-white rounded-md shadow-subtle overflow-hidden cursor-grab active:cursor-grabbing
             transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
             ${isCompact 
-              ? 'w-[180px] h-[135px] md:w-[220px] md:h-[165px]' 
-              : 'w-[260px] h-[150px] sm:w-[320px] sm:h-[180px] md:w-[400px] md:h-[230px]'
+              ? 'w-[160px] h-[120px] md:w-[200px] md:h-[150px]' 
+              : 'w-[240px] h-[180px] sm:w-[300px] sm:h-[225px] md:w-[360px] md:h-[270px]'
             }
             ${snapshot.isDragging 
               ? 'shadow-elevated ring-2 ring-primary/40 z-50 scale-105 rotate-1' 
