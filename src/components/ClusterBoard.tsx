@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
-import { Cluster } from '@/types';
+import { Cluster, Photo } from '@/types';
 import { PlaceRow } from './PlaceRow';
 import { PhotoCard } from './PhotoCard';
 import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
+import { useVirtualizer } from '@tanstack/react-virtual';
 
 import { calculateNextSelection, SelectedPhoto } from '@/hooks/useMultiSelection';
 
@@ -163,6 +164,15 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
     return true;
   });
 
+  const parentRef = useRef<HTMLDivElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: displayedClusters.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => isCompact ? 250 : 350, // Smaller estimate for compact mode
+    overscan: 5,
+  });
+
   return (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="flex flex-col md:flex-row h-full gap-4 md:gap-6">
@@ -313,32 +323,53 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
             </div>
           </div>
 
-          {/* Clusters Grid (Single Column for better focus) */}
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-            <div className={cn(
-                "grid gap-6 items-start pb-20 grid-cols-1", 
-                isCompact && "md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"
-            )}>
-              {displayedClusters.map((cluster) => (
-                  <PlaceRow
-                    key={cluster.id}
-                    cluster={cluster}
-                    onCreate={(order_index, photos) => onCreateCluster(order_index, photos)}
-                    onAddPhotosToExistingCluster={(clusterId, photos) => onAddPhotosToExistingCluster(clusterId, photos)}
-                    onRename={onRenameCluster}
-                    onDeletePhoto={(pid) => onDeletePhoto(pid, cluster.id)}
-                    onDeleteCluster={onDeleteCluster}
-                    onMoveCluster={onMoveCluster}
-                    selectedPhotos={selectedPhotos}
-                    onSelectPhoto={handleSelectPhotoInternal}
-                    isCompact={isCompact}
-                    isCollapsed={collapsedClusterIds.has(cluster.id)}
-                    onToggleCollapse={() => toggleClusterCollapse(cluster.id)}
-                    onEditLabels={onEditLabels}
-                    onPreviewPhoto={(photo) => setPreviewPhoto(photo as any)}
-                    isDragging={isDragging}
-                  />
-              ))}
+          {/* Clusters Grid (Virtualized) */}
+          <div 
+            ref={parentRef}
+            className="flex-1 overflow-y-auto custom-scrollbar pr-1 relative"
+          >
+            <div 
+                style={{
+                    height: `${rowVirtualizer.getTotalSize()}px`,
+                    width: '100%',
+                    position: 'relative',
+                }}
+            >
+                {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+                    const cluster = displayedClusters[virtualRow.index];
+                    return (
+                        <div
+                            key={virtualRow.key}
+                            style={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: '100%',
+                                height: `${virtualRow.size}px`,
+                                transform: `translateY(${virtualRow.start}px)`,
+                            }}
+                            className="pb-6"
+                        >
+                            <PlaceRow
+                                cluster={cluster}
+                                onCreate={(order_index, photos) => onCreateCluster(order_index, photos)}
+                                onAddPhotosToExistingCluster={(clusterId, photos) => onAddPhotosToExistingCluster(clusterId, photos)}
+                                onRename={onRenameCluster}
+                                onDeletePhoto={(pid) => onDeletePhoto(pid, cluster.id)}
+                                onDeleteCluster={onDeleteCluster}
+                                onMoveCluster={onMoveCluster}
+                                selectedPhotos={selectedPhotos}
+                                onSelectPhoto={handleSelectPhotoInternal}
+                                isCompact={isCompact}
+                                isCollapsed={collapsedClusterIds.has(cluster.id)}
+                                onToggleCollapse={() => toggleClusterCollapse(cluster.id)}
+                                onEditLabels={onEditLabels}
+                                onPreviewPhoto={(photo) => setPreviewPhoto(photo as any)}
+                                isDragging={isDragging}
+                            />
+                        </div>
+                    );
+                })}
             </div>
           </div>
         </div>
