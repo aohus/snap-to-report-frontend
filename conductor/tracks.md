@@ -17,6 +17,8 @@ This file tracks all major tracks for the project. Each track has its own detail
   Link: [./archive/ui_modernization_20260205/](./archive/ui_modernization_20260205/)
 - [x] **Track: 사진 분류 보드(Clustering Board) UI/UX 고도화 및 성능 최적화**
   Link: [./docs/clustering_board_enhancement_20260205/report.md](./docs/clustering_board_enhancement_20260205/report.md)
+- [x] **Track: 디자인 고도화: 컴포넌트 정렬 등 균형 및 고밀도 UI 최적화** (Archived)
+  Link: [./archive/ui_balance_enhancement_20260205/](./archive/ui_balance_enhancement_20260205/)
 
 ---
 
@@ -27,6 +29,3 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 - [ ] **Track: 프론트엔드 독립 배포 파이프라인 구축 (백엔드 무중단)**
   Link: [./tracks/frontend_independent_deploy_20260202/](./tracks/frontend_independent_deploy_20260202/)
-
-- [x] **Track: 디자인 고도화: 컴포넌트 정렬 등 균형 및 고밀도 UI 최적화**
-  Link: [./tracks/ui_balance_enhancement_20260205/](./tracks/ui_balance_enhancement_20260205/)
