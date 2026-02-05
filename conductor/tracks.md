@@ -15,10 +15,12 @@ This file tracks all major tracks for the project. Each track has its own detail
   Link: [./archive/duplicate_detection_optimization_20260122/](./archive/duplicate_detection_optimization_20260122/)
 - [x] **Track: UI 개선 및 대시보드 리뉴얼** (Archived)
   Link: [./archive/ui_modernization_20260205/](./archive/ui_modernization_20260205/)
+- [x] **Track: 사진 분류 보드(Clustering Board) UI/UX 고도화 및 성능 최적화**
+  Link: [./docs/clustering_board_enhancement_20260205/report.md](./docs/clustering_board_enhancement_20260205/report.md)
 
 ---
 
 ## Active Tracks
 
-- [~] **Track: 프론트엔드 독립 배포 파이프라인 구축 (백엔드 무중단)**
-Link: [./tracks/frontend_independent_deploy_20260202/](./tracks/frontend_independent_deploy_20260202/)
+- [ ] **Track: 프론트엔드 독립 배포 파이프라인 구축 (백엔드 무중단)**
+  Link: [./tracks/frontend_independent_deploy_20260202/](./tracks/frontend_independent_deploy_20260202/)
