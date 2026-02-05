@@ -123,107 +123,207 @@ export function PlaceRow({
               )}
             </div>
             
-            <div className="flex items-center justify-between md:justify-start gap-2 w-full md:w-auto mt-1 md:mt-0">
-              {/* Action Buttons: Move & Delete */}
-              <div className="flex items-center gap-0.5 md:gap-1 mx-1 md:mx-2 bg-gray-100/50 rounded-lg p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <Button 
-                  variant="ghost" size="icon" 
-                  className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
-                  onClick={() => onMoveCluster(cluster.id, 'up')}
-                  title="위로 이동"
-                >
-                  <ArrowUp className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
-                </Button>
-                <Button
-                  variant="ghost" size="icon"
-                  className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
-                  onClick={() => onMoveCluster(cluster.id, 'down')}
-                  title="아래로 이동"
-                >
-                  <ArrowDown className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
-                </Button>
-                <div className="w-px h-4 bg-gray-300 mx-1"></div>
-                <Button
-                  variant="ghost" size="icon"
-                  className={`text-gray-400 hover:text-red-600 hover:bg-red-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
-                  onClick={() => onDeleteCluster(cluster.id)}
-                  title="장소 삭제"
-                >
-                  <Trash2 className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
-                </Button>
-              </div>
-                
-              {/* Conditional Add Button: Show on hover or when dragging/selection exists */}
-              <div className={cn(
-                "transition-opacity duration-200",
-                (isDragging || selectedPhotoIds.length > 0) ? "opacity-100" : "opacity-0 group-hover:opacity-100"
-              )}>
-                {selectedPhotoIds.length > 0 ? (
-                  <DropdownMenu open={isOpen} onOpenChange={setIsOpen} >
-                    <DropdownMenuTrigger asChild>
-                      <div
-                        onMouseEnter={() => setIsOpen(true)}
-                        onMouseLeave={() => setIsOpen(false)}
-                        className="inline-block"
-                      >
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className={`border-2 border-green-600 bg-green-600 text-white hover:bg-green-700 ml-auto md:ml-0 ${isCompact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'}`}
-                          onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
-                        >
-                          <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-4 h-4 mr-1"} />
-                          <span className={isCompact ? "" : "hidden md:inline"}>
-                            추가 ({selectedPhotoIds.length})
-                          </span>
-                          {!isCompact && <span className="md:hidden">
-                            ({selectedPhotoIds.length})
-                          </span>}
-                        </Button>
-                      </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent
-                      align="end"
-                      onMouseEnter={() => setIsOpen(true)}
-                      onMouseLeave={() => setIsOpen(false)}
-                    >
-                                                          <DropdownMenuItem
-                                                            onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
-                                                          >
-                                                            <BringToFront className="mr-2 h-4 w-4" />
-                                                            <span>선택 사진 ({selectedPhotoIds.length}장) 여기 추가</span>
-                                                          </DropdownMenuItem>
-                                                          <DropdownMenuItem
-                                                            onClick={() => onCreate(cluster.order_index + 1, selectedPhotos)}
-                                                          >
-                                                            <MoveDown className="mr-2 h-4 w-4" />
-                                                            <span>선택 사진 ({selectedPhotoIds.length}장) 아래 추가</span>
-                                                          </DropdownMenuItem>
-                      
-                      <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, [])}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        <span>빈 장소 추가</span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                ) : (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className={`border-2 border-green-600 text-green-600 hover:bg-green-100 ml-auto md:ml-0 ${isCompact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'}`}
-                    onClick={handleCreateEmpty}
-                  >
-                    <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-4 h-4 mr-1"} />
-                    <span className={isCompact ? "" : "hidden md:inline"}>
-                      추가
-                    </span>
-                    {!isCompact && <span className="md:hidden">
-                      추가
-                    </span>}
-                  </Button>
-                )}
-              </div>
-            </div>
+                        <div className="flex items-center justify-between md:justify-start gap-2 w-full md:w-auto mt-1 md:mt-0">
+            
+                          {/* Action Buttons: Move & Delete */}
+            
+                          <div className="flex items-center gap-0.5 md:gap-1 mx-1 md:mx-2 bg-gray-100/50 rounded-lg p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            
+                            <Button 
+            
+                              variant="ghost" size="icon" 
+            
+                              className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
+            
+                              onClick={() => onMoveCluster(cluster.id, 'up')}
+            
+                              title="위로 이동"
+            
+                            >
+            
+                              <ArrowUp className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+            
+                            </Button>
+            
+                            <Button
+            
+                              variant="ghost" size="icon"
+            
+                              className={`text-gray-500 hover:text-blue-600 hover:bg-blue-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
+            
+                              onClick={() => onMoveCluster(cluster.id, 'down')}
+            
+                              title="아래로 이동"
+            
+                            >
+            
+                              <ArrowDown className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+            
+                            </Button>
+            
+                            <div className="w-px h-4 bg-gray-300 mx-1"></div>
+            
+                            <Button
+            
+                              variant="ghost" size="icon"
+            
+                              className={`text-gray-400 hover:text-red-600 hover:bg-red-50 ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
+            
+                              onClick={() => onDeleteCluster(cluster.id)}
+            
+                              title="장소 삭제"
+            
+                            >
+            
+                              <Trash2 className={isCompact ? "w-3 h-3" : "w-3.5 h-3.5"} />
+            
+                            </Button>
+            
+                          </div>
+            
+                            
+            
+                          {/* Add Button: Visible on group hover or when selection exists */}
+            
+                          <div className={cn(
+            
+                            "transition-opacity duration-200",
+            
+                            selectedPhotoIds.length > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+            
+                          )}>
+            
+                            {selectedPhotoIds.length > 0 ? (
+            
+                              <DropdownMenu open={isOpen} onOpenChange={setIsOpen} >
+            
+                                <DropdownMenuTrigger asChild>
+            
+                                  <div
+            
+                                    onMouseEnter={() => setIsOpen(true)}
+            
+                                    onMouseLeave={() => setIsOpen(false)}
+            
+                                    className="inline-block"
+            
+                                  >
+            
+                                    <Button
+            
+                                      size="sm"
+            
+                                      variant="outline"
+            
+                                      className={`border-2 border-green-600 bg-green-600 text-white hover:bg-green-700 ml-auto md:ml-0 ${isCompact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'}`}
+            
+                                      onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
+            
+                                    >
+            
+                                      <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-4 h-4 mr-1"} />
+            
+                                      <span className={isCompact ? "" : "hidden md:inline"}>
+            
+                                        추가 ({selectedPhotoIds.length})
+            
+                                      </span>
+            
+                                      {!isCompact && <span className="md:hidden">
+            
+                                        ({selectedPhotoIds.length})
+            
+                                      </span>}
+            
+                                    </Button>
+            
+                                  </div>
+            
+                                </DropdownMenuTrigger>
+            
+                                <DropdownMenuContent
+            
+                                  align="end"
+            
+                                  onMouseEnter={() => setIsOpen(true)}
+            
+                                  onMouseLeave={() => setIsOpen(false)}
+            
+                                >
+            
+                                  <DropdownMenuItem
+            
+                                    onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
+            
+                                  >
+            
+                                    <BringToFront className="mr-2 h-4 w-4" />
+            
+                                    <span>선택 사진 ({selectedPhotoIds.length}장) 여기 추가</span>
+            
+                                  </DropdownMenuItem>
+            
+                                  <DropdownMenuItem
+            
+                                    onClick={() => onCreate(cluster.order_index + 1, selectedPhotos)}
+            
+                                  >
+            
+                                    <MoveDown className="mr-2 h-4 w-4" />
+            
+                                    <span>선택 사진 ({selectedPhotoIds.length}장) 아래 추가</span>
+            
+                                  </DropdownMenuItem>
+            
+                                  <DropdownMenuItem onClick={() => onCreate(cluster.order_index + 1, [])}>
+            
+                                    <Plus className="mr-2 h-4 w-4" />
+            
+                                    <span>빈 장소 추가</span>
+            
+                                  </DropdownMenuItem>
+            
+                                </DropdownMenuContent>
+            
+                              </DropdownMenu>
+            
+                            ) : (
+            
+                              <Button
+            
+                                size="sm"
+            
+                                variant="outline"
+            
+                                className={`border-2 border-green-600 text-green-600 hover:bg-green-100 ml-auto md:ml-0 ${isCompact ? 'h-7 px-2 text-xs' : 'h-8 px-3 text-sm'}`}
+            
+                                onClick={handleCreateEmpty}
+            
+                              >
+            
+                                <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-4 h-4 mr-1"} />
+            
+                                <span className={isCompact ? "" : "hidden md:inline"}>
+            
+                                  추가
+            
+                                </span>
+            
+                                {!isCompact && <span className="md:hidden">
+            
+                                  추가
+            
+                                </span>}
+            
+                              </Button>
+            
+                            )}
+            
+                          </div>
+            
+                        </div>
+            
+            
                           </div>
                         </div>
                       </div>
@@ -270,6 +370,7 @@ export function PlaceRow({
                     isSelected={selectedPhotoIds.includes(photo.id.toString())}
                     isCompact={isCompact}
                     onEditLabels={onEditLabels}
+                    isDraggingSomewhere={isDragging} // Pass global drag state
                   />
                 </div>
             ))}

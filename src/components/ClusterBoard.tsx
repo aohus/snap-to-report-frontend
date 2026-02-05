@@ -34,67 +34,57 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
   const [isDragging, setIsDragging] = useState(false); // Global drag state
   
   const [lastSelected, setLastSelected] = useState<SelectedPhoto | null>(null);
+  const [draggingPhotoId, setDraggingPhotoId] = useState<string | null>(null);
   
   const selectedPhotoIds = selectedPhotos.map(p => p.id);
 
-  const handleDragStart = () => {
+  const handleDragStart = (start: any) => {
     setIsDragging(true);
+    setDraggingPhotoId(start.draggableId);
   };
 
   const handleDragEnd = (result: DropResult) => {
     setIsDragging(false);
+    setDraggingPhotoId(null);
     const { source, destination, draggableId } = result;
 
     if (!destination) return;
     if (source.droppableId === destination.droppableId && source.index === destination.index) return;
 
-    const photoId = draggableId;
-    const sourceClusterId = source.droppableId;
-    const targetClusterId = destination.droppableId;
-    const targetIndex = destination.index;
-
-    onMovePhoto(photoId, sourceClusterId, targetClusterId, targetIndex);
+    // Handle Multi-drag
+    // If the dragged photo is part of the selection, move all selected photos
+    if (selectedPhotoIds.includes(draggableId)) {
+        // Move all selected photos to the destination cluster
+        // We'll perform multiple onMovePhoto calls or batch them if supported
+        // For now, let's move them sequentially
+        const targetClusterId = destination.droppableId;
+        const targetIndex = destination.index;
+        
+        // Filter out photos already in the target cluster at the same or nearby index to avoid redundant moves
+        // But for simplicity, we'll just move all.
+        selectedPhotos.forEach((sp, idx) => {
+            onMovePhoto(sp.id, sp.clusterId, targetClusterId, targetIndex + idx);
+        });
+    } else {
+        // Normal single drag
+        onMovePhoto(draggableId, source.droppableId, destination.droppableId, destination.index);
+    }
   };
 
   const handleSelectPhotoInternal = (photoId: string, clusterId: string, e?: React.MouseEvent) => {
-    if (!e || (!e.ctrlKey && !e.metaKey && !e.shiftKey)) {
-        onSelectPhoto(photoId, clusterId, e); // Let parent handle single click
-        setLastSelected({ id: photoId, clusterId });
-        return;
-    }
-
-    const isMultiSelect = e.ctrlKey || e.metaKey;
-    const isRangeSelect = e.shiftKey;
-
-    // Flatten all visible photos for range selection
-    const reserveCluster = clusters.find(c => c.name === 'reserve');
-    const placeClusters = clusters.filter(c => c.id !== reserveCluster?.id).sort((a, b) => a.order_index - b.order_index);
-    
-    const allVisiblePhotos: SelectedPhoto[] = [];
-    if (reserveCluster && !isReserveCollapsed) {
-        reserveCluster.photos.forEach(p => allVisiblePhotos.push({ id: p.id.toString(), clusterId: reserveCluster.id }));
-    }
-    placeClusters.forEach(c => {
-        if (!collapsedClusterIds.has(c.id)) {
-            c.photos.forEach(p => allVisiblePhotos.push({ id: p.id.toString(), clusterId: c.id }));
-        }
-    });
-
-    const { nextSelection, nextLastSelected } = calculateNextSelection(
-        selectedPhotos,
-        lastSelected,
-        { id: photoId, clusterId },
-        isMultiSelect,
-        isRangeSelect,
-        allVisiblePhotos
-    );
-
+    // Revert to simple additive toggle without needing Shift/Ctrl/Cmd
     if (onSetSelectedPhotos) {
-        onSetSelectedPhotos(nextSelection);
+        onSetSelectedPhotos(prev => {
+            const exists = prev.some(p => p.id === photoId);
+            if (exists) {
+                return prev.filter(p => p.id !== photoId);
+            }
+            return [...prev, { id: photoId, clusterId }];
+        });
     } else {
         onSelectPhoto(photoId, clusterId, e);
     }
-    setLastSelected(nextLastSelected);
+    setLastSelected({ id: photoId, clusterId });
   };
 
   const reserveCluster = clusters.find(c => c.name === 'reserve');
@@ -223,8 +213,9 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                         isReserve={true}
                         onSelect={(e) => handleSelectPhotoInternal(photo.id.toString(), reserveCluster.id, e)}
                         isSelected={selectedPhotoIds.includes(photo.id.toString())}
-                        isCompact={isCompact}
+                        isCompact={isCompact} // Use state instead of forcing true
                         onEditLabels={onEditLabels}
+                        isDraggingSomewhere={isDragging} // Pass global drag state
                         />
                     </div>
                     ))}
