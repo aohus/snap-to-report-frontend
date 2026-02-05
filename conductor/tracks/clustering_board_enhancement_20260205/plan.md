@@ -37,7 +37,7 @@
     - [x] Implement keyboard navigation (ArrowLeft, ArrowRight, Esc).
 - [x] Task: TDD - Write tests for Lightbox triggering and navigation. [214b362]
 - [x] Task: Final UI/UX Polish (Consistency with latest trends, spacing, shadows). [d1a1ec0]
-- [ ] Task: Conductor - User Manual Verification 'Quick Preview & UI Polish' (Protocol in workflow.md)
+- [x] Task: Conductor - User Manual Verification 'Quick Preview & UI Polish' (Protocol in workflow.md) [checkpoint: 0231c0c]
 
 ## Phase 5: Performance Optimization (Virtualization)
 - [ ] Task: Integrate `@tanstack/react-virtual` for Cluster List
