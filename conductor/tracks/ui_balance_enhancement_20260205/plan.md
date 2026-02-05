@@ -6,7 +6,7 @@
 - [x] Task: Typography 위계 정의 및 Tailwind 설정 업데이트 d31862d
     - [ ] 텍스트 크기 및 굵기 대비(Contrast) 규칙 수립
     - [ ] `tailwind.config.ts`에 세밀한 폰트 스케일 반영
-- [ ] Task: 공통 UI 컴포넌트 크기 표준화
+- [x] Task: 공통 UI 컴포넌트 크기 표준화 42c6519
     - [ ] 과하게 큰 버튼 및 입력창의 패딩/높이 축소 (Compact Scale 적용)
     - [ ] `src/components/ui/` 내 주요 컴포넌트(Button, Input 등) 스타일 조정
 - [ ] Task: Conductor - User Manual Verification 'Phase 1: Foundation' (Protocol in workflow.md)
