@@ -14,6 +14,7 @@ interface PhotoCardProps {
   isSelected?: boolean;
   isCompact?: boolean;
   onEditLabels?: (id: string) => void;
+  isDraggingSomewhere?: boolean; // New prop to detect global drag
 }
 
 // React.memo로 감싸서 props가 변하지 않으면 리렌더링 방지
@@ -25,7 +26,8 @@ export const PhotoCard = React.memo(function PhotoCard({
   onSelect, 
   isSelected,
   isCompact = false,
-  onEditLabels
+  onEditLabels,
+  isDraggingSomewhere = false
 }: PhotoCardProps) {
   return (
     <Draggable draggableId={photo.id.toString()} index={index}>
@@ -45,11 +47,18 @@ export const PhotoCard = React.memo(function PhotoCard({
             ${snapshot.isDragging ? 'shadow-2xl ring-4 ring-blue-500 z-50 scale-105 rotate-2' : 'border border-gray-200 hover:border-blue-400 hover:shadow-md'}
             ${!isReserve && index < 3 && !isSelected ? 'ring-2 ring-green-500 border-green-500' : ''}
             ${isSelected ? 'ring-4 ring-blue-500 border-blue-500' : ''}
+            ${!snapshot.isDragging && isDraggingSomewhere && isSelected ? 'opacity-30 scale-95 grayscale' : ''}
           `}
           style={{
             ...provided.draggableProps.style,
           }}
         >
+          {/* Multi-drag Badge */}
+          {snapshot.isDragging && isSelected && (
+              <div className="absolute -top-3 -right-3 z-50 bg-blue-600 text-white w-8 h-8 rounded-full flex items-center justify-center font-black shadow-xl ring-4 ring-white">
+                  +
+              </div>
+          )}
           {/* Selection Badge */}
           {!isReserve && index < 3 && (
             <div className={`absolute top-2 left-2 z-10 bg-green-600 text-white rounded-md font-bold shadow-md ${isCompact ? 'px-1 py-0.5 text-[10px]' : 'px-2 py-0.5 text-xs md:text-base'}`}>
