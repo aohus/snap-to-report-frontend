@@ -169,9 +169,13 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
   const rowVirtualizer = useVirtualizer({
     count: displayedClusters.length,
     getScrollElement: () => parentRef.current,
-    estimateSize: () => isCompact ? 250 : 350, // Smaller estimate for compact mode
+    estimateSize: () => isCompact ? 200 : 300, 
     overscan: 5,
+    measureElement: (el) => el.getBoundingClientRect().height,
   });
+
+  // Helper to get all currently visible photos in order
+  const getVisiblePhotos = () => {
 
   return (
     <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
@@ -340,12 +344,13 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     return (
                         <div
                             key={virtualRow.key}
+                            data-index={virtualRow.index}
+                            ref={rowVirtualizer.measureElement}
                             style={{
                                 position: 'absolute',
                                 top: 0,
                                 left: 0,
                                 width: '100%',
-                                height: `${virtualRow.size}px`,
                                 transform: `translateY(${virtualRow.start}px)`,
                             }}
                             className="pb-6"
