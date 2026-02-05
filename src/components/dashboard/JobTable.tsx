@@ -82,26 +82,26 @@ export function JobTable({
   const getStatusBadge = (status: Job['status']) => {
     switch (status) {
       case 'COMPLETED':
-        return <Badge className="bg-green-100 text-green-700 hover:bg-green-100 border-none font-bold">완료</Badge>;
+        return <Badge variant="success" className="font-black">완료</Badge>;
       case 'FAILED':
-        return <Badge variant="destructive">실패</Badge>;
+        return <Badge variant="destructive" className="font-black">실패</Badge>;
       case 'PROCESSING':
-        return <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-none animate-pulse font-bold">진행중</Badge>;
+        return <Badge variant="info" className="animate-pulse font-black">진행중</Badge>;
       case 'UPLOADING':
-        return <Badge variant="outline" className="text-slate-500 font-bold">대기중</Badge>;
+        return <Badge variant="outline" className="text-slate-400 font-black">대기중</Badge>;
       default:
-        return <Badge variant="secondary" className="font-bold">빈 작업</Badge>;
+        return <Badge variant="secondary" className="font-black text-slate-400 border-none bg-slate-50">빈 작업</Badge>;
     }
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-col md:flex-row gap-4 justify-between items-start md:items-center">
-        <div className="relative w-full md:w-96 group">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-600 transition-colors" />
+    <div className="space-y-3">
+      <div className="flex flex-col md:flex-row gap-3 justify-between items-start md:items-center">
+        <div className="relative w-full md:w-80 group">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 group-focus-within:text-primary transition-colors" />
           <Input 
-            placeholder="작업명, 시행처, 공종 검색..." 
-            className="pl-10 h-11 bg-white border-slate-200 focus:border-blue-600 focus:ring-blue-600 rounded-xl transition-all"
+            placeholder="작업명, 시행처 검색..." 
+            className="pl-9 h-10 bg-white/50 border-slate-200 focus:border-primary focus:ring-primary/10 rounded-xl transition-all text-sm"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -110,56 +110,55 @@ export function JobTable({
         <div className="flex gap-2 w-full md:w-auto">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-11 rounded-xl gap-2 border-slate-200 hover:bg-slate-50">
-                <Filter className="w-4 h-4" />
+              <Button variant="outline" className="h-10 text-sm font-bold rounded-xl gap-2 border-slate-200 hover:bg-white hover:border-slate-300 shadow-sm transition-all">
+                <Filter className="w-3.5 h-3.5 opacity-60" />
                 상태: {statusFilter === 'all' ? '전체' : statusFilter}
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-40 rounded-xl">
-              <DropdownMenuItem onClick={() => setStatusFilter('all')}>전체</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('COMPLETED')}>완료</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('PROCESSING')}>진행중</DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setStatusFilter('CREATED')}>대기중</DropdownMenuItem>
+            <DropdownMenuContent align="end" className="w-40 rounded-xl shadow-elevated border-slate-100 p-1.5">
+              <DropdownMenuItem onClick={() => setStatusFilter('all')} className="font-bold rounded-lg cursor-pointer">전체</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('COMPLETED')} className="font-bold rounded-lg cursor-pointer">완료</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('PROCESSING')} className="font-bold rounded-lg cursor-pointer">진행중</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setStatusFilter('CREATED')} className="font-bold rounded-lg cursor-pointer">대기중</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-professional overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/60 shadow-professional overflow-hidden">
         <Table className="text-base">
-          <TableHeader className="bg-slate-50/50">
+          <TableHeader className="bg-slate-50/80">
             <TableRow className="hover:bg-transparent border-slate-100">
               <TableHead 
-                className="w-[40%] cursor-pointer hover:text-blue-600 transition-colors text-sm font-bold"
+                className="w-[45%] cursor-pointer hover:text-primary transition-colors text-[11px] font-black uppercase tracking-widest text-slate-400"
                 onClick={() => handleSort('title')}
               >
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 pl-2">
                   작업 정보
-                  <ArrowUpDown className="w-3 h-3" />
+                  <ArrowUpDown className="w-3 h-3 opacity-40" />
                 </div>
               </TableHead>
-              <TableHead className="hidden md:table-cell text-sm font-bold">공종 / 시행처</TableHead>
+              <TableHead className="hidden md:table-cell text-[11px] font-black uppercase tracking-widest text-slate-400">공종 / 시행처</TableHead>
               <TableHead 
-                className="cursor-pointer hover:text-blue-600 transition-colors text-sm font-bold"
+                className="cursor-pointer hover:text-primary transition-colors text-[11px] font-black uppercase tracking-widest text-slate-400"
                 onClick={() => handleSort('work_date')}
               >
                 <div className="flex items-center gap-2">
                   작업일
-                  <ArrowUpDown className="w-3 h-3" />
+                  <ArrowUpDown className="w-3 h-3 opacity-40" />
                 </div>
               </TableHead>
-              <TableHead className="text-sm font-bold">상태</TableHead>
-              <TableHead className="text-right text-sm font-bold">관리</TableHead>
+              <TableHead className="text-[11px] font-black uppercase tracking-widest text-slate-400">상태</TableHead>
+              <TableHead className="text-right text-[11px] font-black uppercase tracking-widest text-slate-400 pr-6">관리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {filteredAndSortedJobs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="h-64 text-center">
-                  <div className="flex flex-col items-center justify-center text-slate-400">
-                    <Search size={40} className="mb-4 opacity-20" />
-                    <p className="text-lg font-bold">검색 결과가 없습니다.</p>
-                    <p className="text-sm">다른 키워드로 검색해보세요.</p>
+                <TableCell colSpan={5} className="h-48 text-center bg-slate-50/20">
+                  <div className="flex flex-col items-center justify-center text-slate-300">
+                    <Search size={32} className="mb-3 opacity-20" />
+                    <p className="text-base font-black">결과가 없습니다.</p>
                   </div>
                 </TableCell>
               </TableRow>
@@ -167,38 +166,39 @@ export function JobTable({
               filteredAndSortedJobs.map((job) => (
                 <TableRow 
                   key={job.id} 
-                  className="group cursor-pointer hover:bg-blue-50/30 border-slate-100 transition-colors"
+                  className="group cursor-pointer hover:bg-slate-50/80 border-slate-100 transition-colors"
                   onClick={() => onNavigate(job.id)}
                 >
-                  <TableCell className="py-3">
-                    <div className="flex flex-col gap-1">
-                      <span className="text-base font-bold text-slate-900 group-hover:text-blue-600 transition-colors">
+                  <TableCell className="py-3 pl-6">
+                    <div className="flex flex-col">
+                      <span className="text-base font-bold text-slate-900 group-hover:text-primary transition-colors">
                         {job.title}
                       </span>
                     </div>
                   </TableCell>
                   <TableCell className="py-3 hidden md:table-cell">
-                    <div className="flex flex-col gap-1 text-base font-medium text-slate-600">
+                    <div className="flex items-center gap-4 text-sm font-bold text-slate-500">
                       <div className="flex items-center gap-1.5">
-                        <Hammer className="w-4 h-4 text-slate-400" />
+                        <Hammer className="w-3.5 h-3.5 opacity-40" />
                         <span>{job.construction_type || '-'}</span>
                       </div>
+                      <div className="w-px h-3 bg-slate-200" />
                       <div className="flex items-center gap-1.5">
-                        <Building2 className="w-4 h-4 text-slate-400" />
+                        <Building2 className="w-3.5 h-3.5 opacity-40" />
                         <span>{job.company_name || '-'}</span>
                       </div>
                     </div>
                   </TableCell>
                   <TableCell className="py-3">
-                    <div className="flex items-center gap-2 text-base font-bold text-slate-600">
-                      <Calendar className="w-4 h-4 text-slate-400" />
+                    <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                      <Calendar className="w-3.5 h-3.5 opacity-40" />
                       {job.work_date ? format(new Date(job.work_date), 'yyyy.MM.dd') : '-'}
                     </div>
                   </TableCell>
                   <TableCell className="py-3">
                     {getStatusBadge(job.status)}
                   </TableCell>
-                  <TableCell className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="py-3 text-right pr-6" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-9 w-9 rounded-xl hover:bg-slate-100">
