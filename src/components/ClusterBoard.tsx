@@ -4,9 +4,10 @@ import { Cluster } from '@/types';
 import { PlaceRow } from './PlaceRow';
 import { PlaceColumn } from './PlaceColumn';
 import { PhotoCard } from './PhotoCard';
-import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, LayoutList, Rows, Eye, EyeOff, Columns, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
+import { cn } from '@/lib/utils';
 
 interface ClusterBoardProps {
   clusters: Cluster[];
@@ -25,7 +26,6 @@ interface ClusterBoardProps {
 export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPhotosToExistingCluster, onRenameCluster, onDeletePhoto, onDeleteCluster, onMoveCluster, selectedPhotos, onSelectPhoto, onEditLabels }: ClusterBoardProps) {
   const isMobile = useIsMobile();
   const [isCompact, setIsCompact] = useState(false);
-  const [isVerticalMode, setIsVerticalMode] = useState(false); // false = Horizontal Mode (Reserve Top), true = Vertical Mode (Reserve Left)
   const [collapsedClusterIds, setCollapsedClusterIds] = useState<Set<string>>(new Set());
   const [hideCompleted, setHideCompleted] = useState(false);
   const [isReserveCollapsed, setIsReserveCollapsed] = useState(false);
@@ -87,202 +87,146 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
 
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
-      <div className="flex flex-col md:flex-row h-full gap-4 md:gap-8">
-        {/* Reserve Area */}
-        {/* Always Left Column on Desktop. Top Row on Mobile. */}
+      <div className="flex flex-col md:flex-row h-full gap-4 md:gap-6">
+        {/* Reserve Area Sidebar (Sticky) */}
         <div 
           className={`
-            flex-shrink-0 flex flex-col bg-gray-200 rounded-xl md:rounded-2xl border-2 border-gray-300 overflow-hidden 
-            w-full transition-all duration-300 ease-in-out
+            flex-shrink-0 flex flex-col bg-slate-50 rounded-2xl border border-slate-200 shadow-sm overflow-hidden 
+            w-full md:sticky md:top-0 md:h-[calc(100vh-120px)] transition-all duration-300 ease-in-out
             ${isReserveCollapsed 
               ? 'md:w-[60px] max-h-[50px] md:max-h-none' 
-              : ((reserveCluster?.photos.length || 0) === 0 ? 'md:w-[360px]' : 'md:w-[460px]') + ' h-auto md:h-full max-h-[220px] md:max-h-none'
+              : ((reserveCluster?.photos.length || 0) === 0 ? 'md:w-[300px]' : 'md:w-[400px]') + ' h-auto md:h-full max-h-[300px] md:max-h-none'
             }
           `}
         >
-          <div className="p-2 md:p-3 bg-gray-300 border-b border-gray-400 flex items-center justify-center md:justify-start gap-2 sticky top-0 z-10 h-[50px]">
-             {/* Mobile Toggle Button (Left) */}
-             <Button 
-               variant="ghost" 
-               size="icon" 
-               className="h-6 w-6 md:hidden absolute right-2"
-               onClick={() => setIsReserveCollapsed(!isReserveCollapsed)}
-             >
-                {isReserveCollapsed ? <ChevronsDown className="w-4 h-4" /> : <ChevronsUp className="w-4 h-4" />}
-             </Button>
-
-            {!isReserveCollapsed && <Archive className="w-4 h-4 md:w-5 md:h-5 text-gray-700 flex-shrink-0" />}
-            
-            {!isReserveCollapsed && (
-              <div className={`
-                flex items-center gap-2 overflow-hidden transition-all duration-300
-                ${(reserveCluster?.photos.length || 0) === 0 ? 'w-0 opacity-0 md:hidden' : 'w-auto opacity-100'}
-              `}>
-                <h3 className="text-base md:text-lg font-bold text-gray-800 whitespace-nowrap">임시 보관</h3>
-                <span className="ml-auto bg-gray-600 text-white px-2 py-0.5 rounded-full text-xs md:text-sm">
+          <div className="p-3 bg-slate-100 border-b border-slate-200 flex items-center justify-between gap-2 z-10 h-[50px]">
+             <div className="flex items-center gap-2 overflow-hidden">
+                {!isReserveCollapsed && <Archive className="w-4 h-4 text-slate-500 flex-shrink-0" />}
+                {!isReserveCollapsed && (
+                  <h3 className="text-sm font-black text-slate-700 whitespace-nowrap">임시 보관</h3>
+                )}
+                <span className={cn(
+                    "bg-slate-700 text-white px-2 py-0.5 rounded-md text-[10px] font-black",
+                    isReserveCollapsed ? "mx-auto" : ""
+                )}>
                   {reserveCluster?.photos.length || 0}
                 </span>
-              </div>
-            )}
-            
-            {/* Show count badge in collapsed mode */}
-             {((reserveCluster?.photos.length || 0) === 0 || isReserveCollapsed) && (
-                <span className={`hidden md:flex bg-gray-600 text-white w-5 h-5 items-center justify-center rounded-full text-xs ${isReserveCollapsed ? 'mx-auto' : ''}`}>
-                  {reserveCluster?.photos.length || 0}
-                </span>
-             )}
+             </div>
 
-            {/* Desktop Toggle Button */}
+            {/* Toggle Button */}
             <Button 
                variant="ghost" 
                size="icon" 
-               className="h-6 w-6 hidden md:flex ml-auto"
+               className="h-8 w-8 text-slate-400 hover:text-slate-600"
                onClick={() => setIsReserveCollapsed(!isReserveCollapsed)}
             >
-               {isReserveCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+               {isMobile ? (
+                   isReserveCollapsed ? <ChevronsDown className="w-4 h-4" /> : <ChevronsUp className="w-4 h-4" />
+               ) : (
+                   isReserveCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />
+               )}
             </Button>
           </div>
           
-          <Droppable droppableId={reserveCluster?.id.toString() || 'reserve'} direction={isMobile ? "horizontal" : "vertical"}>
-            {(provided, snapshot) => (
-              <div
-                ref={provided.innerRef}
-                {...provided.droppableProps}
-                className={`
-                  flex-1 p-2 md:p-4 transition-colors scrollbar-thin scrollbar-thumb-gray-300
-                  ${isMobile
-                    ? 'overflow-x-auto overflow-y-hidden flex flex-row gap-4 items-start content-start'
-                    : 'overflow-y-auto overflow-x-hidden flex flex-col gap-4'
-                  }
-                  ${snapshot.isDraggingOver ? 'bg-blue-100/50' : ''}
-                  ${(reserveCluster?.photos.length || 0) === 0 ? 'items-center' : ''}
-                  ${isReserveCollapsed ? 'hidden' : ''}
-                `}
-              >
-                {reserveCluster?.photos.length === 0 && (
-                  <div className="text-center text-gray-500 m-auto px-2 w-full flex flex-col items-center">
-                    <p className={`text-sm md:text-base transition-opacity duration-200 ${(reserveCluster?.photos.length || 0) === 0 ? 'hidden md:block md:opacity-0 md:group-hover:opacity-100' : ''}`}>
-                      Drag extra photos here.
-                    </p>
-                  </div>
+          {!isReserveCollapsed && (
+            <Droppable droppableId={reserveCluster?.id.toString() || 'reserve'} direction={isMobile ? "horizontal" : "vertical"}>
+                {(provided, snapshot) => (
+                <div
+                    ref={provided.innerRef}
+                    {...provided.droppableProps}
+                    className={`
+                    flex-1 p-3 transition-colors custom-scrollbar
+                    ${isMobile
+                        ? 'overflow-x-auto overflow-y-hidden flex flex-row gap-3 items-start'
+                        : 'overflow-y-auto overflow-x-hidden flex flex-col gap-3'
+                    }
+                    ${snapshot.isDraggingOver ? 'bg-primary/5' : ''}
+                    `}
+                >
+                    {reserveCluster?.photos.length === 0 && (
+                    <div className="text-center text-slate-400 m-auto px-4 py-8 border-2 border-dashed border-slate-200 rounded-xl w-full">
+                        <p className="text-xs font-bold">잘못 분류된 사진을<br/>여기에 보관하세요.</p>
+                    </div>
+                    )}
+                    {reserveCluster?.photos.map((photo, index) => (
+                    <div key={photo.id} className="flex-shrink-0">
+                        <PhotoCard 
+                        photo={photo} 
+                        index={index} 
+                        onDelete={(pid) => onDeletePhoto(pid.toString(), reserveCluster.id)}
+                        isReserve={true}
+                        onSelect={() => onSelectPhoto(photo.id.toString(), reserveCluster.id)}
+                        isSelected={selectedPhotoIds.includes(photo.id.toString())}
+                        isCompact={true}
+                        onEditLabels={onEditLabels}
+                        />
+                    </div>
+                    ))}
+                    {provided.placeholder}
+                </div>
                 )}
-                {reserveCluster?.photos.map((photo, index) => (
-                  <div key={photo.id} className="flex-shrink-0">
-                    <PhotoCard 
-                      photo={photo} 
-                      index={index} 
-                      onDelete={(pid) => onDeletePhoto(pid.toString(), reserveCluster.id)}
-                      isReserve={true}
-                      onSelect={() => onSelectPhoto(photo.id.toString(), reserveCluster.id)}
-                      isSelected={selectedPhotoIds.includes(photo.id.toString())}
-                      isCompact={isCompact}
-                      onEditLabels={onEditLabels}
-                    />
-                  </div>
-                ))}
-                {provided.placeholder}
-              </div>
-            )}
-          </Droppable>
+            </Droppable>
+          )}
         </div>
 
-        {/* Main Places Area */}
-        <div className="flex-1 flex flex-col overflow-hidden order-2">
+        {/* Main Grid Area */}
+        <div className="flex-1 flex flex-col min-w-0">
           {/* Controls Toolbar */}
-          <div className="flex-shrink-0 flex flex-wrap items-center justify-end gap-2 mb-4 p-2 bg-white rounded-xl border border-gray-200 shadow-sm sticky top-0 z-20 backdrop-blur-sm bg-white/90">
-            
-            {/* Layout Mode Group */}
-            <div className="flex items-center gap-1 bg-gray-100/80 p-1 rounded-lg border border-gray-200">
+          <div className="flex-shrink-0 flex items-center justify-between gap-4 mb-6 p-3 bg-white rounded-2xl border border-slate-200 shadow-sm sticky top-0 z-20 backdrop-blur-md bg-white/80">
+            <h2 className="text-xl font-black text-slate-900 tracking-tight ml-2">
+                분류된 장소 <span className="text-primary ml-1">{displayedClusters.length}</span>
+            </h2>
+
+            <div className="flex items-center gap-2">
                 <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsVerticalMode(false)}
-                className={`h-7 px-3 text-xs rounded-md transition-all ${!isVerticalMode ? 'bg-white shadow-sm text-blue-700 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'}`}
-                title="위아래로 스크롤 (가로형)"
+                onClick={() => setIsCompact(!isCompact)}
+                className={cn(
+                    "h-9 px-3 rounded-xl border border-transparent font-bold transition-all",
+                    isCompact ? "bg-primary/10 text-primary border-primary/20" : "text-slate-500 hover:bg-slate-100"
+                )}
                 >
-                    <LayoutList className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden xl:inline">가로형</span>
+                {isCompact ? <Maximize2 className="w-4 h-4 mr-2" /> : <Minimize2 className="w-4 h-4 mr-2" />}
+                {isCompact ? "크게 보기" : "작게 보기"}
                 </Button>
+
+                <div className="w-px h-4 bg-slate-200 mx-1"></div>
+
                 <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setIsVerticalMode(true)}
-                className={`h-7 px-3 text-xs rounded-md transition-all ${isVerticalMode ? 'bg-white shadow-sm text-blue-700 font-semibold' : 'text-gray-500 hover:text-gray-900 hover:bg-gray-200/50'}`}
-                title="좌우로 스크롤 (세로형)"
+                onClick={() => setHideCompleted(!hideCompleted)}
+                className={cn(
+                    "h-9 px-3 rounded-xl border border-transparent font-bold transition-all",
+                    hideCompleted ? "bg-orange-50 text-orange-600 border-orange-100" : "text-slate-500 hover:bg-slate-100"
+                )}
                 >
-                    <Columns className="w-3.5 h-3.5 mr-1.5" />
-                    <span className="hidden xl:inline">세로형</span>
+                {hideCompleted ? <EyeOff className="w-4 h-4 mr-2" /> : <Eye className="w-4 h-4 mr-2" />}
+                완료 숨김
+                </Button>
+
+                <Button
+                variant="ghost"
+                size="sm"
+                onClick={toggleCollapseCompleted}
+                className="h-9 px-3 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50"
+                >
+                {areAllCompletedCollapsed ? <ChevronsDown className="w-4 h-4 mr-2" /> : <ChevronsUp className="w-4 h-4 mr-2" />}
+                완료 {areAllCompletedCollapsed ? "펼치기" : "접기"}
                 </Button>
             </div>
-
-            <div className="w-px h-5 bg-gray-200 mx-1"></div>
-
-             {/* View Options */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setIsCompact(!isCompact)}
-              className={`h-8 text-xs border transition-all ${isCompact ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-white border-transparent hover:bg-gray-100 text-gray-600'}`}
-            >
-              {isCompact ? <Maximize2 className="w-3.5 h-3.5 mr-1.5" /> : <Minimize2 className="w-3.5 h-3.5 mr-1.5" />}
-              <span className="hidden md:inline">{isCompact ? "크게 보기" : "작게 보기"}</span>
-            </Button>
-
-            <div className="w-px h-5 bg-gray-200 mx-1"></div>
-
-            {/* Filter Options */}
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setHideCompleted(!hideCompleted)}
-              className={`h-8 text-xs border transition-all ${hideCompleted ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-white border-transparent hover:bg-gray-100 text-gray-600'}`}
-            >
-              {hideCompleted ? <EyeOff className="w-3.5 h-3.5 mr-1.5" /> : <Eye className="w-3.5 h-3.5 mr-1.5" />}
-              <span className="hidden md:inline">완료 숨김</span>
-            </Button>
-
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={toggleCollapseCompleted}
-              className={`h-8 text-xs border transition-all ${areAllCompletedCollapsed ? 'bg-gray-100 text-gray-900 border-gray-200' : 'bg-white border-transparent hover:bg-gray-100 text-gray-600'}`}
-            >
-              {areAllCompletedCollapsed ? <ChevronsDown className="w-3.5 h-3.5 mr-1.5" /> : <ChevronsUp className="w-3.5 h-3.5 mr-1.5" />}
-              <span className="hidden md:inline">{areAllCompletedCollapsed ? "완료 펼치기" : "완료 접기"}</span>
-            </Button>
           </div>
 
-          {/* Clusters List */}
-          <div className={`
-            flex-1 
-            ${isVerticalMode 
-              ? 'overflow-x-auto overflow-y-hidden' 
-              : 'overflow-y-auto overflow-x-hidden'
-            }
-          `}>
-            <div className={`
-              ${isVerticalMode 
-                ? 'flex flex-row gap-4 h-full items-start pb-4' 
-                : (isCompact ? "grid grid-cols-1 md:grid-cols-2 gap-2 md:gap-4 items-start" : "space-y-4 md:space-y-8")
-              }
-            `}>
+          {/* Clusters Responsive Grid */}
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <div className={cn(
+                "grid gap-6 items-start pb-20",
+                isCompact 
+                    ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+                    : "grid-cols-1 xl:grid-cols-2"
+            )}>
               {displayedClusters.map((cluster) => (
-                isVerticalMode ? (
-                  <PlaceColumn 
-                    key={cluster.id}
-                    cluster={cluster}
-                    onCreate={(order_index, photos) => onCreateCluster(order_index, photos)}
-                    onAddPhotosToExistingCluster={(clusterId, photos) => onAddPhotosToExistingCluster(clusterId, photos)}
-                    onRename={onRenameCluster}
-                    onDeletePhoto={(pid) => onDeletePhoto(pid, cluster.id)}
-                    onDeleteCluster={onDeleteCluster}
-                    onMoveCluster={onMoveCluster}
-                    selectedPhotos={selectedPhotos}
-                    onSelectPhoto={onSelectPhoto}
-                    isCompact={isCompact}
-                    onEditLabels={onEditLabels}
-                  />
-                ) : (
                   <PlaceRow
                     key={cluster.id}
                     cluster={cluster}
@@ -299,7 +243,6 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     onToggleCollapse={() => toggleClusterCollapse(cluster.id)}
                     onEditLabels={onEditLabels}
                   />
-                )
               ))}
             </div>
           </div>
