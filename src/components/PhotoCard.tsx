@@ -131,14 +131,13 @@ export const PhotoCard = React.memo(function PhotoCard({
           )}
 
           {/* Image */}
-          <div className="flex-1 overflow-hidden bg-gray-100">
+          <div className="flex-1 overflow-hidden bg-slate-50 flex items-center justify-center">
             <img
-              // 1. 썸네일이 있다면 우선 사용, 없다면 원본 사용 (백엔드 필드 확인 필요)
               src={photo.thumbnail_url || photo.url} 
               alt={photo.original_filename}
-              className="w-full h-full object-cover transition-transform group-hover:scale-105"
+              className="max-w-full max-h-full object-contain transition-transform group-hover:scale-105"
               loading="lazy"
-              decoding="async" // 2. 비동기 디코딩
+              decoding="async" 
             />
           </div>
         </div>
