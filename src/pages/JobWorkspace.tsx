@@ -17,6 +17,7 @@ import { format } from 'date-fns';
 import { api } from '@/lib/api';
 import { Job, Cluster, Photo } from '@/types';
 import { Loader2, CheckCircle, Plus, X, FileDown, RefreshCw, Edit2, Settings } from 'lucide-react';
+import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger, PopoverClose } from "@/components/ui/popover"
 
