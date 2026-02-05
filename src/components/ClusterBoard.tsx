@@ -5,6 +5,7 @@ import { PlaceRow } from './PlaceRow';
 import { PhotoCard } from './PhotoCard';
 import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { useVirtualizer } from '@tanstack/react-virtual';
