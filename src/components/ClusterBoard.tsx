@@ -157,7 +157,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                         isReserve={true}
                         onSelect={() => onSelectPhoto(photo.id.toString(), reserveCluster.id)}
                         isSelected={selectedPhotoIds.includes(photo.id.toString())}
-                        isCompact={true}
+                        isCompact={isCompact} // Use state instead of forcing true
                         onEditLabels={onEditLabels}
                         />
                     </div>
@@ -224,7 +224,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                 "grid gap-6 items-start pb-20",
                 isCompact 
                     ? "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
-                    : "grid-cols-1 xl:grid-cols-2"
+                    : "grid-cols-1 2xl:grid-cols-2" // Simplified to 1 col (mobile/laptop) -> 2 cols (wide screens)
             )}>
               {displayedClusters.map((cluster) => (
                   <PlaceRow
