@@ -21,12 +21,8 @@
 ## Phase 3: Job Editor - Density & Alignment Optimization
 작업 편집기 내의 여백을 줄이고 사진 노출을 극대화합니다.
 
-- [ ] Task: Job Editor 메인 레이아웃 여백 최소화
-    - [ ] 불필요한 패딩/마진 제거 및 컴포넌트 배치 재구성
-    - [ ] `src/pages/JobEditor.tsx` 및 관련 컨테이너 스타일 수정
-- [ ] Task: Photo Grid 및 상세 정보 정렬 개선
-    - [ ] 사진 그리드의 정보 밀도 향상
-    - [ ] 텍스트 위계 조정을 통한 가독성 확보
+- [x] Task: Job Editor 메인 레이아웃 여백 최소화 13a4a18
+- [x] Task: Photo Grid 및 상세 정보 정렬 개선 13a4a18
 - [ ] Task: Conductor - User Manual Verification 'Phase 3: Job Editor' (Protocol in workflow.md)
 
 ## Phase 4: Final Polish & Visual Quality
