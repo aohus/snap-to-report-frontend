@@ -19,8 +19,8 @@ This file tracks all major tracks for the project. Each track has its own detail
   Link: [./docs/clustering_board_enhancement_20260205/report.md](./docs/clustering_board_enhancement_20260205/report.md)
 - [x] **Track: 디자인 고도화: 컴포넌트 정렬 등 균형 및 고밀도 UI 최적화** (Archived)
   Link: [./archive/ui_balance_enhancement_20260205/](./archive/ui_balance_enhancement_20260205/)
-- [x] **Track: 분류영역 사진 드래그 안되는 버그 해결**
-  Link: [./docs/fix_drag_and_drop_20260206/report.md](./docs/fix_drag_and_drop_20260206/report.md)
+- [x] **Track: 분류영역 사진 드래그 안되는 버그 해결** (Archived)
+  Link: [./archive/fix_drag_and_drop_20260206/](./archive/fix_drag_and_drop_20260206/)
 
 ---
 
