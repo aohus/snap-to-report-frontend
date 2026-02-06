@@ -41,8 +41,8 @@ export const PhotoCard = React.memo(function PhotoCard({
           onClick={onSelect}
           className={`
             relative group flex flex-col bg-white rounded-md shadow-subtle overflow-hidden cursor-grab active:cursor-grabbing
-            transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]
-            aspect-[16/10]
+            aspect-[16/10] flex-shrink-0
+            ${!snapshot.isDragging ? 'transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)]' : ''}
             ${isReserve 
               ? 'w-full' 
               : (isCompact ? 'w-[180px] md:w-[220px]' : 'w-[260px] sm:w-[320px] md:w-[400px]')
@@ -167,6 +167,7 @@ export const PhotoCard = React.memo(function PhotoCard({
     prevProps.index === nextProps.index &&
     prevProps.isSelected === nextProps.isSelected &&
     prevProps.isReserve === nextProps.isReserve &&
-    prevProps.isCompact === nextProps.isCompact
+    prevProps.isCompact === nextProps.isCompact &&
+    prevProps.isDraggingSomewhere === nextProps.isDraggingSomewhere
   );
 });

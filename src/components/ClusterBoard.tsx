@@ -171,7 +171,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
     count: displayedClusters.length,
     getScrollElement: () => parentRef.current,
     estimateSize: () => isCompact ? 200 : 300, 
-    overscan: isDragging ? displayedClusters.length : 10, // Render all items during drag to prevent lost drop targets
+    overscan: 20, // Render a sufficient number of items to avoid jumping during drag
     measureElement: (el) => el.getBoundingClientRect().height,
   });
 
@@ -239,8 +239,8 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                     </div>
                     )}
                     {reserveCluster?.photos.map((photo, index) => (
-                    <div key={photo.id} className="flex-shrink-0">
                         <PhotoCard 
+                        key={photo.id}
                         photo={photo} 
                         index={index} 
                         onDelete={(pid) => onDeletePhoto(pid.toString(), reserveCluster.id)}
@@ -252,7 +252,6 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                         onEditLabels={onEditLabels}
                         isDraggingSomewhere={isDragging} 
                         />
-                    </div>
                     ))}
                     {provided.placeholder}
                 </div>
@@ -336,10 +335,9 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                             ref={rowVirtualizer.measureElement}
                             style={{
                                 position: 'absolute',
-                                top: 0,
+                                top: `${virtualRow.start}px`,
                                 left: 0,
                                 width: '100%',
-                                transform: `translateY(${virtualRow.start}px)`,
                             }}
                             className="pb-6"
                         >

@@ -315,8 +315,8 @@ export function PlaceRow({
             )}
             {cluster.photos
               .map((photo, index) => (
-                <div key={photo.id} className="relative">
                   <PhotoCard 
+                    key={photo.id}
                     photo={photo}
                     index={index}
                     onDelete={onDeletePhoto ? () => onDeletePhoto(photo.id.toString()) : undefined}
@@ -327,7 +327,6 @@ export function PlaceRow({
                     onEditLabels={onEditLabels}
                     isDraggingSomewhere={isDragging} // Pass global drag state
                   />
-                </div>
             ))}
             {provided.placeholder}
           </div>

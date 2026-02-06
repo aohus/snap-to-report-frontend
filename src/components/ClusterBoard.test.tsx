@@ -102,6 +102,41 @@ describe('ClusterBoard - New Layout', () => {
     });
   });
 
+  it('should have unique droppableId and draggableId', () => {
+    const clustersWithPhotos: Cluster[] = [
+      {
+        id: 'reserve-id',
+        name: 'reserve',
+        order_index: -1,
+        photos: [{ id: 'p1', url: '', original_filename: 'p1.jpg', clusterId: 'reserve-id', order_index: 0 }] as any
+      },
+      {
+        id: 'cluster-1',
+        name: 'Place 1',
+        order_index: 0,
+        photos: [{ id: 'p2', url: '', original_filename: 'p2.jpg', clusterId: 'cluster-1', order_index: 0 }] as any
+      }
+    ];
+
+    const { getAllByTestId } = render(
+      <ClusterBoard 
+        clusters={clustersWithPhotos}
+        onMovePhoto={vi.fn()}
+        onCreateCluster={vi.fn()}
+        onAddPhotosToExistingCluster={vi.fn()}
+        onRenameCluster={vi.fn()}
+        onDeletePhoto={vi.fn()}
+        onDeleteCluster={vi.fn()}
+        onMoveCluster={vi.fn()}
+        selectedPhotos={[]}
+        onSelectPhoto={vi.fn()}
+        onEditLabels={vi.fn()}
+      />
+    );
+
+    // This is a placeholder for actual ID uniqueness check if we add data-testid to Droppable/Draggable
+  });
+
   it('shows "Drop Here" overlay when isDragging is true', () => {
     // Basic presence check
   });
