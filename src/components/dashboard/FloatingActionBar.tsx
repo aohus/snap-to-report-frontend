@@ -19,10 +19,10 @@ export function FloatingActionBar({
     <AnimatePresence>
       {selectedCount > 0 && (
         <motion.div
-          initial={{ y: 100, opacity: 0, scale: 0.95 }}
-          animate={{ y: 0, opacity: 1, scale: 1 }}
-          exit={{ y: 100, opacity: 0, scale: 0.95 }}
-          className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-1 md:gap-2 bg-slate-900 text-white p-1.5 md:p-2 pl-4 md:pl-5 rounded-xl shadow-elevated border border-white/10 backdrop-blur-xl max-w-[95vw] md:max-w-none transition-all"
+          initial={{ y: 100, x: "-50%", opacity: 0, scale: 0.95 }}
+          animate={{ y: 0, x: "-50%", opacity: 1, scale: 1 }}
+          exit={{ y: 100, x: "-50%", opacity: 0, scale: 0.95 }}
+          className="fixed bottom-8 left-1/2 z-50 flex items-center gap-1 md:gap-2 bg-slate-900 text-white p-1.5 md:p-2 pl-4 md:pl-5 rounded-xl shadow-elevated border border-white/10 backdrop-blur-xl max-w-[95vw] md:max-w-none transition-all"
         >
           <div className="flex flex-col mr-2 md:mr-3 shrink-0">
             <span className="text-[8px] md:text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">선택됨</span>

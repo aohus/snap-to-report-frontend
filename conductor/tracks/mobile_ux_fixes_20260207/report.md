@@ -48,9 +48,14 @@ Fixed several critical mobile usability issues and drag-and-drop mechanics.
   - Added responsive text labels ("Move" vs "Move Site") to save space.
   - Ensured perfect centering using `left-1/2 -translate-x-1/2`.
 
+### 11. Post-Fix Refinements (Round 9: Framer Motion Transform Conflict)
+- **Issue**: `FloatingActionBar` was still shifted right on mobile.
+- **Root Cause**: `framer-motion`'s animation (controlling `y` and `scale`) overrides the CSS `transform` property, effectively removing the `translateX(-50%)` class needed for centering.
+- **Fix**: Moved the horizontal centering logic (`x: "-50%"`) into the Framer Motion `animate`/`initial` props to ensure it coexists with other animations.
+
 ## Files Modified
-- `src/components/PhotoCard.tsx`
 - `src/components/dashboard/FloatingActionBar.tsx`
+- `src/components/PhotoCard.tsx`
 - `src/components/PhotoUploader.tsx`
 - `src/hooks/use-mobile.tsx`
 - `src/components/PlaceRow.tsx`
