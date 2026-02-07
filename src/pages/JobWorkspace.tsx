@@ -482,7 +482,10 @@ function DashboardContent() {
         onExport={handleExport}
       />
 
-      <main className="flex-1 p-4 md:p-8 max-w-[2000px] mx-auto w-full overflow-y-auto flex flex-col relative custom-scrollbar">
+      <main className={cn(
+        "flex-1 p-4 md:p-8 max-w-[2000px] mx-auto w-full flex flex-col relative custom-scrollbar",
+        clusters.length > 0 ? "overflow-hidden" : "overflow-y-auto"
+      )}>
         <DashboardSectionErrorBoundary>
             <div className="flex flex-col h-full gap-6">
             {clusters.length === 0 ? (

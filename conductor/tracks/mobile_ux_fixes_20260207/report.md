@@ -38,7 +38,13 @@ Fixed several critical mobile usability issues and drag-and-drop mechanics.
 - **Issue**: "분류된 장소" text breaking vertically.
 - **Fix**: Added `whitespace-nowrap` to the ClusterBoard header text.
 
+### 5. Post-Fix Refinements (Round 3: Scroll Container Conflict)
+- **Issue**: ClusterBoard scroll still problematic on mobile compared to Dashboard.
+- **Root Cause**: `JobWorkspace`'s `<main>` had `overflow-y-auto`, and `ClusterBoard` (child) also had `overflow-y-auto`. This nested scroll structure confuses mobile browsers and `useVirtualizer`.
+- **Fix**: Conditionally applied `overflow-hidden` to `<main>` when `ClusterBoard` is active, forcing the internal `ClusterBoard` scroll container to take precedence.
+
 ## Files Modified
+- `src/pages/JobWorkspace.tsx`
 - `src/components/PhotoCard.tsx`
 - `src/components/dashboard/DashboardStats.tsx`
 - `src/components/dashboard/JobTable.tsx`
