@@ -192,7 +192,7 @@ export function PlaceRow({
             
                                       <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-3.5 h-3.5 mr-1 stroke-[3]"} />
             
-                                      이 장소에 추가 ({selectedPhotoIds.length})
+                                      <span className="whitespace-nowrap">이 장소에 추가 ({selectedPhotoIds.length})</span>
             
                                     </Button>
             
@@ -267,7 +267,7 @@ export function PlaceRow({
             
                                 <Plus className={isCompact ? "w-3 h-3 mr-1" : "w-3.5 h-3.5 mr-1 stroke-[3]"} />
             
-                                빈 장소 추가
+                                <span className="whitespace-nowrap">빈 장소 추가</span>
             
                               </Button>
             

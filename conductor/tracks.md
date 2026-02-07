@@ -26,6 +26,9 @@ This file tracks all major tracks for the project. Each track has its own detail
 
 ## Active Tracks
 
+- [x] **Track: Mobile UX Fixes**
+  Link: [./conductor/tracks/mobile_ux_fixes_20260207/report.md](./conductor/tracks/mobile_ux_fixes_20260207/report.md)
+
 - [x] **Track: Mobile & DnD Fixes**
   Link: [./conductor/tracks/mobile_and_dnd_fixes_20260207/report.md](./conductor/tracks/mobile_and_dnd_fixes_20260207/report.md)
 

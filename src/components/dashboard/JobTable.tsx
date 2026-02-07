@@ -130,7 +130,7 @@ export function JobTable({
           <TableHeader className="bg-slate-50/50">
             <TableRow className="hover:bg-transparent border-slate-200">
               <TableHead 
-                className="w-[40%] cursor-pointer hover:text-primary transition-colors text-xs font-bold uppercase tracking-wider text-slate-500 py-3"
+                className="w-[40%] cursor-pointer hover:text-primary transition-colors text-xs font-bold uppercase tracking-wider text-slate-500 py-3 whitespace-nowrap"
                 onClick={() => handleSort('title')}
               >
                 <div className="flex items-center gap-2 pl-2">
@@ -138,9 +138,9 @@ export function JobTable({
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
                 </div>
               </TableHead>
-              <TableHead className="hidden md:table-cell text-xs font-bold uppercase tracking-wider text-slate-500 py-3">공종 / 시행처</TableHead>
+              <TableHead className="hidden md:table-cell text-xs font-bold uppercase tracking-wider text-slate-500 py-3 whitespace-nowrap">공종 / 시행처</TableHead>
               <TableHead 
-                className="cursor-pointer hover:text-primary transition-colors text-xs font-bold uppercase tracking-wider text-slate-500 py-3"
+                className="cursor-pointer hover:text-primary transition-colors text-xs font-bold uppercase tracking-wider text-slate-500 py-3 whitespace-nowrap"
                 onClick={() => handleSort('work_date')}
               >
                 <div className="flex items-center gap-2">
@@ -148,8 +148,8 @@ export function JobTable({
                   <ArrowUpDown className="w-3.5 h-3.5 opacity-40" />
                 </div>
               </TableHead>
-              <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-500 py-3">상태</TableHead>
-              <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-slate-500 py-3 pr-6">관리</TableHead>
+              <TableHead className="text-xs font-bold uppercase tracking-wider text-slate-500 py-3 whitespace-nowrap">상태</TableHead>
+              <TableHead className="text-right text-xs font-bold uppercase tracking-wider text-slate-500 py-3 pr-6 whitespace-nowrap">관리</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -172,14 +172,14 @@ export function JobTable({
                   className="group cursor-pointer hover:bg-slate-50/50 border-slate-100 transition-colors"
                   onClick={() => onNavigate(job.id)}
                 >
-                  <TableCell className="py-4 pl-6">
+                  <TableCell className="py-4 pl-6 whitespace-nowrap md:whitespace-normal">
                     <div className="flex flex-col">
                       <span className="text-[15px] font-semibold text-slate-900 group-hover:text-primary transition-colors leading-snug">
                         {job.title}
                       </span>
                     </div>
                   </TableCell>
-                  <TableCell className="py-4 hidden md:table-cell">
+                  <TableCell className="py-4 hidden md:table-cell whitespace-nowrap">
                     <div className="flex items-center gap-3 text-[13px] font-medium text-slate-500">
                       <div className="flex items-center gap-1.5 px-2 py-0.5 bg-slate-50 rounded-md border border-slate-100">
                         <Hammer className="w-3 h-3 opacity-40" />
@@ -191,16 +191,16 @@ export function JobTable({
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="py-4">
+                  <TableCell className="py-4 whitespace-nowrap">
                     <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
                       <Calendar className="w-3.5 h-3.5 opacity-40 text-slate-400" />
                       {job.work_date ? format(new Date(job.work_date), 'yyyy.MM.dd') : '-'}
                     </div>
                   </TableCell>
-                  <TableCell className="py-4">
+                  <TableCell className="py-4 whitespace-nowrap">
                     {getStatusBadge(job.status)}
                   </TableCell>
-                  <TableCell className="py-4 text-right pr-6" onClick={(e) => e.stopPropagation()}>
+                  <TableCell className="py-4 text-right pr-6 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-md hover:bg-slate-100 text-slate-400 hover:text-slate-600">
