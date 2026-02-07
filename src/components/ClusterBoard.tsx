@@ -289,7 +289,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
           {/* Controls Toolbar */}
           <div className="flex-shrink-0 flex items-center justify-between gap-4 mb-6 p-2 bg-white/80 rounded-md border border-slate-200 shadow-subtle sticky top-0 z-30 backdrop-blur-md">
             <div className="flex items-center gap-3 ml-2">
-              <h2 className="text-base font-bold text-slate-900 tracking-tight">
+              <h2 className="text-base font-bold text-slate-900 tracking-tight whitespace-nowrap">
                   분류된 장소
               </h2>
               <Badge variant="outline" className="text-[10px] font-bold text-slate-400 px-1.5 rounded-md">

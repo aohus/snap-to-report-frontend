@@ -68,6 +68,7 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
       `}
       style={{
         ...provided.draggableProps.style,
+        touchAction: isMobile ? 'pan-y' : undefined,
       }}
     >
       {/* Mobile Drag Handle */}
@@ -105,7 +106,7 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
         </div>
       )}
 
-      <div className="absolute top-1.5 right-1.5 flex gap-1 z-10">
+      <div className="absolute top-1.5 right-1.5 flex gap-1 z-30">
           {/* Preview Button */}
           {onPreview && (
             <Button 

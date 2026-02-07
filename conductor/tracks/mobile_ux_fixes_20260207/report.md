@@ -27,10 +27,22 @@ Fixed several critical mobile usability issues and drag-and-drop mechanics.
 - **Fix**: 
   - Added `whitespace-nowrap` to `TableHead` and `TableCell` in `JobTable.tsx`.
   - Added `whitespace-nowrap` to buttons in `PlaceRow.tsx` to prevent label wrapping.
+  
+### 4. Post-Fix Refinements (Round 2)
+- **Issue**: "Scroll not working" persisted on mobile.
+- **Root Cause**: `useIsMobile` initialized to `undefined` (false-y), causing the Desktop view (with drag handle on root) to render first. If hydrated or cached this way, or if inline styles persisted, scroll would be blocked.
+- **Fix**: Updated `useIsMobile` to initialize with `window.innerWidth` if available.
+- **Fix**: Explicitly added `touchAction: 'pan-y'` to the `PhotoCard` style on mobile to override any potential inline styles from the library.
+- **Issue**: "Drag not working" on mobile.
+- **Fix**: Increased z-index of buttons to `z-30` to ensure they are clickable, and verified handle placement.
+- **Issue**: "분류된 장소" text breaking vertically.
+- **Fix**: Added `whitespace-nowrap` to the ClusterBoard header text.
 
 ## Files Modified
 - `src/components/PhotoCard.tsx`
 - `src/components/dashboard/DashboardStats.tsx`
 - `src/components/dashboard/JobTable.tsx`
 - `src/components/PlaceRow.tsx`
+- `src/components/ClusterBoard.tsx`
+- `src/hooks/use-mobile.tsx`
 - `conductor/tracks/mobile_ux_fixes_20260207/`
