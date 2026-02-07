@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Pencil, Check, AlertCircle, Plus, CheckCircle2, ArrowUp, ArrowDown, Trash2, Image as ImageIcon, MoveDown, BringToFront } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PlaceRowProps {
   cluster: Cluster;
