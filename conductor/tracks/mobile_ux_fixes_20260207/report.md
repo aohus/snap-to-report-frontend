@@ -54,18 +54,16 @@ Fixed several critical mobile usability issues and drag-and-drop mechanics.
 - **Root Cause**: Flex items (`ClusterSection` and `ClusterBoard` Main Grid) were missing `min-height: 0` (or `min-h-0`). In flex column layouts, children can expand to fit content (ignoring overflow constraints) if min-height is auto. This pushed the scroll container size beyond the viewport, causing clipping without scrollbars.
 - **Fix**: Added `min-h-0` to `ClusterSection` and `ClusterBoard`'s Main Grid container.
 
-### 8. Post-Fix Refinements (Round 6: Drag Handle vs Scroll Conflict)
-- **Issue**: "Photo fixed on screen, rest moves" - Dragging was behaving like scrolling, or scroll was stealing the gesture.
-- **Fix**: Refined `touch-action` logic in `PhotoCard`.
-  - Applied `touch-action: pan-y` to the card ONLY when NOT dragging (`!snapshot.isDragging`). This allows scrolling when touching the card body.
-  - Removed `touch-action: pan-y` when dragging (including on the Drag Preview/Clone), to ensure the browser doesn't try to scroll.
-  - Explicitly added `touchAction: 'none'` to the Drag Handle style.
+### 9. Post-Fix Refinements (Round 7: Mobile Detection)
+- **Issue**: "Background moves when dragging handle" (i.e., drag fails, scroll takes over) even after touch-action fixes.
+- **Root Cause**: `useIsMobile` relied solely on window width (< 768px). On larger phones (landscape), tablets, or high-res simulators, `isMobile` evaluated to `false`, causing the component to render in Desktop mode (handle on root) but without proper touch handling for scrolling.
+- **Fix**: Updated `useIsMobile` to also check for `(pointer: coarse)`, ensuring all touch-primary devices get the mobile optimized drag handle logic regardless of screen width.
+- **Fix**: Ensured `isMobile` state is consistently passed down to `PhotoCardInner` via props.
 
 ## Files Modified
-- `src/components/dashboard/ClusterSection.tsx`
-- `src/components/ClusterBoard.tsx`
+- `src/hooks/use-mobile.tsx`
 - `src/components/PhotoCard.tsx`
 - `src/components/PlaceRow.tsx`
+- `src/components/ClusterBoard.tsx`
+- `src/components/dashboard/ClusterSection.tsx`
 - `src/pages/JobWorkspace.tsx`
-- `src/hooks/use-mobile.tsx`
-- `conductor/tracks/mobile_ux_fixes_20260207/`
