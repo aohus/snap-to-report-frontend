@@ -29,7 +29,7 @@ import { FloatingActionBar } from '@/components/dashboard/FloatingActionBar';
 import { ActionDrawer } from '@/components/dashboard/ActionDrawer';
 import { GlobalErrorBoundary } from '@/components/GlobalErrorBoundary';
 import { DashboardSectionErrorBoundary } from '@/components/dashboard/DashboardSectionErrorBoundary';
-import { sortPhotosByOrderIndex } from '@/lib/utils';
+import { sortPhotosByOrderIndex, cn } from '@/lib/utils';
 
 export default function DashboardPage() {
     return (
