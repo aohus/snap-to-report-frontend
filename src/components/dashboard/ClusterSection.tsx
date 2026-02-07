@@ -37,7 +37,7 @@ export function ClusterSection({
 }: ClusterSectionProps) {
   return (
     <div
-      className={`flex-1 overflow-hidden transition duration-200 ${
+      className={`flex-1 min-h-0 overflow-hidden transition duration-200 ${
         isClustering ? "opacity-40 pointer-events-none" : ""
       }`}
       aria-disabled={isClustering}

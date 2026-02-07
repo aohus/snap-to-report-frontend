@@ -49,7 +49,13 @@ Fixed several critical mobile usability issues and drag-and-drop mechanics.
 - **Fix**: Added `touch-action: pan-y` to the `PlaceRow` droppable area to ensure empty spaces don't block scroll.
 - **Fix**: Added `pointer-events-auto` to drag handle to ensure it captures events even if z-index logic was tricky.
 
+### 7. Post-Fix Refinements (Round 5: Flexbox Min-Height)
+- **Issue**: "Scrollbar disappears" on mobile when layout shifts.
+- **Root Cause**: Flex items (`ClusterSection` and `ClusterBoard` Main Grid) were missing `min-height: 0` (or `min-h-0`). In flex column layouts, children can expand to fit content (ignoring overflow constraints) if min-height is auto. This pushed the scroll container size beyond the viewport, causing clipping without scrollbars.
+- **Fix**: Added `min-h-0` to `ClusterSection` and `ClusterBoard`'s Main Grid container.
+
 ## Files Modified
+- `src/components/dashboard/ClusterSection.tsx`
 - `src/components/ClusterBoard.tsx`
 - `src/components/PhotoCard.tsx`
 - `src/components/PlaceRow.tsx`

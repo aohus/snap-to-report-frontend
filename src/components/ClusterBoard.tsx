@@ -285,7 +285,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
         </div>
 
         {/* Main Grid Area */}
-        <div className="flex-1 flex flex-col min-w-0">
+        <div className="flex-1 flex flex-col min-w-0 min-h-0">
           {/* Controls Toolbar */}
           <div className="flex-shrink-0 flex items-center justify-between gap-4 mb-6 p-2 bg-white/80 rounded-md border border-slate-200 shadow-subtle sticky top-0 z-30 backdrop-blur-md">
             <div className="flex items-center gap-3 ml-2">
