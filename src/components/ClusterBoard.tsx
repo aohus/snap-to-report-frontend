@@ -2,7 +2,7 @@ import { useState, useRef, useMemo } from 'react';
 import { DragDropContext, DropResult, Droppable } from '@hello-pangea/dnd';
 import { Cluster, Photo } from '@/types';
 import { PlaceRow } from './PlaceRow';
-import { PhotoCard } from './PhotoCard';
+import { PhotoCard, PhotoCardInner } from './PhotoCard';
 import { Archive, Minimize2, Maximize2, ChevronsDown, ChevronsUp, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -219,7 +219,31 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
           </div>
           
           {!isReserveCollapsed && (
-            <Droppable droppableId={reserveCluster?.id.toString() || 'reserve'} direction={isMobile ? "horizontal" : "vertical"}>
+            <Droppable 
+                droppableId={reserveCluster?.id.toString() || 'reserve'} 
+                direction={isMobile ? "horizontal" : "vertical"}
+                renderClone={(provided, snapshot, rubric) => {
+                    const photo = reserveCluster?.photos[rubric.source.index];
+                    if (!photo || !reserveCluster) return null;
+                    
+                    return (
+                        <PhotoCardInner
+                            photo={photo}
+                            index={rubric.source.index}
+                            provided={provided}
+                            snapshot={snapshot}
+                            onDelete={(pid) => onDeletePhoto(pid.toString(), reserveCluster.id)}
+                            isReserve={true}
+                            onSelect={(e) => handleSelectPhotoInternal(photo.id.toString(), reserveCluster.id, e)}
+                            onPreview={() => setPreviewPhoto(photo as any)}
+                            isSelected={selectedPhotoIds.includes(photo.id.toString())}
+                            isCompact={isReserveCollapsed}
+                            onEditLabels={onEditLabels}
+                            isDraggingSomewhere={isDragging} 
+                        />
+                    );
+                }}
+            >
                 {(provided, snapshot) => (
                 <div
                     ref={provided.innerRef}

@@ -6,7 +6,7 @@ import { AuthService } from '@/lib/auth';
 import { Job, Site } from '@/types';
 import { 
   Plus, Loader2, LayoutGrid, LogOut, 
-  User, Folder as FolderIcon, FolderPlus, MoreHorizontal, 
+  User, Folder as FolderIcon, FolderPlus, MoreHorizontal, Menu
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -28,6 +28,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +52,7 @@ export default function Dashboard() {
   const [sites, setSites] = useState<Site[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Site Management State
   const [selectedSiteId, setSelectedSiteId] = useState<string | 'unclassified' | null>(null);
@@ -256,132 +262,165 @@ export default function Dashboard() {
     return site?.jobs || [];
   };
 
+  const SidebarContent = () => (
+    <div className="flex flex-col h-full">
+        <div className="flex items-center justify-between mb-2 px-2 pt-4">
+            <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+            현장 관리
+            </h2>
+            <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/5 rounded-md transition-all" onClick={() => setIsAddingSite(true)}>
+            <FolderPlus className="w-3.5 h-3.5" />
+            </Button>
+        </div>
+
+        <nav className="space-y-0.5 overflow-y-auto pr-1 custom-scrollbar flex-1 pb-4">
+            <Button
+            variant="ghost"
+            className={cn(
+                "w-full justify-start text-sm font-semibold h-9 rounded-md px-3 transition-all",
+                selectedSiteId === null 
+                ? "bg-primary text-primary-foreground shadow-subtle hover:bg-primary/95" 
+                : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
+            )}
+            onClick={() => { setSelectedSiteId(null); setMobileMenuOpen(false); }}
+            >
+            <LayoutGrid className={cn("w-4 h-4 mr-2.5", selectedSiteId === null ? "opacity-100" : "opacity-50")} />
+            전체 보기
+            </Button>
+
+            <Button
+            variant="ghost"
+            className={cn(
+                "w-full justify-start text-sm font-semibold h-9 rounded-md px-3 transition-all",
+                selectedSiteId === 'unclassified' 
+                ? "bg-primary text-primary-foreground shadow-subtle hover:bg-primary/95" 
+                : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
+            )}
+            onClick={() => { setSelectedSiteId('unclassified'); setMobileMenuOpen(false); }}
+            >
+            <FolderIcon className={cn("w-4 h-4 mr-2.5", selectedSiteId === 'unclassified' ? "opacity-100" : "opacity-50")} />
+            <span className="truncate flex-1 text-left">미분류</span>
+            <Badge variant="secondary" className={cn(
+                "ml-auto text-[10px] px-1.5 py-0 rounded-md font-bold",
+                selectedSiteId === 'unclassified' 
+                ? "bg-white/20 text-white" 
+                : "bg-slate-100 text-slate-500"
+            )}>
+                {jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id)).length}
+            </Badge>
+            </Button>
+
+            <div className="px-3 mb-1 mt-6">
+            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">현장별 폴더</span>
+            </div>
+
+            {sites.map((site) => (
+            <div key={site.id} className="group relative">
+                <Button
+                variant="ghost"
+                className={cn(
+                    "w-full justify-start text-sm font-medium h-9 rounded-md px-3 transition-all pr-8",
+                    selectedSiteId === site.id 
+                    ? "bg-slate-900 text-white shadow-subtle" 
+                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
+                )}
+                onClick={() => { setSelectedSiteId(site.id); setMobileMenuOpen(false); }}
+                >
+                <FolderIcon className={cn(
+                    "w-4 h-4 mr-2.5 transition-colors", 
+                    selectedSiteId === site.id ? "text-white/80" : "text-slate-400"
+                )} />
+                <span className="truncate flex-1 text-left">{site.name}</span>
+                </Button>
+                
+                <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="absolute right-1 top-0.5 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-md text-slate-400 hover:text-slate-600">
+                    <MoreHorizontal className="w-4 h-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-md shadow-elevated border-slate-100 p-1 min-w-[120px]">
+                    <DropdownMenuItem onClick={() => handleUpdateSite(site.id, site.name)} className="text-xs font-semibold rounded-md cursor-pointer py-1.5">이름 수정</DropdownMenuItem>
+                    <DropdownMenuItem className="text-xs text-red-600 font-semibold rounded-md cursor-pointer py-1.5" onClick={() => handleDeleteSite(site.id)}>삭제</DropdownMenuItem>
+                </DropdownMenuContent>
+                </DropdownMenu>
+            </div>
+            ))}
+            
+            {isAddingSite && (
+                <div className="px-2 mt-2">
+                    <Input 
+                        autoFocus
+                        value={newSiteName}
+                        onChange={(e) => setNewSiteName(e.target.value)}
+                        onBlur={() => { if(!newSiteName.trim()) setIsAddingSite(false); }}
+                        onKeyDown={(e) => {
+                            if(e.key === 'Enter') handleAddSite();
+                            if(e.key === 'Escape') setIsAddingSite(false);
+                        }}
+                        placeholder="새 현장 이름"
+                        className="h-8 text-sm"
+                    />
+                </div>
+            )}
+        </nav>
+    </div>
+  );
+
   if (loading) return <div data-testid="loader" className="h-screen flex items-center justify-center bg-surface-2"><Loader2 className="w-12 h-12 animate-spin text-primary/20" /></div>;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col selection:bg-primary/10 selection:text-primary">
-      <header className="bg-white/90 border-b border-slate-200 px-6 py-4 flex items-center justify-between sticky top-0 z-30 backdrop-blur-xl shadow-sm">
+      <header className="bg-white/90 border-b border-slate-200 px-4 md:px-6 py-4 flex items-center justify-between sticky top-0 z-30 backdrop-blur-xl shadow-sm">
         <div className="flex items-center gap-4">
-          <div className="p-2 bg-primary rounded-xl shadow-emphasis shadow-primary/20">
+          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
+            <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="md:hidden -ml-2 text-slate-500">
+                    <Menu className="w-6 h-6" />
+                </Button>
+            </SheetTrigger>
+            <SheetContent side="left" className="w-[300px] sm:w-[350px] p-0 pt-10">
+                <SidebarContent />
+            </SheetContent>
+          </Sheet>
+
+          <div className="p-2 bg-primary rounded-xl shadow-emphasis shadow-primary/20 hidden md:block">
             <LayoutGrid className="w-6 h-6 text-primary-foreground" />
           </div>
           <div className="flex flex-col">
             <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">Field Note</h1>
-            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest">Construction Intelligence</span>
+            <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest hidden md:inline-block">Construction Intelligence</span>
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="text-base text-slate-600 hover:text-primary font-black rounded-xl h-11 px-5 transition-all">
-             <User className="w-5 h-5 mr-2 opacity-70" />
-             내 정보
+          <Button variant="ghost" size="sm" onClick={() => navigate('/profile')} className="text-base text-slate-600 hover:text-primary font-black rounded-xl h-11 px-3 md:px-5 transition-all">
+             <User className="w-5 h-5 md:mr-2 opacity-70" />
+             <span className="hidden md:inline">내 정보</span>
           </Button>
-          <div className="w-px h-5 bg-slate-200 mx-2" />
-          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-base text-slate-400 hover:text-red-600 font-black rounded-xl h-11 px-5 transition-all">
-            <LogOut className="w-5 h-5 mr-2 opacity-70" />
-            로그아웃
+          <div className="w-px h-5 bg-slate-200 mx-2 hidden md:block" />
+          <Button variant="ghost" size="sm" onClick={handleLogout} className="text-base text-slate-400 hover:text-red-600 font-black rounded-xl h-11 px-3 md:px-5 transition-all">
+            <LogOut className="w-5 h-5 md:mr-2 opacity-70" />
+            <span className="hidden md:inline">로그아웃</span>
           </Button>
         </div>
       </header>
 
-      <div className="flex-1 flex w-full">
-        <aside className="w-64 flex flex-col shrink-0 border-r border-slate-200 bg-white/50 backdrop-blur-sm">
-          <div className="p-4 flex flex-col h-[calc(100vh-73px)] sticky top-[73px]">
-            <div className="flex items-center justify-between mb-2 px-2">
-              <h2 className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
-                현장 관리
-              </h2>
-              <Button variant="ghost" size="icon" className="h-6 w-6 text-primary hover:bg-primary/5 rounded-md transition-all" onClick={() => setIsAddingSite(true)}>
-                <FolderPlus className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-
-            <nav className="space-y-0.5 overflow-y-auto pr-1 custom-scrollbar flex-1">
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-sm font-semibold h-9 rounded-md px-3 transition-all",
-                  selectedSiteId === null 
-                    ? "bg-primary text-primary-foreground shadow-subtle hover:bg-primary/95" 
-                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
-                )}
-                onClick={() => setSelectedSiteId(null)}
-              >
-                <LayoutGrid className={cn("w-4 h-4 mr-2.5", selectedSiteId === null ? "opacity-100" : "opacity-50")} />
-                전체 보기
-              </Button>
-
-              <Button
-                variant="ghost"
-                className={cn(
-                  "w-full justify-start text-sm font-semibold h-9 rounded-md px-3 transition-all",
-                  selectedSiteId === 'unclassified' 
-                    ? "bg-primary text-primary-foreground shadow-subtle hover:bg-primary/95" 
-                    : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
-                )}
-                onClick={() => setSelectedSiteId('unclassified')}
-              >
-                <FolderIcon className={cn("w-4 h-4 mr-2.5", selectedSiteId === 'unclassified' ? "opacity-100" : "opacity-50")} />
-                <span className="truncate flex-1 text-left">미분류</span>
-                <Badge variant="secondary" className={cn(
-                  "ml-auto text-[10px] px-1.5 py-0 rounded-md font-bold",
-                  selectedSiteId === 'unclassified' 
-                    ? "bg-white/20 text-white" 
-                    : "bg-slate-100 text-slate-500"
-                )}>
-                  {jobs.filter(job => !job.site_id || !sites.some(s => s.id === job.site_id)).length}
-                </Badge>
-              </Button>
-
-              <div className="px-3 mb-1 mt-6">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">현장별 폴더</span>
-              </div>
-
-              {sites.map((site) => (
-                <div key={site.id} className="group relative">
-                  <Button
-                    variant="ghost"
-                    className={cn(
-                      "w-full justify-start text-sm font-medium h-9 rounded-md px-3 transition-all pr-8",
-                      selectedSiteId === site.id 
-                        ? "bg-slate-900 text-white shadow-subtle" 
-                        : "text-slate-600 hover:bg-slate-100/80 hover:text-slate-900"
-                    )}
-                    onClick={() => setSelectedSiteId(site.id)}
-                  >
-                    <FolderIcon className={cn(
-                      "w-4 h-4 mr-2.5 transition-colors", 
-                      selectedSiteId === site.id ? "text-white/80" : "text-slate-400"
-                    )} />
-                    <span className="truncate flex-1 text-left">{site.name}</span>
-                  </Button>
-                  
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="absolute right-1 top-0.5 h-8 w-8 opacity-0 group-hover:opacity-100 transition-opacity rounded-md text-slate-400 hover:text-slate-600">
-                        <MoreHorizontal className="w-4 h-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-md shadow-elevated border-slate-100 p-1 min-w-[120px]">
-                      <DropdownMenuItem onClick={() => handleUpdateSite(site.id, site.name)} className="text-xs font-semibold rounded-md cursor-pointer py-1.5">이름 수정</DropdownMenuItem>
-                      <DropdownMenuItem className="text-xs text-red-600 font-semibold rounded-md cursor-pointer py-1.5" onClick={() => handleDeleteSite(site.id)}>삭제</DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
-            </nav>
-          </div>
+      <div className="flex-1 flex w-full overflow-hidden">
+        {/* Desktop Sidebar - Hidden on mobile, visible on md and up */}
+        <aside className="hidden md:flex w-64 flex-col shrink-0 border-r border-slate-200 bg-white/50 backdrop-blur-sm sticky top-[73px] h-[calc(100vh-73px)]">
+           <SidebarContent />
         </aside>
 
-        <main className="flex-1 p-8 overflow-y-auto custom-scrollbar">
-          <div className="max-w-6xl mx-auto">
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto custom-scrollbar">
+          <div className="max-w-6xl mx-auto pb-20">
             <div className="flex items-center justify-between mb-8">
               <div>
-                <h2 className="text-3xl font-bold text-slate-900 tracking-tight leading-tight">대시보드</h2>
-                <p className="text-slate-500 font-medium text-sm">현장 데이터를 한눈에 관리하세요.</p>
+                <h2 className="text-2xl md:text-3xl font-bold text-slate-900 tracking-tight leading-tight">대시보드</h2>
+                <p className="text-slate-500 font-medium text-sm hidden md:block">현장 데이터를 한눈에 관리하세요.</p>
               </div>
               <Button 
                 onClick={handleCreateJob} 
-                className="h-10 px-5 font-bold rounded-md shadow-emphasis shadow-primary/10 transition-all" 
+                className="h-10 px-4 md:px-5 font-bold rounded-md shadow-emphasis shadow-primary/10 transition-all text-sm md:text-base" 
                 disabled={creating}
               >
                 {creating ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2 stroke-[2.5]" />}
@@ -393,7 +432,7 @@ export default function Dashboard() {
 
             <div className="mt-10">
               <div className="flex items-center gap-3 mb-6">
-                <h2 className="text-xl font-semibold text-slate-900 tracking-tight">
+                <h2 className="text-lg md:text-xl font-semibold text-slate-900 tracking-tight">
                   {selectedSiteId === null ? "전체 작업" : selectedSiteId === 'unclassified' ? "미분류" : sites.find(s => s.id === selectedSiteId)?.name}
                 </h2>
                 <Badge variant="outline" className="text-slate-500 font-semibold px-2 py-0.5 text-[11px] rounded-md">

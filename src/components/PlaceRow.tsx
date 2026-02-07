@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Droppable } from '@hello-pangea/dnd';
-import { Cluster } from '@/types';
-import { PhotoCard } from './PhotoCard';
+import { Cluster, Photo } from '@/types';
+import { PhotoCard, PhotoCardInner } from './PhotoCard';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { 
@@ -86,7 +86,7 @@ export function PlaceRow({
       {/* Header Section */}
       <div className={`
         border-b border-slate-100 flex items-start justify-between gap-4 bg-slate-50/30 rounded-t-md
-        ${isCompact ? 'px-3 py-1.5' : 'px-4 py-2.5'}
+        ${isCompact ? 'px-3 py-1.5' : 'px-3 md:px-4 py-2 md:py-2.5'}
       `}>
         <div className="flex-1 space-y-1 w-full">
           <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
@@ -106,17 +106,17 @@ export function PlaceRow({
                   <Input
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className={`font-bold bg-white shadow-subtle focus-visible:ring-primary/10 ${isCompact ? 'h-8 text-sm' : 'h-9 text-base'}`}
+                    className={`font-bold bg-white shadow-subtle focus-visible:ring-primary/10 ${isCompact ? 'h-8 text-sm' : 'h-8 md:h-9 text-sm md:text-base'}`}
                     autoFocus
                     onKeyDown={(e) => e.key === 'Enter' && handleSave()}
                   />
-                  <Button size="sm" onClick={handleSave} className={`bg-emerald-600 hover:bg-emerald-700 h-9 px-3 rounded-md shadow-subtle`}>
+                  <Button size="sm" onClick={handleSave} className={`bg-emerald-600 hover:bg-emerald-700 h-8 md:h-9 px-3 rounded-md shadow-subtle`}>
                     <Check className={`mr-1.5 w-4 h-4`} /> <span className="hidden md:inline font-bold">저장</span>
                   </Button>
                 </div>
               ) : (
                 <div className="flex items-center gap-2 md:gap-3 group/title cursor-pointer flex-1 overflow-hidden" onClick={() => setIsEditing(true)}>
-                  <h3 className={`font-bold text-slate-800 group-hover/title:text-primary transition-colors truncate mb-0 ${isCompact ? 'text-sm' : 'text-base'}`}>
+                  <h3 className={`font-bold text-slate-800 group-hover/title:text-primary transition-colors truncate mb-0 ${isCompact ? 'text-sm' : 'text-sm md:text-base'}`}>
                     {name}
                   </h3>
                   <Button variant="ghost" size="icon" className={`flex-shrink-0 rounded-md bg-slate-100/50 hover:bg-primary/5 text-slate-400 hover:text-primary opacity-0 group-hover/title:opacity-100 transition-all ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}>
@@ -128,7 +128,7 @@ export function PlaceRow({
             
             <div className="flex items-center justify-between md:justify-start gap-2 w-full md:w-auto mt-1 md:mt-0">
               {/* Action Buttons: Move & Delete */}
-              <div className="flex items-center gap-0.5 bg-slate-100/50 rounded-md p-0.5 opacity-40 group-hover:opacity-100 transition-all">
+              <div className="flex items-center gap-0.5 bg-slate-100/50 rounded-md p-0.5 opacity-100 md:opacity-40 md:group-hover:opacity-100 transition-all">
                 <Button 
                   variant="ghost" size="icon" 
                   className={`text-slate-500 hover:text-primary hover:bg-white rounded-md ${isCompact ? 'h-6 w-6' : 'h-7 w-7'}`}
@@ -159,7 +159,7 @@ export function PlaceRow({
               {/* Add Button */}
               <div className={cn(
                 "transition-all duration-200",
-                selectedPhotoIds.length > 0 ? "opacity-100" : "opacity-0 group-hover:opacity-100"
+                selectedPhotoIds.length > 0 ? "opacity-100" : "opacity-100 md:opacity-0 md:group-hover:opacity-100"
               )}>
             
                             {selectedPhotoIds.length > 0 ? (
@@ -184,7 +184,7 @@ export function PlaceRow({
             
                                       variant="default"
             
-                                      className={`bg-primary text-white shadow-subtle rounded-md ml-auto md:ml-0 font-bold tracking-tight ${isCompact ? 'h-7 px-2.5 text-[11px]' : 'h-8 px-3 text-xs'}`}
+                                      className={`bg-primary text-white shadow-subtle rounded-md ml-auto md:ml-0 font-bold tracking-tight ${isCompact ? 'h-7 px-2.5 text-[11px]' : 'h-7 md:h-8 px-2.5 md:px-3 text-[11px] md:text-xs'}`}
             
                                       onClick={() => onAddPhotosToExistingCluster(cluster.id, selectedPhotos)}
             
@@ -259,7 +259,7 @@ export function PlaceRow({
             
                                 variant="outline"
             
-                                className={`border-emerald-600/20 text-emerald-600 hover:bg-emerald-50 rounded-md ml-auto md:ml-0 font-bold ${isCompact ? 'h-7 px-2.5 text-[11px]' : 'h-8 px-3 text-xs'}`}
+                                className={`border-emerald-600/20 text-emerald-600 hover:bg-emerald-50 rounded-md ml-auto md:ml-0 font-bold ${isCompact ? 'h-7 px-2.5 text-[11px]' : 'h-7 md:h-8 px-2.5 md:px-3 text-[11px] md:text-xs'}`}
             
                                 onClick={handleCreateEmpty}
             
@@ -283,14 +283,32 @@ export function PlaceRow({
                       </div>
       {/* Photos Area */}
       {!isCollapsed && (
-      <Droppable droppableId={cluster.id.toString()} direction="horizontal">
+      <Droppable 
+        droppableId={cluster.id.toString()} 
+        direction="horizontal"
+        renderClone={(provided, snapshot, rubric) => (
+            <PhotoCardInner
+                photo={cluster.photos[rubric.source.index]}
+                index={rubric.source.index}
+                provided={provided}
+                snapshot={snapshot}
+                onDelete={onDeletePhoto ? () => onDeletePhoto(cluster.photos[rubric.source.index].id.toString()) : undefined}
+                onSelect={(e) => onSelectPhoto(cluster.photos[rubric.source.index].id.toString(), cluster.id, e)}
+                onPreview={() => onPreviewPhoto?.(cluster.photos[rubric.source.index] as any)}
+                isSelected={selectedPhotoIds.includes(cluster.photos[rubric.source.index].id.toString())}
+                isCompact={isCompact}
+                onEditLabels={onEditLabels}
+                isDraggingSomewhere={isDragging} 
+            />
+        )}
+      >
         {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
             className={`
               transition-all duration-200 rounded-b-md flex flex-wrap relative
-              ${isCompact ? 'p-2 gap-2 min-h-[80px]' : 'p-4 gap-4 min-h-[140px]'}
+              ${isCompact ? 'p-2 gap-2 min-h-[80px]' : 'p-3 md:p-4 gap-3 md:gap-4 min-h-[140px]'}
               ${snapshot.isDraggingOver ? 'bg-primary/5 ring-1 ring-inset ring-primary/10' : ''}
               ${(isDragging && !snapshot.isDraggingOver) ? 'bg-slate-50/50' : ''}
             `}
@@ -309,7 +327,7 @@ export function PlaceRow({
 
             {cluster.photos.length === 0 && !isDragging && (
               <div className={`w-full h-full flex flex-col items-center justify-center text-slate-300 border border-dashed border-slate-200 rounded-md ${isCompact ? 'p-4' : 'p-8 md:p-12'}`}>
-                <p className={`font-semibold ${isCompact ? 'text-[10px]' : 'text-sm'}`}>사진이 없습니다.</p>
+                <p className={`font-semibold ${isCompact ? 'text-[10px]' : 'text-xs md:text-sm'}`}>사진이 없습니다.</p>
                 {!isCompact && <p className="text-[11px] hidden md:block mt-1">여기로 사진을 끌어다 놓으세요.</p>}
               </div>
             )}
