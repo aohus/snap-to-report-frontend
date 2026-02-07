@@ -325,14 +325,15 @@ export function PlaceRow({
                 onSelect={(e) => onSelectPhoto(cluster.photos[rubric.source.index].id.toString(), cluster.id, e)}
                 onPreview={() => onPreviewPhoto?.(cluster.photos[rubric.source.index] as any)}
                 isSelected={selectedPhotoIds.includes(cluster.photos[rubric.source.index].id.toString())}
-                                isCompact={isCompact}
-                                onEditLabels={onEditLabels}
-                                isDraggingSomewhere={isDragging}
-                                isMobile={isMobile}
-                                onReorder={handleReorder}
-                            />
-                        )}
-                      >        {(provided, snapshot) => (
+                isCompact={isCompact}
+                onEditLabels={onEditLabels}
+                isDraggingSomewhere={isDragging} 
+                isMobile={isMobile}
+                onReorder={handleReorder}
+            />
+        )}
+      >
+        {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
