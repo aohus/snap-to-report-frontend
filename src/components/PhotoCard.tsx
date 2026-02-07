@@ -83,24 +83,24 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
             <Button
                 variant="secondary"
                 size="icon"
-                className="absolute left-1 top-1/2 -translate-y-1/2 z-40 h-8 w-8 rounded-full bg-white/80 shadow-md border border-slate-100 hover:bg-white active:scale-95 opacity-80 hover:opacity-100"
+                className="absolute left-1 bottom-1 z-50 h-7 w-7 rounded-full bg-white/60 shadow-sm border border-slate-100/50 hover:bg-white active:scale-95 backdrop-blur-sm"
                 onClick={(e) => {
                     e.stopPropagation();
                     onReorder(photo.id.toString(), 'left');
                 }}
             >
-                <ChevronLeft className="w-5 h-5 text-slate-700" />
+                <ChevronLeft className="w-4 h-4 text-slate-800" />
             </Button>
             <Button
                 variant="secondary"
                 size="icon"
-                className="absolute right-1 top-1/2 -translate-y-1/2 z-40 h-8 w-8 rounded-full bg-white/80 shadow-md border border-slate-100 hover:bg-white active:scale-95 opacity-80 hover:opacity-100"
+                className="absolute right-1 bottom-1 z-50 h-7 w-7 rounded-full bg-white/60 shadow-sm border border-slate-100/50 hover:bg-white active:scale-95 backdrop-blur-sm"
                 onClick={(e) => {
                     e.stopPropagation();
                     onReorder(photo.id.toString(), 'right');
                 }}
             >
-                <ChevronRight className="w-5 h-5 text-slate-700" />
+                <ChevronRight className="w-4 h-4 text-slate-800" />
             </Button>
         </>
       )}

@@ -38,13 +38,18 @@ export function ActionDrawer({
                 </h4>
                 <ScrollArea className="h-[240px] border border-slate-100 rounded-md p-1 bg-slate-50/50">
                     <div className="flex flex-col gap-0.5">
-                        {clusters.map(cluster => (
+                        {clusters.map((cluster, index) => (
                             <Button
                                 key={cluster.id}
                                 variant="ghost"
                                 className="justify-start h-9 px-2 font-semibold text-sm hover:bg-white hover:shadow-subtle rounded-md transition-all"
                                 onClick={() => onMoveToCluster(cluster.id)}
                             >
+                                {cluster.name === 'reserve' ? (
+                                    <span className="bg-slate-400 text-white rounded-[4px] px-1 py-0.5 text-[9px] font-bold mr-2 shrink-0">BOX</span>
+                                ) : (
+                                    <span className="bg-slate-900 text-white rounded-[4px] px-1 py-0.5 text-[9px] font-bold mr-2 shrink-0">#{index}</span>
+                                )}
                                 <span className="truncate">{cluster.name === 'reserve' ? '미분류' : cluster.name}</span>
                                 <span className="ml-auto text-[10px] bg-slate-100 px-1.5 py-0.5 rounded-md text-slate-500 font-bold">{cluster.photos.length}장</span>
                             </Button>

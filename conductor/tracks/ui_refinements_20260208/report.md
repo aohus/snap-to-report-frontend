@@ -30,6 +30,14 @@ Implemented several UI refinements and mobile-specific features to improve usabi
   - Implemented `handleReorder` in `PlaceRow` which calculates the new index and calls `onMovePhoto`.
   - Buttons are only visible when `isMobile` is true.
 
+- **Fix**: Added `whitespace-nowrap` to buttons in `PlaceRow.tsx` to prevent label wrapping.
+
+### 5. Post-Fix Refinements
+- **Issue**: Mobile reorder buttons were covering the center of the photo.
+- **Fix**: Moved reorder buttons to the **bottom-left** and **bottom-right** corners and made them smaller/semi-transparent (`h-7 w-7 bg-white/60`) to minimize obstruction.
+- **Issue**: "Move to Cluster" drawer list didn't show row numbers.
+- **Fix**: Added `#{index}` badge to the list items in `ActionDrawer.tsx`.
+
 ## Files Modified
 - `src/pages/Dashboard.tsx`
 - `src/components/PhotoUploader.tsx`
@@ -37,4 +45,5 @@ Implemented several UI refinements and mobile-specific features to improve usabi
 - `src/components/PlaceRow.tsx`
 - `src/components/ClusterBoard.tsx`
 - `src/components/PhotoCard.tsx`
+- `src/components/dashboard/ActionDrawer.tsx`
 - `conductor/tracks/ui_refinements_20260208/`
