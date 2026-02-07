@@ -56,7 +56,7 @@ export function FloatingActionBar({
             <Button
                 size="icon"
                 variant="ghost"
-                className="text-slate-400 hover:bg-white/10 hover:text-white rounded-lg h-9 w-9 ml-0.5 md:ml-1 transition-all active:scale-[0.98] shrink-0"
+                className="text-slate-400 hover:bg-white/10 hover:text-white rounded-lg h-9 w-10 ml-0.5 md:ml-1 transition-all active:scale-[0.98] shrink-0"
                 onClick={onClearSelection}
             >
                 <X className="w-4 h-4" />

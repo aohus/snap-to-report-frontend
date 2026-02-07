@@ -52,6 +52,8 @@ Fixed several critical mobile usability issues and drag-and-drop mechanics.
 - **Issue**: `FloatingActionBar` was still shifted right on mobile.
 - **Root Cause**: `framer-motion`'s animation (controlling `y` and `scale`) overrides the CSS `transform` property, effectively removing the `translateX(-50%)` class needed for centering.
 - **Fix**: Moved the horizontal centering logic (`x: "-50%"`) into the Framer Motion `animate`/`initial` props to ensure it coexists with other animations.
+- **Issue**: X button on the FloatingActionBar was too narrow on mobile, clipping the icon.
+- **Fix**: Increased the width of the X button from `w-9` to `w-10` to provide sufficient spacing.
 
 ## Files Modified
 - `src/components/dashboard/FloatingActionBar.tsx`
