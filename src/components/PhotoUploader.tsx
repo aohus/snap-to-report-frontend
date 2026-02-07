@@ -30,6 +30,10 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
   const { isUploading, items, itemIds, totalProgress } = useUploadStore();
 
   useEffect(() => {
+    // 마운트 시 이전에 완료된 상태가 남아있다면 초기화 (업로드 중이 아닐 때만)
+    if (!useUploadStore.getState().isUploading) {
+        useUploadStore.getState().clearQueue();
+    }
     return () => {
       isMounted.current = false;
     };
