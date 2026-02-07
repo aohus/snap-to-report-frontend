@@ -259,7 +259,7 @@ export function PlaceRow({
             
                                 variant="outline"
             
-                                className={`border-emerald-600/20 text-emerald-600 hover:bg-emerald-50 rounded-md ml-auto md:ml-0 font-bold ${isCompact ? 'h-7 px-2.5 text-[11px]' : 'h-7 md:h-8 px-2.5 md:px-3 text-[11px] md:text-xs'}`}
+                                className={`border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-900 rounded-md ml-auto md:ml-0 font-bold ${isCompact ? 'h-7 px-2.5 text-[11px]' : 'h-7 md:h-8 px-2.5 md:px-3 text-[11px] md:text-xs'}`}
             
                                 onClick={handleCreateEmpty}
             

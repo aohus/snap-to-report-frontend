@@ -30,6 +30,12 @@ Fixed several critical mobile usability issues and a drag-and-drop visualization
 - Reduced button sizes and padding in `PlaceRow` for mobile screens (`h-7`, `text-[11px]`).
 - Adjusted Dashboard header elements to be more compact on mobile.
 
+### 5. Post-Fix Refinements (Fixing Regression)
+- **Issue**: Dragging photos was freezing or lagging significantly because `React.memo` on `PhotoCardInner` was preventing re-renders when `provided.draggableProps.style` changed.
+- **Fix**: Removed the custom comparison function from `React.memo` in `PhotoCard.tsx` to allow React to properly handle prop updates during drag operations.
+- **Issue**: "Add Empty Place" button style (green) clashed with the UI.
+- **Fix**: Updated button style in `PlaceRow.tsx` to a neutral gray/slate outline style.
+
 ## Files Modified
 - `src/pages/Dashboard.tsx`
 - `src/components/PhotoCard.tsx`

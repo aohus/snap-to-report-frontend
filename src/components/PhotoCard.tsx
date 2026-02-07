@@ -175,18 +175,6 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-    return (
-        prevProps.photo.id === nextProps.photo.id &&
-        prevProps.photo.thumbnail_url === nextProps.photo.thumbnail_url &&
-        prevProps.photo.labels === nextProps.photo.labels &&
-        prevProps.index === nextProps.index &&
-        prevProps.isSelected === nextProps.isSelected &&
-        prevProps.isReserve === nextProps.isReserve &&
-        prevProps.isCompact === nextProps.isCompact &&
-        prevProps.isDraggingSomewhere === nextProps.isDraggingSomewhere &&
-        prevProps.snapshot.isDragging === nextProps.snapshot.isDragging // Check snapshot changes
-    );
 });
 
 
