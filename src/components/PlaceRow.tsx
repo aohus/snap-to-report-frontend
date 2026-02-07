@@ -307,7 +307,7 @@ export function PlaceRow({
             ref={provided.innerRef}
             {...provided.droppableProps}
             className={`
-              transition-all duration-200 rounded-b-md flex flex-wrap relative
+              transition-all duration-200 rounded-b-md flex flex-wrap relative touch-pan-y
               ${isCompact ? 'p-2 gap-2 min-h-[80px]' : 'p-3 md:p-4 gap-3 md:gap-4 min-h-[140px]'}
               ${snapshot.isDraggingOver ? 'bg-primary/5 ring-1 ring-inset ring-primary/10' : ''}
               ${(isDragging && !snapshot.isDraggingOver) ? 'bg-slate-50/50' : ''}

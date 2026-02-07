@@ -43,12 +43,16 @@ Fixed several critical mobile usability issues and drag-and-drop mechanics.
 - **Root Cause**: `JobWorkspace`'s `<main>` had `overflow-y-auto`, and `ClusterBoard` (child) also had `overflow-y-auto`. This nested scroll structure confuses mobile browsers and `useVirtualizer`.
 - **Fix**: Conditionally applied `overflow-hidden` to `<main>` when `ClusterBoard` is active, forcing the internal `ClusterBoard` scroll container to take precedence.
 
+### 6. Post-Fix Refinements (Round 4: Touch Action & Webkit Scroll)
+- **Issue**: Mobile scroll still sticky or non-functional in ClusterBoard.
+- **Fix**: Added `touch-action: pan-y` and `-webkit-overflow-scrolling: touch` explicitly to the `ClusterBoard` scroll container.
+- **Fix**: Added `touch-action: pan-y` to the `PlaceRow` droppable area to ensure empty spaces don't block scroll.
+- **Fix**: Added `pointer-events-auto` to drag handle to ensure it captures events even if z-index logic was tricky.
+
 ## Files Modified
-- `src/pages/JobWorkspace.tsx`
-- `src/components/PhotoCard.tsx`
-- `src/components/dashboard/DashboardStats.tsx`
-- `src/components/dashboard/JobTable.tsx`
-- `src/components/PlaceRow.tsx`
 - `src/components/ClusterBoard.tsx`
+- `src/components/PhotoCard.tsx`
+- `src/components/PlaceRow.tsx`
+- `src/pages/JobWorkspace.tsx`
 - `src/hooks/use-mobile.tsx`
 - `conductor/tracks/mobile_ux_fixes_20260207/`

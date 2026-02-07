@@ -341,7 +341,8 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
           {/* Clusters Grid (Virtualized) */}
           <div 
             ref={parentRef}
-            className="flex-1 overflow-y-auto custom-scrollbar pr-1 relative"
+            className="flex-1 overflow-y-auto custom-scrollbar pr-1 relative touch-pan-y"
+            style={{ WebkitOverflowScrolling: 'touch' }}
           >
             <div 
                 style={{
