@@ -17,6 +17,7 @@ interface PhotoCardProps {
   isCompact?: boolean;
   onEditLabels?: (id: string) => void;
   isDraggingSomewhere?: boolean; // New prop to detect global drag
+  isMobile?: boolean; // New prop
 }
 
 interface PhotoCardInnerProps extends PhotoCardProps {
@@ -36,9 +37,11 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
   onEditLabels,
   isDraggingSomewhere = false,
   provided,
-  snapshot
+  snapshot,
+  isMobile: isMobileProp
 }: PhotoCardInnerProps) {
-  const isMobile = useIsMobile();
+  const isMobileHook = useIsMobile();
+  const isMobile = isMobileProp ?? isMobileHook;
 
   return (
     <div
@@ -64,11 +67,12 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
           : ''
         }
         ${!snapshot.isDragging && isDraggingSomewhere && isSelected ? 'opacity-40 scale-[0.98] grayscale-[0.3]' : ''}
-        ${isMobile ? 'touch-pan-y' : ''} 
+        ${isMobile && !snapshot.isDragging ? 'touch-pan-y' : ''} 
+        ${isMobile && snapshot.isDragging ? 'touch-none' : ''}
       `}
       style={{
         ...provided.draggableProps.style,
-        touchAction: (isMobile && !snapshot.isDragging) ? 'pan-y' : undefined,
+        touchAction: isMobile ? (snapshot.isDragging ? 'none' : 'pan-y') : undefined,
       }}
     >
       {/* Mobile Drag Handle */}
@@ -183,10 +187,11 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
 
 // React.memo로 감싸서 props가 변하지 않으면 리렌더링 방지
 export const PhotoCard = React.memo(function PhotoCard(props: PhotoCardProps) {
+  const isMobile = useIsMobile();
   return (
     <Draggable draggableId={props.photo.id.toString()} index={props.index}>
       {(provided, snapshot) => (
-         <PhotoCardInner {...props} provided={provided} snapshot={snapshot} />
+         <PhotoCardInner {...props} provided={provided} snapshot={snapshot} isMobile={isMobile} />
       )}
     </Draggable>
   );

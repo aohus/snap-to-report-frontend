@@ -240,6 +240,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                             isCompact={isReserveCollapsed}
                             onEditLabels={onEditLabels}
                             isDraggingSomewhere={isDragging} 
+                            isMobile={isMobile}
                         />
                     );
                 }}

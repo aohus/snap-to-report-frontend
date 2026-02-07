@@ -50,6 +50,7 @@ export function PlaceRow({
   onEditLabels,
   isDragging = false
 }: PlaceRowProps) {
+  const isMobile = useIsMobile();
   const [isEditing, setIsEditing] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [name, setName] = useState(cluster.name || `Place ${cluster.order_index + 1}`);
@@ -299,6 +300,7 @@ export function PlaceRow({
                 isCompact={isCompact}
                 onEditLabels={onEditLabels}
                 isDraggingSomewhere={isDragging} 
+                isMobile={isMobile}
             />
         )}
       >
