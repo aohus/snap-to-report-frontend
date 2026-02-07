@@ -13,12 +13,14 @@ import {
 } from "@/components/ui/dialog";
 import { useUploadStore } from '@/lib/uploadStore';
 import { cn } from '@/lib/utils';
+import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PhotoUploaderProps {
   onUpload: (files: File[]) => Promise<void>;
 }
 
 export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
+  const isMobile = useIsMobile();
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [isCheckingDuplicates, setIsCheckingDuplicates] = useState(false);
   const [duplicateProgress, setDuplicateProgress] = useState(0);
@@ -231,7 +233,7 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
           className={cn(
             "border-4 border-dashed rounded-[2.5rem] text-center transition-all bg-white group relative overflow-hidden",
             isUploading ? 'border-primary/20' : 'border-slate-200 hover:border-primary/40 hover:bg-slate-50/50',
-            (hasFiles || isUploading) ? 'w-full md:w-1/3 p-10' : 'w-full p-12 md:p-24 cursor-pointer'
+            (hasFiles || isUploading) ? 'w-full md:w-1/3 p-6 md:p-10' : 'w-full p-8 md:p-24 cursor-pointer'
           )}
           onDrop={!isUploading ? handleDrop : undefined}
           onDragOver={!isUploading ? handleDragOver : undefined}
@@ -242,38 +244,38 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
           {isUploading ? (
             <div className="flex flex-col items-center justify-center space-y-8 py-4 animate-in fade-in zoom-in-95">
               <div className="relative">
-                <Loader2 className="w-28 h-24 animate-spin text-primary opacity-20" />
-                <div className="absolute inset-0 flex items-center justify-center font-black text-primary text-3xl tracking-tighter">
+                <Loader2 className="w-20 h-16 md:w-28 md:h-24 animate-spin text-primary opacity-20" />
+                <div className="absolute inset-0 flex items-center justify-center font-black text-primary text-xl md:text-3xl tracking-tighter">
                   {totalProgress}%
                 </div>
               </div>
               <div className="space-y-2 text-center">
-                <h3 className="text-2xl font-black text-slate-900 tracking-tighter text-center uppercase">Uploading...</h3>
-                <p className="text-slate-400 font-bold text-sm tracking-tight">잠시만 기다려 주세요!</p>
+                <h3 className="text-lg md:text-2xl font-black text-slate-900 tracking-tighter text-center uppercase">Uploading...</h3>
+                <p className="text-slate-400 font-bold text-xs md:text-sm tracking-tight">잠시만 기다려 주세요!</p>
               </div>
-              <div className="w-full bg-slate-100 rounded-full h-4 overflow-hidden shadow-inner ring-1 ring-slate-200/50">
+              <div className="w-full bg-slate-100 rounded-full h-3 md:h-4 overflow-hidden shadow-inner ring-1 ring-slate-200/50">
                 <div 
                   className="bg-primary h-full transition-all duration-700 ease-out shadow-[0_0_20px_rgba(16,42,67,0.3)]" 
                   style={{ width: `${totalProgress}%` }}
                 />
               </div>
-              <div className="bg-slate-900 text-white px-8 py-4 rounded-3xl shadow-xl shadow-slate-200 border border-white/10 font-black tracking-tight">
+              <div className="bg-slate-900 text-white px-6 py-3 md:px-8 md:py-4 rounded-3xl shadow-xl shadow-slate-200 border border-white/10 font-black tracking-tight text-xs md:text-base">
                 총 {totalCount}장 중 {completedCount}장 완료
               </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center space-y-6">
-              <div className={cn("p-6 bg-slate-50 rounded-[2rem] shadow-sm group-hover:scale-110 group-hover:bg-white group-hover:shadow-xl transition-all duration-500 ring-1 ring-slate-100", !hasFiles ? 'p-10' : '')}>
-                <Upload className={cn("text-primary transition-transform group-hover:-translate-y-1", hasFiles ? 'w-10 h-10' : 'w-16 h-12')} />
+            <div className="flex flex-col items-center justify-center space-y-4 md:space-y-6">
+              <div className={cn("p-4 md:p-6 bg-slate-50 rounded-[2rem] shadow-sm group-hover:scale-110 group-hover:bg-white group-hover:shadow-xl transition-all duration-500 ring-1 ring-slate-100", !hasFiles ? 'p-6 md:p-10' : '')}>
+                <Upload className={cn("text-primary transition-transform group-hover:-translate-y-1", hasFiles ? 'w-8 h-8 md:w-10 md:h-10' : 'w-10 h-8 md:w-16 md:h-12')} />
               </div>
-              <div className="text-center space-y-3">
-                <h3 className={cn("font-black text-slate-900 tracking-tighter leading-none", hasFiles ? 'text-2xl' : 'text-4xl')}>
+              <div className="text-center space-y-2 md:space-y-3">
+                <h3 className={cn("font-black text-slate-900 tracking-tighter leading-none", hasFiles ? 'text-lg md:text-2xl' : 'text-xl md:text-4xl')}>
                   {hasFiles ? '사진 더 추가' : '여기에 사진 드롭'}
                 </h3>
-                <p className="text-slate-400 font-bold text-base tracking-tight">
+                <p className="text-slate-400 font-bold text-sm md:text-base tracking-tight">
                   또는 클릭하여 <span className="text-primary underline underline-offset-4 decoration-4 decoration-primary/10">파일 선택</span>
                 </p>
-                {!hasFiles && <p className="text-emerald-600/40 font-black mt-10 text-xs uppercase tracking-[0.3em] animate-pulse">Up to 500 photos</p>}
+                {!hasFiles && <p className="text-emerald-600/40 font-black mt-6 md:mt-10 text-[10px] md:text-xs uppercase tracking-[0.3em] animate-pulse">Up to 500 photos</p>}
               </div>
             </div>
           )}
@@ -281,18 +283,18 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
 
         {/* 오른쪽: 상세 정보 카드 (미리보기 또는 전역 진행 목록) */}
         {(hasFiles || isUploading) && (
-          <Card className="flex-1 min-h-[600px] max-h-[850px] shadow-emphasis border border-slate-200/60 rounded-[2.5rem] overflow-hidden flex flex-col bg-white">
-            <CardContent className="p-8 flex flex-col h-full overflow-hidden">
-              <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-8 shrink-0">
-                <h4 className="text-2xl font-black flex items-center gap-4 text-slate-900 tracking-tighter">
+          <Card className="flex-1 min-h-[400px] md:min-h-[600px] max-h-[600px] md:max-h-[850px] shadow-emphasis border border-slate-200/60 rounded-[2.5rem] overflow-hidden flex flex-col bg-white">
+            <CardContent className="p-5 md:p-8 flex flex-col h-full overflow-hidden">
+              <div className="flex items-center justify-between mb-4 md:mb-8 border-b border-slate-100 pb-4 md:pb-8 shrink-0">
+                <h4 className="text-lg md:text-2xl font-black flex items-center gap-2 md:gap-4 text-slate-900 tracking-tighter">
                   {isUploading ? (
-                    <><CloudUpload className="w-8 h-8 text-primary" /> 전송 진행 상황</>
+                    <><CloudUpload className="w-5 h-5 md:w-8 md:h-8 text-primary" /> 전송 진행 상황</>
                   ) : (
-                    <><FileImage className="w-8 h-8 text-primary" /> 대기 중인 사진 <span className="text-primary/30 font-medium ml-1">{selectedFiles.length}장</span></>
+                    <><FileImage className="w-5 h-5 md:w-8 md:h-8 text-primary" /> 대기 중인 사진 <span className="text-primary/30 font-medium ml-1">{selectedFiles.length}장</span></>
                   )}
                 </h4>
                 {!isUploading && (
-                  <Button variant="ghost" onClick={() => setSelectedFiles([])} className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-black text-sm uppercase tracking-widest h-10 px-4 rounded-xl transition-all">Clear All</Button>
+                  <Button variant="ghost" onClick={() => setSelectedFiles([])} className="text-rose-500 hover:text-rose-600 hover:bg-rose-50 font-black text-xs md:text-sm uppercase tracking-widest h-8 md:h-10 px-3 md:px-4 rounded-xl transition-all">Clear All</Button>
                 )}
               </div>
               
@@ -302,24 +304,24 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
                     {itemIds.map(id => {
                       const item = items[id];
                       return (
-                        <div key={id} className="flex items-center justify-between p-5 rounded-[1.5rem] bg-slate-50/50 border border-slate-100 hover:border-primary/20 hover:bg-white hover:shadow-professional transition-all group">
+                        <div key={id} className="flex items-center justify-between p-3 md:p-5 rounded-[1.5rem] bg-slate-50/50 border border-slate-100 hover:border-primary/20 hover:bg-white hover:shadow-professional transition-all group">
                           <div className="flex flex-col min-w-0 flex-1">
-                            <span className="truncate font-black text-slate-800 text-base tracking-tight">{item.fileName}</span>
-                            <div className="flex items-center gap-4 mt-2.5">
-                              <div className="flex-1 bg-slate-200/60 rounded-full h-2 overflow-hidden shadow-inner w-full max-w-[240px]">
+                            <span className="truncate font-black text-slate-800 text-sm md:text-base tracking-tight">{item.fileName}</span>
+                            <div className="flex items-center gap-2 md:gap-4 mt-1.5 md:mt-2.5">
+                              <div className="flex-1 bg-slate-200/60 rounded-full h-1.5 md:h-2 overflow-hidden shadow-inner w-full max-w-[240px]">
                                 <div className="bg-primary h-full transition-all duration-500 ease-out" style={{ width: `${item.progress}%` }} />
                               </div>
-                              <span className="text-xs font-black text-primary tabular-nums tracking-widest">{item.progress}%</span>
+                              <span className="text-[10px] md:text-xs font-black text-primary tabular-nums tracking-widest">{item.progress}%</span>
                             </div>
                           </div>
-                          <div className="ml-6 shrink-0">
+                          <div className="ml-3 md:ml-6 shrink-0">
                             {item.status === 'completed' ? (
-                              <div className="bg-emerald-500 text-white p-2 rounded-full shadow-lg shadow-emerald-100 animate-in zoom-in duration-300"><CheckCircle className="w-5 h-5" /></div>
+                              <div className="bg-emerald-500 text-white p-1.5 md:p-2 rounded-full shadow-lg shadow-emerald-100 animate-in zoom-in duration-300"><CheckCircle className="w-4 h-4 md:w-5 md:h-5" /></div>
                             ) : item.status === 'failed' ? (
-                              <div className="bg-rose-500 text-white p-2 rounded-full shadow-lg shadow-rose-100 animate-in shake duration-500"><AlertCircle className="w-5 h-5" /></div>
+                              <div className="bg-rose-500 text-white p-1.5 md:p-2 rounded-full shadow-lg shadow-rose-100 animate-in shake duration-500"><AlertCircle className="w-4 h-4 md:w-5 md:h-5" /></div>
                             ) : (
                               <div className="flex flex-col items-end">
-                                <span className="text-[10px] font-black text-primary uppercase tracking-widest animate-pulse bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-sm">
+                                <span className="text-[9px] md:text-[10px] font-black text-primary uppercase tracking-widest animate-pulse bg-white border border-slate-200 px-2 py-1 md:px-3 md:py-1.5 rounded-xl shadow-sm">
                                   {item.status === 'compressing' ? 'Optimize' : 'Upload'}
                                 </span>
                               </div>
@@ -330,13 +332,13 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
                     })}
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 pb-4">
+                  <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-4 pb-4">
                     {selectedFiles.map((file, index) => (
-                      <div key={index} className="relative group aspect-square bg-slate-100 rounded-2xl shadow-sm overflow-hidden border border-slate-200 hover:border-primary/40 hover:shadow-emphasis transition-all duration-300">
+                      <div key={index} className="relative group aspect-square bg-slate-100 rounded-xl md:rounded-2xl shadow-sm overflow-hidden border border-slate-200 hover:border-primary/40 hover:shadow-emphasis transition-all duration-300">
                         <img src={URL.createObjectURL(file)} alt="preview" className="w-full h-full object-cover transition-transform group-hover:scale-110" onLoad={(e) => URL.revokeObjectURL(e.currentTarget.src)} />
                         <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity" />
-                        <button onClick={(e) => { e.stopPropagation(); removeFile(index); }} className="absolute top-2 right-2 bg-rose-500 text-white rounded-full p-2 opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:scale-110 active:scale-90 ring-4 ring-white/20">
-                          <X className="w-4 h-4" />
+                        <button onClick={(e) => { e.stopPropagation(); removeFile(index); }} className="absolute top-1 right-1 md:top-2 md:right-2 bg-rose-500 text-white rounded-full p-1.5 md:p-2 opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:scale-110 active:scale-90 ring-4 ring-white/20">
+                          <X className="w-3 h-3 md:w-4 md:h-4" />
                         </button>
                       </div>
                     ))}
@@ -345,9 +347,9 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
               </div>
 
               {!isUploading && (
-                <div className="mt-8 pt-8 border-t border-slate-100 shrink-0">
+                <div className="mt-4 pt-4 md:mt-8 md:pt-8 border-t border-slate-100 shrink-0">
                   <Button 
-                    className="w-full h-24 text-3xl font-black bg-primary hover:bg-slate-900 text-white shadow-emphasis shadow-primary/20 active:scale-[0.98] transition-all rounded-[2rem] tracking-tighter" 
+                    className="w-full h-16 md:h-24 text-xl md:text-3xl font-black bg-primary hover:bg-slate-900 text-white shadow-emphasis shadow-primary/20 active:scale-[0.98] transition-all rounded-[1.5rem] md:rounded-[2rem] tracking-tighter" 
                     onClick={handleUploadClick} 
                     disabled={isCheckingDuplicates}
                   >
@@ -355,7 +357,7 @@ export function PhotoUploader({ onUpload }: PhotoUploaderProps) {
                       ? `분석 중... ${duplicateProgress}%`
                       : '이 사진들로 작업 시작하기'}
                   </Button>
-                  <p className="text-center text-slate-400 mt-5 font-black text-sm uppercase tracking-[0.2em] opacity-60">
+                  <p className="text-center text-slate-400 mt-3 md:mt-5 font-black text-[10px] md:text-sm uppercase tracking-[0.2em] opacity-60">
                     Press button to start processing
                   </p>
                 </div>

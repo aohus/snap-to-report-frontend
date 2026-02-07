@@ -1,8 +1,8 @@
 {
   "track_id": "frontend_independent_deploy_20260202",
   "type": "feature",
-  "status": "new",
+  "status": "completed",
   "created_at": "2026-02-02T00:00:00Z",
-  "updated_at": "2026-02-02T00:00:00Z",
+  "updated_at": "2026-02-07T00:00:00Z",
   "description": "프론트엔드 독립 배포 파이프라인 구축 (백엔드 무중단)"
 }

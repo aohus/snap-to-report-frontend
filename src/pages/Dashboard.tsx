@@ -388,7 +388,7 @@ export default function Dashboard() {
             <LayoutGrid className="w-6 h-6 text-primary-foreground" />
           </div>
           <div className="flex flex-col">
-            <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">Field Note</h1>
+            <h1 className="text-xl font-black text-slate-900 tracking-tight leading-none mb-1">현장노트</h1>
             <span className="text-[11px] font-black text-slate-400 uppercase tracking-widest hidden md:inline-block">Construction Intelligence</span>
           </div>
         </div>

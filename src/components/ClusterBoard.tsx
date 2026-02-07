@@ -369,6 +369,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                         >
                             <PlaceRow
                                 cluster={cluster}
+                                index={virtualRow.index}
                                 onCreate={(order_index, photos) => onCreateCluster(order_index, photos)}
                                 onAddPhotosToExistingCluster={(clusterId, photos) => onAddPhotosToExistingCluster(clusterId, photos)}
                                 onRename={onRenameCluster}
@@ -383,6 +384,7 @@ export function ClusterBoard({ clusters, onMovePhoto,  onCreateCluster, onAddPho
                                 onEditLabels={onEditLabels}
                                 onPreviewPhoto={(photo) => setPreviewPhoto(photo as any)}
                                 isDragging={isDragging}
+                                onMovePhoto={onMovePhoto}
                             />
                         </div>
                     );

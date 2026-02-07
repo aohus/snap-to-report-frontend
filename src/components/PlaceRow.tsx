@@ -17,6 +17,7 @@ import { useIsMobile } from '@/hooks/use-mobile';
 
 interface PlaceRowProps {
   cluster: Cluster;
+  index: number;
   onCreate: (order_index: number, photos: { id: string, clusterId: string }[]) => void;
   onAddPhotosToExistingCluster: (clusterId: string, photos: { id: string, clusterId: string }[]) => void;
   onRename: (clusterId: string, newName: string) => void;
@@ -31,11 +32,13 @@ interface PlaceRowProps {
   onToggleCollapse?: () => void;
   onEditLabels: (photoId: string) => void;
   isDragging?: boolean;
+  onMovePhoto: (photoId: string, sourceClusterId: string, targetClusterId: string, targetIndex?: number) => void;
 }
 
 
 export function PlaceRow({ 
   cluster, 
+  index,
   onCreate, 
   onAddPhotosToExistingCluster, 
   onRename, 
@@ -49,7 +52,8 @@ export function PlaceRow({
   isCollapsed = false,
   onToggleCollapse,
   onEditLabels,
-  isDragging = false
+  isDragging = false,
+  onMovePhoto
 }: PlaceRowProps) {
   const isMobile = useIsMobile();
   const [isEditing, setIsEditing] = useState(false);
@@ -57,6 +61,24 @@ export function PlaceRow({
   const [name, setName] = useState(cluster.name || `Place ${cluster.order_index + 1}`);
 
   const selectedPhotoIds = selectedPhotos.map(p => p.id);
+
+  const handleReorder = (photoId: string, direction: 'left' | 'right') => {
+    const currentIndex = cluster.photos.findIndex(p => p.id.toString() === photoId);
+    if (currentIndex === -1) return;
+    
+    // Calculate new index
+    // If moving left, we swap with previous. Target index is current - 1.
+    // If moving right, we swap with next. Target index is current + 1.
+    // NOTE: onMovePhoto usually takes the insertion index.
+    // If moving right (e.g. 0 to 1), we want it to be at index 1.
+    // If moving left (e.g. 1 to 0), we want it to be at index 0.
+    
+    const newIndex = direction === 'left' ? currentIndex - 1 : currentIndex + 1;
+    
+    if (newIndex < 0 || newIndex >= cluster.photos.length) return;
+    
+    onMovePhoto(photoId, cluster.id, cluster.id, newIndex);
+  };
 
   // Sync name if prop changes
   useEffect(() => {
@@ -97,12 +119,17 @@ export function PlaceRow({
                  <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="h-7 w-7 -ml-1 text-slate-400 hover:text-slate-900 rounded-md transition-all" 
+                  className="h-7 w-7 -ml-1 text-slate-400 hover:text-slate-900 rounded-md transition-all mr-1" 
                   onClick={onToggleCollapse}
                 >
                   {isCollapsed ? <ArrowDown className="w-3.5 h-3.5" /> : <ArrowUp className="w-3.5 h-3.5" />}
                 </Button>
               )}
+              
+              <div className="bg-slate-900 text-white rounded-md px-1.5 py-0.5 text-[10px] font-bold mr-2 shrink-0">
+                #{index + 1}
+              </div>
+
               {isEditing ? (
                 <div className="flex items-center gap-2 w-full max-w-xl">
                   <Input
@@ -298,14 +325,14 @@ export function PlaceRow({
                 onSelect={(e) => onSelectPhoto(cluster.photos[rubric.source.index].id.toString(), cluster.id, e)}
                 onPreview={() => onPreviewPhoto?.(cluster.photos[rubric.source.index] as any)}
                 isSelected={selectedPhotoIds.includes(cluster.photos[rubric.source.index].id.toString())}
-                isCompact={isCompact}
-                onEditLabels={onEditLabels}
-                isDraggingSomewhere={isDragging} 
-                isMobile={isMobile}
-            />
-        )}
-      >
-        {(provided, snapshot) => (
+                                isCompact={isCompact}
+                                onEditLabels={onEditLabels}
+                                isDraggingSomewhere={isDragging}
+                                isMobile={isMobile}
+                                onReorder={handleReorder}
+                            />
+                        )}
+                      >        {(provided, snapshot) => (
           <div
             ref={provided.innerRef}
             {...provided.droppableProps}
@@ -347,6 +374,7 @@ export function PlaceRow({
                     isCompact={isCompact}
                     onEditLabels={onEditLabels}
                     isDraggingSomewhere={isDragging} // Pass global drag state
+                    onReorder={handleReorder}
                   />
             ))}
             {provided.placeholder}

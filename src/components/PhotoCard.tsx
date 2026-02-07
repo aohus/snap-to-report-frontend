@@ -2,7 +2,7 @@ import React from 'react'; // React.memo 사용을 위해 import
 import { Draggable, DraggableProvided, DraggableStateSnapshot } from '@hello-pangea/dnd';
 import { Photo } from '@/types';
 // import { api } from '@/lib/api'; // 사용되지 않아 제거 가능
-import { X, Tags, Maximize2, CheckCircle2, GripHorizontal } from 'lucide-react';
+import { X, Tags, Maximize2, CheckCircle2, GripHorizontal, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/use-mobile';
 
@@ -18,6 +18,7 @@ interface PhotoCardProps {
   onEditLabels?: (id: string) => void;
   isDraggingSomewhere?: boolean; // New prop to detect global drag
   isMobile?: boolean; // New prop
+  onReorder?: (id: string, direction: 'left' | 'right') => void; // New prop for mobile reorder
 }
 
 interface PhotoCardInnerProps extends PhotoCardProps {
@@ -38,7 +39,8 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
   isDraggingSomewhere = false,
   provided,
   snapshot,
-  isMobile: isMobileProp
+  isMobile: isMobileProp,
+  onReorder
 }: PhotoCardInnerProps) {
   const isMobileHook = useIsMobile();
   const isMobile = isMobileProp ?? isMobileHook;
@@ -72,9 +74,37 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
       `}
       style={{
         ...provided.draggableProps.style,
-        touchAction: isMobile ? 'pan-y' : undefined,
+        touchAction: isMobile ? (snapshot.isDragging ? 'none' : 'pan-y') : undefined,
       }}
     >
+      {/* Mobile Reorder Buttons */}
+      {isMobile && onReorder && (
+        <>
+            <Button
+                variant="secondary"
+                size="icon"
+                className="absolute left-1 top-1/2 -translate-y-1/2 z-40 h-8 w-8 rounded-full bg-white/80 shadow-md border border-slate-100 hover:bg-white active:scale-95 opacity-80 hover:opacity-100"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onReorder(photo.id.toString(), 'left');
+                }}
+            >
+                <ChevronLeft className="w-5 h-5 text-slate-700" />
+            </Button>
+            <Button
+                variant="secondary"
+                size="icon"
+                className="absolute right-1 top-1/2 -translate-y-1/2 z-40 h-8 w-8 rounded-full bg-white/80 shadow-md border border-slate-100 hover:bg-white active:scale-95 opacity-80 hover:opacity-100"
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onReorder(photo.id.toString(), 'right');
+                }}
+            >
+                <ChevronRight className="w-5 h-5 text-slate-700" />
+            </Button>
+        </>
+      )}
+
       {/* Selected Overlay & Icon */}
       {isSelected && (
         <div className="absolute inset-0 bg-primary/5 z-10 pointer-events-none transition-all duration-300">
