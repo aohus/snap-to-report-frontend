@@ -54,6 +54,13 @@ Fixed several critical mobile usability issues and drag-and-drop mechanics.
 - **Root Cause**: Flex items (`ClusterSection` and `ClusterBoard` Main Grid) were missing `min-height: 0` (or `min-h-0`). In flex column layouts, children can expand to fit content (ignoring overflow constraints) if min-height is auto. This pushed the scroll container size beyond the viewport, causing clipping without scrollbars.
 - **Fix**: Added `min-h-0` to `ClusterSection` and `ClusterBoard`'s Main Grid container.
 
+### 8. Post-Fix Refinements (Round 6: Drag Handle vs Scroll Conflict)
+- **Issue**: "Photo fixed on screen, rest moves" - Dragging was behaving like scrolling, or scroll was stealing the gesture.
+- **Fix**: Refined `touch-action` logic in `PhotoCard`.
+  - Applied `touch-action: pan-y` to the card ONLY when NOT dragging (`!snapshot.isDragging`). This allows scrolling when touching the card body.
+  - Removed `touch-action: pan-y` when dragging (including on the Drag Preview/Clone), to ensure the browser doesn't try to scroll.
+  - Explicitly added `touchAction: 'none'` to the Drag Handle style.
+
 ## Files Modified
 - `src/components/dashboard/ClusterSection.tsx`
 - `src/components/ClusterBoard.tsx`

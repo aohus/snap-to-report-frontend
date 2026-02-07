@@ -68,14 +68,15 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
       `}
       style={{
         ...provided.draggableProps.style,
-        touchAction: isMobile ? 'pan-y' : undefined,
+        touchAction: (isMobile && !snapshot.isDragging) ? 'pan-y' : undefined,
       }}
     >
       {/* Mobile Drag Handle */}
       {isMobile && (
         <div 
             {...provided.dragHandleProps}
-            className="absolute top-0 right-0 left-0 h-12 z-20 flex justify-center pt-1 touch-none pointer-events-auto"
+            className="absolute top-0 right-0 left-0 h-12 z-20 flex justify-center pt-1 pointer-events-auto"
+            style={{ touchAction: 'none' }}
             onClick={(e) => e.stopPropagation()} // Prevent click propagation
         >
             <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-slate-100/50">
