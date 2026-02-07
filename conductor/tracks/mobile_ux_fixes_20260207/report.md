@@ -38,32 +38,23 @@ Fixed several critical mobile usability issues and drag-and-drop mechanics.
 - **Issue**: "분류된 장소" text breaking vertically.
 - **Fix**: Added `whitespace-nowrap` to the ClusterBoard header text.
 
-### 5. Post-Fix Refinements (Round 3: Scroll Container Conflict)
-- **Issue**: ClusterBoard scroll still problematic on mobile compared to Dashboard.
-- **Root Cause**: `JobWorkspace`'s `<main>` had `overflow-y-auto`, and `ClusterBoard` (child) also had `overflow-y-auto`. This nested scroll structure confuses mobile browsers and `useVirtualizer`.
-- **Fix**: Conditionally applied `overflow-hidden` to `<main>` when `ClusterBoard` is active, forcing the internal `ClusterBoard` scroll container to take precedence.
-
-### 6. Post-Fix Refinements (Round 4: Touch Action & Webkit Scroll)
-- **Issue**: Mobile scroll still sticky or non-functional in ClusterBoard.
-- **Fix**: Added `touch-action: pan-y` and `-webkit-overflow-scrolling: touch` explicitly to the `ClusterBoard` scroll container.
-- **Fix**: Added `touch-action: pan-y` to the `PlaceRow` droppable area to ensure empty spaces don't block scroll.
-- **Fix**: Added `pointer-events-auto` to drag handle to ensure it captures events even if z-index logic was tricky.
-
-### 7. Post-Fix Refinements (Round 5: Flexbox Min-Height)
-- **Issue**: "Scrollbar disappears" on mobile when layout shifts.
-- **Root Cause**: Flex items (`ClusterSection` and `ClusterBoard` Main Grid) were missing `min-height: 0` (or `min-h-0`). In flex column layouts, children can expand to fit content (ignoring overflow constraints) if min-height is auto. This pushed the scroll container size beyond the viewport, causing clipping without scrollbars.
-- **Fix**: Added `min-h-0` to `ClusterSection` and `ClusterBoard`'s Main Grid container.
-
-### 9. Post-Fix Refinements (Round 7: Mobile Detection)
-- **Issue**: "Background moves when dragging handle" (i.e., drag fails, scroll takes over) even after touch-action fixes.
-- **Root Cause**: `useIsMobile` relied solely on window width (< 768px). On larger phones (landscape), tablets, or high-res simulators, `isMobile` evaluated to `false`, causing the component to render in Desktop mode (handle on root) but without proper touch handling for scrolling.
-- **Fix**: Updated `useIsMobile` to also check for `(pointer: coarse)`, ensuring all touch-primary devices get the mobile optimized drag handle logic regardless of screen width.
-- **Fix**: Ensured `isMobile` state is consistently passed down to `PhotoCardInner` via props.
+### 10. Post-Fix Refinements (Round 8: Disable Drag & Fix ActionBar)
+- **Decision**: Disabled drag-and-drop on mobile entirely as per user request (users will use the "Move Site" feature instead).
+- **Fix**: Set `isDragDisabled={isMobile}` on `Draggable` components and removed the drag handle icon on mobile.
+- **Issue**: `FloatingActionBar` (Move Site component) was shifted right and buttons were partially invisible on mobile.
+- **Fix**:
+  - Added `max-w-[95vw]` to the bar to prevent screen overflow.
+  - Reduced internal gaps and padding on mobile.
+  - Added responsive text labels ("Move" vs "Move Site") to save space.
+  - Ensured perfect centering using `left-1/2 -translate-x-1/2`.
 
 ## Files Modified
-- `src/hooks/use-mobile.tsx`
 - `src/components/PhotoCard.tsx`
+- `src/components/dashboard/FloatingActionBar.tsx`
+- `src/components/PhotoUploader.tsx`
+- `src/hooks/use-mobile.tsx`
 - `src/components/PlaceRow.tsx`
 - `src/components/ClusterBoard.tsx`
 - `src/components/dashboard/ClusterSection.tsx`
 - `src/pages/JobWorkspace.tsx`
+- `conductor/tracks/mobile_ux_fixes_20260207/`

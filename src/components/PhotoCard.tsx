@@ -72,23 +72,9 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
       `}
       style={{
         ...provided.draggableProps.style,
-        touchAction: isMobile ? (snapshot.isDragging ? 'none' : 'pan-y') : undefined,
+        touchAction: isMobile ? 'pan-y' : undefined,
       }}
     >
-      {/* Mobile Drag Handle */}
-      {isMobile && (
-        <div 
-            {...provided.dragHandleProps}
-            className="absolute top-0 right-0 left-0 h-12 z-20 flex justify-center pt-1 pointer-events-auto"
-            style={{ touchAction: 'none' }}
-            onClick={(e) => e.stopPropagation()} // Prevent click propagation
-        >
-            <div className="bg-white/80 backdrop-blur-sm px-3 py-1 rounded-full shadow-sm border border-slate-100/50">
-                <GripHorizontal className="w-5 h-5 text-slate-500" />
-            </div>
-        </div>
-      )}
-
       {/* Selected Overlay & Icon */}
       {isSelected && (
         <div className="absolute inset-0 bg-primary/5 z-10 pointer-events-none transition-all duration-300">
@@ -189,7 +175,7 @@ export const PhotoCardInner = React.memo(function PhotoCardInner({
 export const PhotoCard = React.memo(function PhotoCard(props: PhotoCardProps) {
   const isMobile = useIsMobile();
   return (
-    <Draggable draggableId={props.photo.id.toString()} index={props.index}>
+    <Draggable draggableId={props.photo.id.toString()} index={props.index} isDragDisabled={isMobile}>
       {(provided, snapshot) => (
          <PhotoCardInner {...props} provided={provided} snapshot={snapshot} isMobile={isMobile} />
       )}
